@@ -2,35 +2,37 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- Se hizo: investigación, fork de OHA con limpieza de seguridad y método (PR #1); instalación en el PC de Pedro
-  (junction a `bots/`, `tools/instalar.ps1`) y benchmark contra los bots de Valve listo sin estrenar (bench/README.md).
-- Siguiente acción: primera partida de Pedro con `tools/bench/Dota-benchmark.url`: confirmar que los bots se llaman
-  «*.OHA», que el lobby acepta un script distinto por equipo y que salen líneas `[BENCH]` en `console.log`; luego
-  correr `node tools/bench/resumen.mjs` y ajustar lo que falle.
-- Espera a Pedro: esa partida, las 10 del benchmark, la prueba con un amigo y elegir el primer héroe a mejorar.
+- Se hizo: fork limpio (PR #1), instalación por junction y benchmark (PR #2). Después, pruebas en vivo lanzando
+  `dota2.exe` desde el agente (2026-10-28), medido en `console.log`:
+  - Funciona sin clics: `dota2.exe -console -condebug -novid -windowed +sv_cheats 1 +sv_lan 1 +dota_start_ai_game 1
+    +dota_force_gamemode 1 +dota_bot_set_difficulty 4 +map dota` carga el mapa, la selección de héroes vence sola,
+    entran 9 bots «*.OHA» y la partida empieza (unos 4 min). Radiant y Dire cargan los dos `vscripts/bots`.
+  - No funciona: lo que imprimen los bots (`print`) no llega a `console.log` (ni el «Picking hero» de OHA), así que
+    el registrador `[BENCH]` de PR #2 no deja nada; `-condebug` además reescribe el log en cada arranque. Los `+cmd`
+    después de `+map` corren antes de cargar (no hay `jointeam spec` ni `dota_bot_populate` tardíos); `host_timescale`
+    antes de `+map` no acelera; no hay `-netconport` (Dota no abre puertos); esta sesión no puede capturar pantalla
+    ni usar computer use. El humano queda en Radiant con héroe aleatorio quieto (partida desigual).
+  - 10 «Script Runtime Error: error in error handling» al empezar la partida, origen sin aislar (no es el pcall del
+    registrador: su diagnóstico `[BENCH-ERR]` no salió, aunque puede ser el mismo problema de `print`).
+- Siguiente acción: resultado por GSI (`map.win_team`, `game_state`; carpeta `cfg/gamestate_integration` ya existe)
+  con un servidor local en Node, en vez de `print`; luego resolver espectador y velocidad (probar `cfg/server.cfg` o
+  un custom game de las Workshop Tools con `SendToServerConsole`) y el guardia por equipo en Lua para que un lado use
+  los bots de Valve. Rama `claude/bench-auto` con el diagnóstico `[BENCH-ERR]`.
+- Espera a Pedro: si sigue la automatización (recomendado) o juega él las partidas a mano.
 
 ## Madurez
 Prototipo: es OHA 7.41/7.41a (127 héroes) con la limpieza de seguridad; sin cambios de juego propios.
 
 ## Entregado
-- 2026-10-28 · Informe de investigación sobre APIs de bots de Dota 2 (docs/investigacion/2026-10-28-bots-dota2.md).
-- 2026-10-28 · Fork, limpieza de seguridad y check (`tools/check`).
-- 2026-10-28 · Instalación por junction y benchmark (registrador `[BENCH]`, resumen y protocolo en bench/).
+- 2026-10-28 · Investigación (docs/investigacion/), fork con limpieza y check (PR #1), junction y benchmark (PR #2).
 
 ## Siguientes pasos
-1. Probar en el PC de Pedro: solo, y con amigos en el mismo lobby Local Host.
-2. Correr el benchmark: 10 partidas dota-bot contra Valve en Unfair, cambiando de lado; resultados en bench/.
-3. Elegir un héroe débil (Invoker, Rubick o Morphling) y mejorar sus funciones `Consider*`.
-4. Ponerse al día con los parches 7.41b-f (OHA se quedó en 7.41a; ver docs/PATCH_UPDATE_GUIDE.md).
+1. Benchmark automático (ver «Próxima sesión»); después, 10 partidas dota-bot contra Valve en Unfair.
+2. Probar con amigos en un lobby Local Host.
+3. Mejorar un héroe débil (Invoker, Rubick o Morphling); ponerse al día con 7.41b-f (docs/PATCH_UPDATE_GUIDE.md).
 
 ## Problemas conocidos
-- Quedan textos ofensivos y de promoción en `bots/FunLib/localization.lua` y `aba_chat_table.lua`; con la burla
-  apagada no salen, salvo los saludos de inicio («buy me a coffee… Workshop», `mode_laning_generic.lua:248`,
-  `mode_farm_generic.lua:903`) y una línea de Faceless Void (`BotLib/hero_faceless_void.lua:151`).
-- `FunLib/custom_loader.lua` carga primero `game/Customize/general` (ignorado por git): una personalización vieja de OHA
-  en ese PC puede volver a encender la burla.
-- Los comandos `set`/`nudge` del host en FretBots evalúan texto con `loadstring` (`FretBots/Utilities.lua:515`);
-  solo el host, dentro del juego.
-- Las dependencias npm heredadas no instalan sin `--legacy-peer-deps` (conflicto de `typescript`).
-- La API de Valve no soporta bien a 8 héroes (Dark Willow, Elder Titan, Hoodwink, IO, Kez, Marci, Muerta, Primal
-  Beast) ni facets ni Tormentor; Valve no la actualiza.
+- Saludos de inicio con promoción del Workshop siguen saliendo (`mode_laning_generic.lua:248`,
+  `mode_farm_generic.lua:903`, `BotLib/hero_faceless_void.lua:151`); textos ofensivos solo con la burla encendida.
+- `custom_loader.lua` carga antes `game/Customize/general` si existe; FretBots `set`/`nudge` usan `loadstring` (host).
+- Dependencias npm heredadas: conflicto de `typescript`. API de Valve: 8 héroes mal soportados, sin facets ni Tormentor.

@@ -8395,7 +8395,12 @@ end
 function BuybackUsageThink()
 	if RefreshBotHandle() then return end
 	if bot.lastBuybackFrameProcessTime == nil then bot.lastBuybackFrameProcessTime = DotaTime() end
-	pcall(Bench.Tick, bot) -- before the throttle: it keeps its own real-time clock; an error must never stop the bot
+	-- Before the throttle: it keeps its own real-time clock. An error must never stop the bot; the first one is logged.
+	local benchOk, benchErr = pcall(Bench.Tick, bot)
+	if not benchOk and not bot.benchErrorShown then
+		bot.benchErrorShown = true
+		print('[BENCH-ERR] '..tostring(benchErr))
+	end
 	if DotaTime() > 30 and (DotaTime() - bot.lastBuybackFrameProcessTime < 2) then return end
 	bot.lastBuybackFrameProcessTime = DotaTime()
 	if not bot:IsIllusion() then BuybackUsageComplement() end

@@ -1,5 +1,8 @@
 # Benchmark: ¿juega mejor dota-bot que los bots de Valve?
 
+> **No funciona todavía (2026-10-28):** lo que imprimen los bots no llega a `console.log`, así que el registrador
+> `[BENCH]` no deja resultados. Se reemplaza por GSI; detalle en ESTADO.md, «Próxima sesión».
+
 Partidas de bots contra bots en tu PC, sin ventajas (FretBots apagado, que es lo normal si no lo activas a mano). Un
 equipo usa dota-bot y el otro los bots de Valve, los dos en la misma dificultad. Los bots de dota-bot escriben el
 estado de la partida en la consola (`bots/FunLib/bench.lua`) y `tools/bench/resumen.mjs` lo convierte en una tabla.
