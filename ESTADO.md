@@ -2,13 +2,12 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- Se hizo: investigación (docs/investigacion/), fork de OHA en PedValme/dota-bot, revisión de seguridad y limpieza
-  (sin red, el chat libre del host ya no corre como Lua, sin burlas por defecto, sin scripts de instalación) y
-  adopción del método.
-- Siguiente acción: Pedro instala `bots/` en su Dota y juega una partida en lobby Local Host con Local Dev Script
-  (primero solo, después con un amigo) para confirmar que carga (los bots se llaman «*.OHA») y que los amigos pueden
-  unirse.
-- Espera a Pedro: esa prueba en su PC, y elegir el primer héroe a mejorar.
+- Se hizo: investigación, fork de OHA con limpieza de seguridad y método (PR #1); instalación en el PC de Pedro
+  (junction a `bots/`, `tools/instalar.ps1`) y benchmark contra los bots de Valve listo sin estrenar (bench/README.md).
+- Siguiente acción: primera partida de Pedro con `tools/bench/Dota-benchmark.url`: confirmar que los bots se llaman
+  «*.OHA», que el lobby acepta un script distinto por equipo y que salen líneas `[BENCH]` en `console.log`; luego
+  correr `node tools/bench/resumen.mjs` y ajustar lo que falle.
+- Espera a Pedro: esa partida, las 10 del benchmark, la prueba con un amigo y elegir el primer héroe a mejorar.
 
 ## Madurez
 Prototipo: es OHA 7.41/7.41a (127 héroes) con la limpieza de seguridad; sin cambios de juego propios.
@@ -16,10 +15,11 @@ Prototipo: es OHA 7.41/7.41a (127 héroes) con la limpieza de seguridad; sin cam
 ## Entregado
 - 2026-10-28 · Informe de investigación sobre APIs de bots de Dota 2 (docs/investigacion/2026-10-28-bots-dota2.md).
 - 2026-10-28 · Fork, limpieza de seguridad y check (`tools/check`).
+- 2026-10-28 · Instalación por junction y benchmark (registrador `[BENCH]`, resumen y protocolo en bench/).
 
 ## Siguientes pasos
 1. Probar en el PC de Pedro: solo, y con amigos en el mismo lobby Local Host.
-2. Montar un benchmark propio: N partidas bot contra bot, con FretBots apagado, para medir si un cambio mejora el juego.
+2. Correr el benchmark: 10 partidas dota-bot contra Valve en Unfair, cambiando de lado; resultados en bench/.
 3. Elegir un héroe débil (Invoker, Rubick o Morphling) y mejorar sus funciones `Consider*`.
 4. Ponerse al día con los parches 7.41b-f (OHA se quedó en 7.41a; ver docs/PATCH_UPDATE_GUIDE.md).
 
