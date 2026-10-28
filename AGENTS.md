@@ -40,18 +40,22 @@ Code and tests are what the system really does; when a document and the code dis
   (`npm run build`): si cambias un `.lua` generado, cambia también su fuente TS (docs/ARCHITECTURE.md, sección 13).
   Las dependencias npm del proyecto (heredadas) tienen un conflicto de versiones de `typescript`; no hacen falta para el
   check ni para jugar.
-- Jugar o probar: `pwsh tools/instalar.ps1` enlaza (junction, sin administrador) `vscripts/bots` de Dota a `bots/`
-  de este clon, así que el juego usa la rama que esté activa aquí; luego Custom Lobby con servidor **Local Host** y
-  **Local Dev Script** en los bots. En el PC de Pedro ya está instalado (2026-10-28). No se usan los instaladores de OHA
-  (pedían administrador y enlazaban al Workshop del autor; se borraron).
-- Benchmark contra los bots de Valve: [bench/README.md](bench/README.md). `node tools/bench/orquestador.mjs` lanza y
-  cierra partidas locales de bots sin clics y lee el ganador por GSI. Sus límites (solo Steam y Dota, lo que el
-  benchmark necesita) están al inicio del archivo y son decisión de Pedro (DECISIONES.md, 2026-10-28). Cada archivo de
-  entrada de `bots/` empieza con la guardia `FunLib/bench_side`: sin `Customize/bench_valve_team.lua` (lo crea y borra
-  el orquestador) no hace nada; con él, ese equipo juega con los bots de Valve. Un archivo de entrada nuevo la lleva.
+- Jugar o probar: `pwsh tools/instalar.ps1` crea tres junctions (sin administrador): `vscripts/bots` de Dota a
+  `bots/` de este clon (el juego usa la rama activa aquí), `dota_addons/dotabench` al custom game del benchmark
+  (`tools/bench/addon`, necesita las Workshop Tools) y, dentro de este, `scripts/vscripts/bots` a `bots/` (ignorado por
+  git: no usar `git clean -x` ni borrar `tools/bench/addon` en recursivo). Para jugar: Custom Lobby con servidor
+  **Local Host** y **Local Dev Script**. En el PC de Pedro ya está instalado (2026-10-28). No se usan los instaladores
+  de OHA (pedían administrador y enlazaban al Workshop del autor; se borraron).
+- Benchmark contra los bots de Valve: [bench/README.md](bench/README.md). `node tools/bench/orquestador.mjs` lanza el
+  custom game local dotabench sin clics (humano fuera de los equipos, mismos cinco héroes en los dos lados, acelerado)
+  y lee el ganador por GSI. Sus límites (solo Steam y Dota, lo que el benchmark necesita) están al inicio del archivo y
+  son decisión de Pedro (DECISIONES.md, 2026-10-28). Cada archivo de entrada de `bots/` empieza con la guardia
+  `FunLib/bench_side`: sin `Customize/bench_valve_team.lua` (lo crea y borra el orquestador) no hace nada; con él, ese
+  equipo juega con los bots de Valve. Un archivo de entrada nuevo la lleva (el check lo exige).
 - Check: `npm --prefix tools/check ci && node tools/check/check.mjs && node --test tools/bench/orquestador.test.mjs`:
-  todos los `.lua` de `bots/` y `game/` parsean, ni el Lua ni sus fuentes TS mencionan las funciones HTTP de Valve ni
-  el ayudante heredado `http_req` (que sigue en disco y nadie carga), y la lógica del orquestador pasa sus pruebas.
+  todos los `.lua` de `bots/`, `game/` y el `addon_game_mode.lua` del custom game parsean, cada archivo de entrada
+  lleva la guardia, ni el Lua ni sus fuentes TS mencionan las funciones HTTP de Valve ni el ayudante heredado
+  `http_req` (que sigue en disco y nadie carga), y la lógica del orquestador pasa sus pruebas.
   Corre antes de cada commit. No prueba el comportamiento en el juego: eso se ve jugando.
 - Modo FretBots/Buff (bonos para los bots) necesita trampas activadas en el lobby (`sv_cheats 1`); su servidor remoto
   de chat está anulado en `bots/FretBots/Chat.lua`.
