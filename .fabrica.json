@@ -1,0 +1,9 @@
+{
+  "check": "npm --prefix tools/check ci && node tools/check/check.mjs",
+  "rama_viva": "main",
+  "protegidas": ["main"],
+  "protocolo": "fabrica/2",
+  "categoria": "construccion",
+  "integracion": "pr-agente",
+  "hooks": ["fabrica-secretos"]
+}
