@@ -12,6 +12,7 @@ local Utils = require( GetScriptDirectory()..'/FunLib/utils' )
 local BotBuild = dofile( GetScriptDirectory().."/BotLib/"..string.gsub( botName, "npc_dota_", "" ) )
 local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
 local Customize = require(GetScriptDirectory()..'/Customize/general')
+local Bench = require(GetScriptDirectory()..'/FunLib/bench')
 Customize.ThinkLess = Customize.Enable and Customize.ThinkLess or 1
 if GAMEMODE_TURBO == nil then GAMEMODE_TURBO = 23 end
 if GAMEMODE_ARDM == nil then GAMEMODE_ARDM = 20 end
@@ -8394,6 +8395,7 @@ end
 function BuybackUsageThink()
 	if RefreshBotHandle() then return end
 	if bot.lastBuybackFrameProcessTime == nil then bot.lastBuybackFrameProcessTime = DotaTime() end
+	pcall(Bench.Tick, bot) -- before the throttle: it keeps its own real-time clock; an error must never stop the bot
 	if DotaTime() > 30 and (DotaTime() - bot.lastBuybackFrameProcessTime < 2) then return end
 	bot.lastBuybackFrameProcessTime = DotaTime()
 	if not bot:IsIllusion() then BuybackUsageComplement() end

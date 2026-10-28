@@ -128,6 +128,9 @@ Customize.Fretbots = {
 -- This won't be very effective for FPS improvement because Valve has a lot of compute on their side that your PC have to handle for Local Hosting.
 Customize.ThinkLess = 1;
 
+-- dota-bot: print "[BENCH]" match-state lines to the console for the benchmark (FunLib/bench.lua). Read-only, no network.
+Customize.Bench = true
+
 return Customize
 
 

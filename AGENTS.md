@@ -39,12 +39,16 @@ Code and tests are what the system really does; when a document and the code dis
   (`npm run build`): si cambias un `.lua` generado, cambia también su fuente TS (docs/ARCHITECTURE.md, sección 13).
   Las dependencias npm del proyecto (heredadas) tienen un conflicto de versiones de `typescript`; no hacen falta para el
   check ni para jugar.
-- Jugar o probar: copiar `bots/` a `<Steam>/steamapps/common/dota 2 beta/game/dota/scripts/vscripts/bots`, crear un
-  Custom Lobby con servidor **Local Host** y elegir **Local Dev Script** en los bots. A mano: no se usan los scripts
-  de instalación de OHA (pedían administrador y enlazaban al Workshop del autor; se borraron).
-- Check: `npm --prefix tools/check ci && node tools/check/check.mjs`: todos los `.lua` de `bots/` y `game/` parsean, y
-  ni el Lua ni sus fuentes TS mencionan las funciones HTTP de Valve ni el ayudante heredado `http_req` (que sigue en
-  disco y nadie carga). Corre antes de cada commit. No prueba el comportamiento: eso se ve jugando.
+- Jugar o probar: `pwsh tools/instalar.ps1` enlaza (junction, sin administrador) `vscripts/bots` de Dota a `bots/`
+  de este clon, así que el juego usa la rama que esté activa aquí; luego Custom Lobby con servidor **Local Host** y
+  **Local Dev Script** en los bots. En el PC de Pedro ya está instalado (2026-10-28). No se usan los instaladores de OHA
+  (pedían administrador y enlazaban al Workshop del autor; se borraron).
+- Benchmark contra los bots de Valve: [bench/README.md](bench/README.md). `bots/FunLib/bench.lua` escribe líneas
+  `[BENCH]` en la consola (se apaga con `Customize.Bench = false`) y `node tools/bench/resumen.mjs` las resume.
+- Check: `npm --prefix tools/check ci && node tools/check/check.mjs && node --test tools/bench/resumen.test.mjs`:
+  todos los `.lua` de `bots/` y `game/` parsean, ni el Lua ni sus fuentes TS mencionan las funciones HTTP de Valve ni
+  el ayudante heredado `http_req` (que sigue en disco y nadie carga), y el resumen del benchmark pasa sus pruebas.
+  Corre antes de cada commit. No prueba el comportamiento en el juego: eso se ve jugando.
 - Modo FretBots/Buff (bonos para los bots) necesita trampas activadas en el lobby (`sv_cheats 1`); su servidor remoto
   de chat está anulado en `bots/FretBots/Chat.lua`.
 - Al traer cambios de OHA: `git fetch upstream`, rama propia, fusionar, correr el check y revisar el diff entero como
