@@ -1,0 +1,8 @@
+{
+  "name": "dota-bot-check",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "luaparse": "0.3.1"
+  }
+}

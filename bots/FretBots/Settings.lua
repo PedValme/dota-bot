@@ -413,8 +413,7 @@ function Settings:OnPlayerChat(event)
 		if playerID == hostID then
 			-- check for 'light' commands
 			local isSuccess = Settings:DoSuperUserChatCommandParse(text)
-			-- if not that, then try to pcall arbitrary text
-			Utilities:PCallText(text)
+			-- dota-bot: the host's chat is no longer run as Lua (upstream called Utilities:PCallText(text) here)
 		end
 	end
 end
