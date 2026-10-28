@@ -1,2 +1,3 @@
-fecha,etiqueta,partida,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano
-2026-10-28T20:04,prueba-orquestador,1,4,radiant,dire,final,79,84,26,radiant
+fecha,etiqueta,partida,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano,heroes
+2026-10-28T20:04,prueba-orquestador,1,4,radiant,dire,final,79,84,26,radiant,elegidos por los bots (4 contra 5; no válida)
+2026-10-28T20:35,prueba-custom-game,1,4,radiant,radiant,final,43,52,23,radiant,chaos_knight lina tidehunter jakiro warlock

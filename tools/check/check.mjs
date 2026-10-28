@@ -27,7 +27,10 @@ const entryFile = /^bots\/(bot_generic|hero_selection|team_desires|ability_item_
 const guard = "if dofile(GetScriptDirectory()..'/FunLib/bench_side') then return end";
 
 const errors = [];
-const lua =["bots", "game"].flatMap((d) => filesUnder(join(root, d), [".lua"]));
+const lua = [
+  ...["bots", "game"].flatMap((d) => filesUnder(join(root, d), [".lua"])),
+  join(root, "tools", "bench", "addon", "scripts", "vscripts", "addon_game_mode.lua"),
+];
 // Type declarations (.d.ts) only describe Valve's API; they never run.
 const ts = filesUnder(join(root, "typescript"), [".ts"]).filter((f) => !f.endsWith(".d.ts"));
 for (const file of [...lua, ...ts]) {

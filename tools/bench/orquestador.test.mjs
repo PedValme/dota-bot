@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sides, launchArgs, gsiConfig, readGsi, isFinished, csvRow, TOKEN, PORT } from "./orquestador.mjs";
+import { sides, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT }
+  from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
 
@@ -10,12 +11,24 @@ test("sides alternate and Valve always takes the other team", () => {
   assert.deepEqual(sides(2), sides(0));
 });
 
-test("launch arguments start a local bot game and nothing else", () => {
-  const a = launchArgs(4);
+test("launch arguments start the local benchmark custom game and nothing else", () => {
+  const a = launchArgs();
   assert.ok(a.includes("-gamestateintegration"));
-  assert.equal(a[a.indexOf("+dota_bot_set_difficulty") + 1], "4");
-  assert.equal(a[a.indexOf("+map") + 1], "dota");
-  assert.ok(!a.some((x) => /connect|exec|quit|rcon/i.test(x)));
+  assert.deepEqual(a.slice(a.indexOf("+dota_launch_custom_game") + 1, a.indexOf("+dota_launch_custom_game") + 3), ["dotabench", "dota"]);
+  assert.ok(!a.some((x) => /connect|exec|quit|rcon|-w$|-h$|windowed/i.test(x)));
+});
+
+test("both teams get the same five heroes, one per position, from the pool", () => {
+  const heroes = drawHeroes(() => 0.999);
+  assert.equal(heroes.length, 5);
+  heroes.forEach((h, i) => assert.equal(h, "npc_dota_hero_" + HERO_POOL[i].at(-1)));
+  assert.equal(new Set(drawHeroes()).size, 5);
+});
+
+test("the match config is plain Lua data for the custom game", () => {
+  const lua = matchConfigLua(["npc_dota_hero_axe", "npc_dota_hero_lina"], 4, 4);
+  assert.match(lua, /return \{ difficulty = "unfair", timescale = 4, heroes = \{ "npc_dota_hero_axe", "npc_dota_hero_lina" \} \}/);
+  assert.match(matchConfigLua(["x"], 0, 1), /difficulty = "passive"/);
 });
 
 test("the GSI config posts only to localhost with the token", () => {
@@ -43,6 +56,6 @@ test("a finished match needs post-game and a winner", () => {
 
 test("CSV rows keep their columns", () => {
   const row = csvRow({ fecha: "2026-10-28T19:00", etiqueta: "a,b", partida: 1, dotabot: "radiant", ganador: "dire" });
-  assert.equal(row.split(",").length, 11);
+  assert.equal(row.split(",").length, 12);
   assert.ok(row.includes("a;b"));
 });

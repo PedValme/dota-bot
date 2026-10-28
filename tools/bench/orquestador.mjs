@@ -1,16 +1,21 @@
 // dota-bot benchmark orchestrator: plays N local bot-vs-bot matches, dota-bot on one side and Valve's own bots on the
-// other (sides alternate), and records each winner from Dota's Game State Integration (GSI).
-//   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--etiqueta texto] [--dota "<dota 2 beta>"]
+// other (sides alternate), both teams with the same five heroes drawn per match, and records each winner from Dota's
+// Game State Integration (GSI). The match runs in the local custom game tools/bench/addon ("dotabench"), which keeps
+// the human out of the teams, adds the bots and speeds the match up.
+//   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--velocidad 4] [--etiqueta texto]
+//                                    [--dota "<dota 2 beta>"]
 //
 // Limits, on purpose (Pedro, 2026-10-28: «solamente y acotado a steam y dota y lo que queremos»):
 // - Starts only <dota>/game/bin/win64/dota2.exe with fixed arguments, and only stops the dota2.exe it started.
 // - Does not start Steam (it must already be running) and refuses to run if any dota2.exe is already open.
 // - Listens only on 127.0.0.1 and only accepts GSI posts carrying its own token.
 // - Writes only: the GSI config in <dota>/game/dota/cfg/gamestate_integration/, bots/Customize/bench_valve_team.lua
-//   (which team plays with Valve's bots), and bench/partidas.csv. The team file lives only from launch until the
+//   (which team plays with Valve's bots), tools/bench/addon/scripts/vscripts/bench_partida.lua (heroes, difficulty,
+//   speed; deleted at the end too) and bench/partidas.csv. The team file lives only from launch until the
 //   horn (scripts load before it); both temporary files are deleted when it ends, also on Ctrl+C, closing the window
 //   or an error. A hard kill of this script (Task Manager) leaves its Dota open and the GSI config in place
-//   (harmless); during a match's first minutes it could also leave the team file, which makes that team play with
+//   (harmless), and bench_partida.lua (only dotabench reads it; the next match overwrites it); during a match's first
+//   minutes it could also leave the team file, which makes that team play with
 //   Valve's bots in any local game until the next run deletes it (or delete bots/Customize/bench_valve_team.lua).
 import { spawn, execFile } from "node:child_process";
 import { createServer } from "node:http";
@@ -24,22 +29,43 @@ const RADIANT = 2;
 const DIRE = 3;
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const VALVE_TEAM_FILE = join(root, "bots", "Customize", "bench_valve_team.lua");
+const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", "bench_partida.lua");
 const CSV = join(root, "bench", "partidas.csv");
 const COLUMNS = ["fecha", "etiqueta", "partida", "dificultad", "dotabot", "ganador", "resultado", "minutos",
-  "kills_radiant", "kills_dire", "humano"];
+  "kills_radiant", "kills_dire", "humano", "heroes"];
+const DIFFICULTIES = ["passive", "easy", "medium", "hard", "unfair"];
+
+// One hero per position, from the heroes Valve's own bots were built for (their original pool, as recalled; not yet
+// checked against "BotImplemented" in the game's npc_heroes.txt), so the Valve side is not crippled by an unsupported
+// hero. Both teams get the same five.
+export const HERO_POOL = [
+  ["juggernaut", "phantom_assassin", "luna", "sven", "chaos_knight", "drow_ranger", "skeleton_king"],
+  ["lina", "zuus", "sniper", "viper", "death_prophet", "razor", "necrolyte"],
+  ["axe", "bristleback", "tidehunter", "dragon_knight", "sand_king", "kunkka"],
+  ["lion", "jakiro", "vengefulspirit", "bane", "skywrath_mage"],
+  ["crystal_maiden", "witch_doctor", "lich", "warlock", "dazzle", "oracle"],
+];
+
+export function drawHeroes(random = Math.random) {
+  return HERO_POOL.map((pool) => "npc_dota_hero_" + pool[Math.floor(random() * pool.length)]);
+}
+
+// Lua read by the custom game (tools/bench/addon/scripts/vscripts/addon_game_mode.lua).
+export function matchConfigLua(heroes, difficulty, timescale) {
+  const list = heroes.map((h) => `"${h}"`).join(", ");
+  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, heroes = { ${list} } }\n`;
+}
 
 // Match i (0-based) puts dota-bot on Radiant when i is even, on Dire when odd; Valve plays the other side.
 export function sides(i) {
   return i % 2 === 0 ? { dotabot: "radiant", valveTeam: DIRE } : { dotabot: "dire", valveTeam: RADIANT };
 }
 
-export function launchArgs(difficulty) {
+export function launchArgs() {
   return [
     // No window or resolution flags: they could stick in the owner's video settings.
     "-console", "-condebug", "-novid", "-gamestateintegration",
-    "+sv_cheats", "1", "+sv_lan", "1", "+dota_start_ai_game", "1", "+dota_force_gamemode", "1",
-    "+dota_bot_set_difficulty", String(difficulty), "+map", "dota",
-    // Measured 2026-10-28: commands after +map run before it loads, so no jointeam/host_timescale here (see ESTADO).
+    "+sv_cheats", "1", "+sv_lan", "1", "+dota_launch_custom_game", "dotabench", "dota",
   ];
 }
 
@@ -88,17 +114,19 @@ export function csvRow(r) {
 }
 
 function parseArgs(argv) {
-  const opt = { partidas: 2, dificultad: 4, etiqueta: "oha-vs-valve", dota: "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta", maxMin: 75 };
+  const opt = { partidas: 2, dificultad: 4, velocidad: 4, etiqueta: "oha-vs-valve", dota: "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta", maxMin: 75 };
   for (let i = 0; i < argv.length; i += 2) {
     const [k, v] = [argv[i], argv[i + 1]];
     if (k === "--partidas") opt.partidas = Number(v);
     else if (k === "--dificultad") opt.dificultad = Number(v);
+    else if (k === "--velocidad") opt.velocidad = Number(v);
     else if (k === "--etiqueta") opt.etiqueta = v;
     else if (k === "--dota") opt.dota = v;
     else throw new Error(`Opción desconocida: ${k}`);
   }
   if (!Number.isInteger(opt.partidas) || opt.partidas < 1 || opt.partidas > 50) throw new Error("--partidas: 1 a 50");
   if (!Number.isInteger(opt.dificultad) || opt.dificultad < 0 || opt.dificultad > 4) throw new Error("--dificultad: 0 a 4");
+  if (!Number.isInteger(opt.velocidad) || opt.velocidad < 1 || opt.velocidad > 8) throw new Error("--velocidad: 1 a 8");
   if (!/^[\w.-]{1,40}$/.test(opt.etiqueta)) throw new Error("--etiqueta: letras, números, . _ -");
   return opt;
 }
@@ -118,6 +146,9 @@ async function main(argv) {
   const gsiFile = join(gsiDir, "gamestate_integration_dotabot.cfg");
   if (!existsSync(exe)) throw new Error(`No encuentro ${exe}; usa --dota`);
   if (!existsSync(gsiDir)) throw new Error(`No existe ${gsiDir}`);
+  if (!existsSync(resolve(opt.dota, "game/dota_addons/dotabench/addoninfo.txt"))) {
+    throw new Error("Falta el custom game dotabench en Dota: corre pwsh tools/instalar.ps1");
+  }
   if (!(await running("steam.exe"))) throw new Error("Steam no está abierto; ábrelo y vuelve a correr esto.");
   if (await running("dota2.exe")) throw new Error("Ya hay un Dota abierto; ciérralo primero (no lo toco).");
   if (existsSync(VALVE_TEAM_FILE)) {
@@ -156,6 +187,7 @@ async function main(argv) {
   const cleanup = () => {
     try { if (childAlive) child.kill(); } catch {}
     removeTeamFile();
+    try { if (existsSync(MATCH_FILE)) unlinkSync(MATCH_FILE); } catch {}
     try { if (existsSync(gsiFile)) unlinkSync(gsiFile); } catch {}
     try { server.close(); } catch {}
   };
@@ -176,11 +208,14 @@ async function main(argv) {
       if (await running("dota2.exe")) throw new Error("Hay un Dota abierto que no es mío; paro sin tocarlo.");
       const { dotabot, valveTeam } = sides(i);
       writeFileSync(VALVE_TEAM_FILE, `-- written by tools/bench/orquestador.mjs for one match; deleted once the bots load\nreturn ${valveTeam}\n`);
+      const heroes = drawHeroes();
+      writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad));
       latest = null;
       lastPost = 0;
-      console.log(`Partida ${i + 1}/${opt.partidas}: dota-bot en ${dotabot}, Valve en ${valveTeam === RADIANT ? "radiant" : "dire"}.`);
+      const short = heroes.map((h) => h.replace("npc_dota_hero_", "")).join(" ");
+      console.log(`Partida ${i + 1}/${opt.partidas}: dota-bot en ${dotabot}, Valve en ${valveTeam === RADIANT ? "radiant" : "dire"}; héroes ${short}.`);
       const started = Date.now();
-      child = spawn(exe, launchArgs(opt.dificultad), { cwd: dirname(exe), stdio: "ignore" });
+      child = spawn(exe, launchArgs(), { cwd: dirname(exe), stdio: "ignore" });
       childAlive = true;
       child.on("exit", () => { childAlive = false; });
       let launchError = null;
@@ -212,7 +247,7 @@ async function main(argv) {
         fecha: new Date().toISOString().slice(0, 16), etiqueta: opt.etiqueta, partida: i + 1, dificultad: opt.dificultad,
         dotabot, ganador: outcome === "final" ? s.winner : "", resultado: outcome,
         minutos: s.clock ? Math.round(s.clock / 60) : "", kills_radiant: s.radiantKills ?? "",
-        kills_dire: s.direKills ?? "", humano: s.human ?? "",
+        kills_dire: s.direKills ?? "", humano: s.human ?? "", heroes: short,
       };
       appendFileSync(CSV, csvRow(row) + "\n");
       results.push(row);
@@ -223,8 +258,6 @@ async function main(argv) {
     const decided = results.filter((r) => r.resultado === "final");
     const ours = decided.filter((r) => r.ganador === r.dotabot).length;
     console.log(`dota-bot ganó ${ours} de ${decided.length} partidas terminadas (de ${results.length}). Detalle en bench/partidas.csv.`);
-    const withHuman = decided.filter((r) => r.humano === "radiant" || r.humano === "dire").length;
-    if (withHuman) console.log(`Ojo: en ${withHuman} el humano ocupaba un lugar en un equipo (héroe quieto): esas partidas no son 5 contra 5.`);
   } finally {
     cleanup();
   }
