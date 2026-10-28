@@ -1,3 +1,10 @@
 fecha,etiqueta,partida,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano,heroes
 2026-10-28T20:04,prueba-orquestador,1,4,radiant,dire,final,79,84,26,radiant,elegidos por los bots (4 contra 5; no válida)
 2026-10-28T20:35,prueba-custom-game,1,4,radiant,radiant,final,43,52,23,radiant,chaos_knight lina tidehunter jakiro warlock
+2026-10-28T20:51,oha-vs-valve-unfair,1,4,radiant,radiant,final,39,57,26,radiant,phantom_assassin necrolyte dragon_knight bane dazzle
+2026-10-28T21:20,oha-vs-valve-unfair,2,4,dire,radiant,final,45,33,32,radiant,luna viper tidehunter vengefulspirit crystal_maiden
+2026-10-28T21:51,oha-vs-valve-unfair,3,4,radiant,radiant,final,48,57,29,radiant,luna necrolyte tidehunter skywrath_mage crystal_maiden
+2026-10-28T22:26,oha-vs-valve-unfair,4,4,dire,dire,final,53,28,31,radiant,skeleton_king zuus tidehunter vengefulspirit warlock
+2026-10-28T23:15,oha-vs-valve-unfair,5,4,radiant,dire,final,73,49,46,radiant,drow_ranger lina axe jakiro crystal_maiden
+2026-10-28T23:50,oha-vs-valve-unfair,6,4,dire,dire,final,53,28,55,radiant,phantom_assassin necrolyte dragon_knight vengefulspirit crystal_maiden
+2026-10-28T23:59,oha-vs-valve-unfair,7,4,radiant,,sin-gsi,,,,,chaos_knight viper tidehunter bane oracle
