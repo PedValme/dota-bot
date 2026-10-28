@@ -1,3 +1,4 @@
+if dofile(GetScriptDirectory()..'/FunLib/bench_side') then return end -- benchmark: Valve's bots play this team
 local Defend = require( GetScriptDirectory()..'/FunLib/aba_defend')
 
 local bot = GetBot()

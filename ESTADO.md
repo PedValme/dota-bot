@@ -2,23 +2,17 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- Se hizo: fork limpio (PR #1), instalación por junction y benchmark (PR #2). Después, pruebas en vivo lanzando
-  `dota2.exe` desde el agente (2026-10-28), medido en `console.log`:
-  - Funciona sin clics: `dota2.exe -console -condebug -novid -windowed +sv_cheats 1 +sv_lan 1 +dota_start_ai_game 1
-    +dota_force_gamemode 1 +dota_bot_set_difficulty 4 +map dota` carga el mapa, la selección de héroes vence sola,
-    entran 9 bots «*.OHA» y la partida empieza (unos 4 min). Radiant y Dire cargan los dos `vscripts/bots`.
-  - No funciona: lo que imprimen los bots (`print`) no llega a `console.log` (ni el «Picking hero» de OHA), así que
-    el registrador `[BENCH]` de PR #2 no deja nada; `-condebug` además reescribe el log en cada arranque. Los `+cmd`
-    después de `+map` corren antes de cargar (no hay `jointeam spec` ni `dota_bot_populate` tardíos); `host_timescale`
-    antes de `+map` no acelera; no hay `-netconport` (Dota no abre puertos); esta sesión no puede capturar pantalla
-    ni usar computer use. El humano queda en Radiant con héroe aleatorio quieto (partida desigual).
-  - 10 «Script Runtime Error: error in error handling» al empezar la partida, origen sin aislar (no es el pcall del
-    registrador: su diagnóstico `[BENCH-ERR]` no salió, aunque puede ser el mismo problema de `print`).
-- Siguiente acción: resultado por GSI (`map.win_team`, `game_state`; carpeta `cfg/gamestate_integration` ya existe)
-  con un servidor local en Node, en vez de `print`; luego resolver espectador y velocidad (probar `cfg/server.cfg` o
-  un custom game de las Workshop Tools con `SendToServerConsole`) y el guardia por equipo en Lua para que un lado use
-  los bots de Valve. Rama `claude/bench-auto` con el diagnóstico `[BENCH-ERR]`.
-- Espera a Pedro: si sigue la automatización (recomendado) o juega él las partidas a mano.
+- Se hizo (2026-10-28): orquestador `tools/bench/orquestador.mjs` + guardia por equipo `FunLib/bench_side` (rama
+  `claude/orquestador-gsi`). Medido en una partida real: lanza Dota sin clics, un equipo con 4 bots «*.OHA» y el otro
+  con 5 bots de Valve, GSI da el ganador, cierra su Dota y borra sus temporales. Resultado (no válido, 4 contra 5):
+  79 min, kills 84-26 a favor de dota-bot, y ganó Valve: OHA pelea pero no cierra partidas (hipótesis a confirmar).
+- Medido también: el `print` de los bots no llega a `console.log` (el registrador `[BENCH]` se quitó); los `+cmd`
+  tras `+map` corren antes de cargar; `host_timescale 4` sí acelera si se escribe ya en partida (Pedro); `jointeam
+  spectator` en partida no saca al héroe del humano, que ocupa un lugar en Radiant.
+- Siguiente acción: con las Workshop Tools (instalación pedida a Steam), un custom game local que deje al humano fuera
+  antes de elegir héroes, añada 10 bots y ponga `host_timescale 4`; primero comprobar que carga nuestros `bots/` y que
+  la guardia por equipo sigue funcionando. Luego las 10 partidas.
+- Espera a Pedro: nada, salvo que la instalación de Steam pida confirmación.
 
 ## Madurez
 Prototipo: es OHA 7.41/7.41a (127 héroes) con la limpieza de seguridad; sin cambios de juego propios.

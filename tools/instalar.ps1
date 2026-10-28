@@ -1,5 +1,5 @@
 # dota-bot: installs this repository's bots into Dota 2 as a junction (no admin rights, no copy to keep in sync):
-# <dota>\game\dota\scripts\vscripts\bots -> <repo>\bots, and copies tools\bench\bench.cfg to <dota>\game\dota\cfg.
+# <dota>\game\dota\scripts\vscripts\bots -> <repo>\bots.
 # The game then plays whatever branch is checked out here. Refuses to touch an existing bots folder it did not create.
 #   pwsh tools/instalar.ps1 [-Dota "<path to dota 2 beta>"]
 param([string]$Dota)
@@ -29,10 +29,6 @@ if (Test-Path $link) {
     New-Item -ItemType Junction -Path $link -Target $target | Out-Null
     Write-Output "bots installed: $link -> $target"
 }
-
-$cfg = Join-Path $Dota 'game\dota\cfg'
-Copy-Item (Join-Path $repo 'tools\bench\bench.cfg') (Join-Path $cfg 'bench.cfg') -Force
-Write-Output "bench.cfg copied to $cfg"
 
 $override = Join-Path $vscripts 'game\Customize'
 if (Test-Path $override) { Write-Warning "$override exists and overrides bots\Customize (OHA reads it first)." }

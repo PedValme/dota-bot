@@ -19,6 +19,7 @@ once it exists.
   source:
   - El bot no hace llamadas de red ni envía datos de jugadores; el check lo vigila (DECISIONES.md, 2026-10-28).
   - Lo que se trae de `upstream` se revisa como código de terceros antes de fusionarlo (DECISIONES.md, 2026-10-28).
+  - El orquestador del benchmark solo toca Steam y Dota y lo que el benchmark necesita (DECISIONES.md, 2026-10-28).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).
 
 ## Where things are: one document per question
@@ -43,11 +44,14 @@ Code and tests are what the system really does; when a document and the code dis
   de este clon, así que el juego usa la rama que esté activa aquí; luego Custom Lobby con servidor **Local Host** y
   **Local Dev Script** en los bots. En el PC de Pedro ya está instalado (2026-10-28). No se usan los instaladores de OHA
   (pedían administrador y enlazaban al Workshop del autor; se borraron).
-- Benchmark contra los bots de Valve: [bench/README.md](bench/README.md). `bots/FunLib/bench.lua` escribe líneas
-  `[BENCH]` en la consola (se apaga con `Customize.Bench = false`) y `node tools/bench/resumen.mjs` las resume.
-- Check: `npm --prefix tools/check ci && node tools/check/check.mjs && node --test tools/bench/resumen.test.mjs`:
+- Benchmark contra los bots de Valve: [bench/README.md](bench/README.md). `node tools/bench/orquestador.mjs` lanza y
+  cierra partidas locales de bots sin clics y lee el ganador por GSI. Sus límites (solo Steam y Dota, lo que el
+  benchmark necesita) están al inicio del archivo y son decisión de Pedro (DECISIONES.md, 2026-10-28). Cada archivo de
+  entrada de `bots/` empieza con la guardia `FunLib/bench_side`: sin `Customize/bench_valve_team.lua` (lo crea y borra
+  el orquestador) no hace nada; con él, ese equipo juega con los bots de Valve. Un archivo de entrada nuevo la lleva.
+- Check: `npm --prefix tools/check ci && node tools/check/check.mjs && node --test tools/bench/orquestador.test.mjs`:
   todos los `.lua` de `bots/` y `game/` parsean, ni el Lua ni sus fuentes TS mencionan las funciones HTTP de Valve ni
-  el ayudante heredado `http_req` (que sigue en disco y nadie carga), y el resumen del benchmark pasa sus pruebas.
+  el ayudante heredado `http_req` (que sigue en disco y nadie carga), y la lógica del orquestador pasa sus pruebas.
   Corre antes de cada commit. No prueba el comportamiento en el juego: eso se ve jugando.
 - Modo FretBots/Buff (bonos para los bots) necesita trampas activadas en el lobby (`sv_cheats 1`); su servidor remoto
   de chat está anulado en `bots/FretBots/Chat.lua`.
