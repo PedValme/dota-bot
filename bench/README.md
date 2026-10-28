@@ -26,6 +26,10 @@ node tools/bench/orquestador.mjs --partidas 10 --dificultad 4 --velocidad 4 --et
   `tools/bench/addon` en recursivo (podría borrar `bots/` a través del enlace); el enlace se quita con
   `cmd /c rmdir "tools\bench\addon\scripts\vscripts\bots"`.
 
+- Si una partida acaba en `sin-gsi`, mira `game/dota/console.log`: «No usable DX11 adapters» significa que Dota no
+  tuvo pantalla ni GPU (monitor apagado, sesión bloqueada o remota). Deja la pantalla encendida durante la serie.
+- Mide la máquina antes de una serie y anótalo con los resultados (regla del entorno): CPU, memoria libre y procesos.
+
 ## Cómo leerlo
 - 10 partidas solo distinguen diferencias grandes (por ejemplo 8 de 10); un 6 de 10 puede ser suerte.
 - Los héroes salen de los que los bots de Valve saben jugar (lista recordada, sin verificar aún contra

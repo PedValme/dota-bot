@@ -9,9 +9,14 @@
 - Medido: `print` de los bots no llega a `console.log`; los `+cmd` tras `+map` corren antes de cargar; el VScript de un
   custom game sí imprime y sí ejecuta comandos (`SendToServerConsole`); los errores del VM de bots salen como «error in
   error handling» (20 al añadir bots), sin aislar.
-- Siguiente acción: la serie de 10 partidas (`--partidas 10 --dificultad 4`) y leer el resultado; verificar la lista de
-  héroes contra `BotImplemented` de `npc_heroes.txt`.
-- Espera a Pedro: nada; la serie ocupa su PC unos 100 minutos.
+- Serie `oha-vs-valve-unfair` (2026-10-28, bench/partidas.csv): dota-bot gana 4 de 6 partidas válidas (2 de 3 en
+  cada lado); victorias de 39-53 min, derrotas de 45 y 73 min. La 7 quedó `sin-gsi`: Dota no encontró GPU («No usable
+  DX11 adapters», rasterizador por software) y se colgó al arrancar, probablemente pantalla apagada o sesión
+  bloqueada; el orquestador paró y limpió. Máquina medida durante la serie (no antes, como pide la regla): CPU 8 %,
+  57 % de memoria libre, 24 núcleos. El ×4 rinde menos: unos 30 min reales por partida.
+- Siguiente acción: completar la serie (4 partidas más, `--partidas 4`, con la pantalla del PC encendida) y leer el
+  total; verificar la lista de héroes contra `BotImplemented` de `npc_heroes.txt`.
+- Espera a Pedro: cuándo puede dejar el PC con la pantalla activa unas 2 horas.
 
 ## Madurez
 Prototipo: es OHA 7.41/7.41a (127 héroes) con la limpieza de seguridad; sin cambios de juego propios.
