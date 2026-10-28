@@ -1,3 +1,4 @@
+if dofile(GetScriptDirectory()..'/FunLib/bench_side') then return end -- benchmark: Valve's bots play this team
 --==============================================================================
 --  DRAFTER — with per-team weak-hero cap + configurable
 --  penalty curve, matchup-aware selection, and strict ban/repeat policy.

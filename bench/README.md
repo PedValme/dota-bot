@@ -1,38 +1,26 @@
 # Benchmark: ¿juega mejor dota-bot que los bots de Valve?
 
-> **No funciona todavía (2026-10-28):** lo que imprimen los bots no llega a `console.log`, así que el registrador
-> `[BENCH]` no deja resultados. Se reemplaza por GSI; detalle en ESTADO.md, «Próxima sesión».
+Partidas locales de bots contra bots, sin clics: dota-bot en un equipo y los bots de Valve en el otro, en la misma
+dificultad, cambiando de lado en cada partida. El ganador lo dice el propio Dota por Game State Integration (GSI).
 
-Partidas de bots contra bots en tu PC, sin ventajas (FretBots apagado, que es lo normal si no lo activas a mano). Un
-equipo usa dota-bot y el otro los bots de Valve, los dos en la misma dificultad. Los bots de dota-bot escriben el
-estado de la partida en la consola (`bots/FunLib/bench.lua`) y `tools/bench/resumen.mjs` lo convierte en una tabla.
+```
+node tools/bench/orquestador.mjs --partidas 10 --dificultad 4 --etiqueta oha-vs-valve-unfair
+```
 
-## Una vez
-- Instalación: `pwsh tools/instalar.ps1` (ya hecha el 2026-10-28). Enlaza `bots/` dentro de Dota y copia `bench.cfg`.
-  Es un enlace, no una copia: si algún día Dota o «verificar archivos» borrara `vscripts/bots`, podría borrar el
-  contenido del clon; lo que esté en git se recupera, lo no guardado no.
-- Abre Dota siempre con [Dota-benchmark.url](../tools/bench/Dota-benchmark.url) (doble clic): arranca con
-  `-console -condebug`, que guarda la consola en `game/dota/console.log`. Steam pide confirmar las opciones.
+- Requisitos: Steam abierto, ningún Dota abierto, `bots/` instalado (`pwsh tools/instalar.ps1`, ya hecho).
+- Qué hace y qué no toca: los límites están al inicio de [orquestador.mjs](../tools/bench/orquestador.mjs). Solo
+  lanza y cierra su propio `dota2.exe`, escucha en `127.0.0.1`, y sus dos archivos temporales (la config de GSI y
+  `bots/Customize/bench_valve_team.lua`) se borran al terminar o al interrumpirlo con Ctrl+C.
+- Resultados: una fila por partida en `partidas.csv` (ganador, minutos, kills, en qué equipo quedó el humano).
+- Dificultad: 0 pasiva … 4 injusta.
 
-## Cada partida
-1. Jugar → Crear lobby personalizado. Ubicación del servidor: **Local Host**. Modo: All Pick. Marca **Enable Cheats**.
-2. Bots: un equipo con **Local Dev Script** (dota-bot) y el otro con los **bots por defecto de Valve**, los dos en
-   **Unfair**. Tú, en espectador o sin asignar, y que los bots llenen los huecos.
-3. Cuando empiece, abre la consola y escribe `exec bench` (acelera ×4; si va a tirones, `host_timescale 2`).
-4. Déjala terminar. En la siguiente, cambia de lado (dota-bot en el otro equipo), porque el lado del mapa influye.
+- Si el orquestador se cierra a la fuerza (Administrador de tareas), su Dota queda abierto y, en los primeros minutos
+  de una partida, puede quedar `bots/Customize/bench_valve_team.lua`: mientras exista, un equipo juega con los bots de
+  Valve en cualquier partida local. La siguiente corrida lo borra; también se puede borrar a mano.
 
-## Resultados
-`node tools/bench/resumen.mjs` muestra las partidas del `console.log`; con `--guardar <etiqueta>` (por ejemplo
-`--guardar oha-vs-valve-unfair`) las añade a [resultados.csv](resultados.csv) sin repetir las ya guardadas. Guarda
-cuando las partidas hayan terminado: una partida guardada a medias no se actualiza después. Si Dota no está en
-`C:\Program Files (x86)\Steam`, pasa la ruta del log: `node tools/bench/resumen.mjs "<dota 2 beta>\game\dota\console.log"`.
-
-Columna `how`: «final», se vio el fin de la partida; «inferido», un Ancient aparece destruido; «probable», la última
-línea tiene un Ancient casi muerto (menos de 1500) y el otro sano (3000 o más); «?», no se sabe. El resumen cuenta
-«probable» como decidida; si dudas, míralo en la tabla.
-
-## Cómo leerlo
+## Límites conocidos (2026-10-28)
+- Tu usuario entra como jugador de Radiant con un héroe quieto (medido; `jointeam spectator` en partida no lo saca):
+  esas partidas son 4 contra 5. El orquestador lo marca en la columna `humano` y en el resumen. Se resuelve con un
+  custom game de las Workshop Tools (en curso).
+- Sin acelerar: `host_timescale 4` solo funciona escrito ya en partida; a velocidad normal una partida dura 30-80 min.
 - 10 partidas solo distinguen diferencias grandes (por ejemplo 8 de 10); un 6 de 10 puede ser suerte.
-- Los héroes los elige cada script, así que cada partida es distinta: mira también las columnas de héroes.
-- Por verificar en la primera partida: los nombres exactos de las opciones del lobby, que cada equipo acepte un script
-  distinto y que aparezcan líneas `[BENCH]` en `console.log`.

@@ -1,3 +1,4 @@
+if dofile(GetScriptDirectory()..'/FunLib/bench_side') then return end -- benchmark: Valve's bots play this team
 local X = {}
 local bot = GetBot()
 local botName = bot:GetUnitName()
@@ -12,7 +13,6 @@ local Utils = require( GetScriptDirectory()..'/FunLib/utils' )
 local BotBuild = dofile( GetScriptDirectory().."/BotLib/"..string.gsub( botName, "npc_dota_", "" ) )
 local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
 local Customize = require(GetScriptDirectory()..'/Customize/general')
-local Bench = require(GetScriptDirectory()..'/FunLib/bench')
 Customize.ThinkLess = Customize.Enable and Customize.ThinkLess or 1
 if GAMEMODE_TURBO == nil then GAMEMODE_TURBO = 23 end
 if GAMEMODE_ARDM == nil then GAMEMODE_ARDM = 20 end
@@ -8395,12 +8395,6 @@ end
 function BuybackUsageThink()
 	if RefreshBotHandle() then return end
 	if bot.lastBuybackFrameProcessTime == nil then bot.lastBuybackFrameProcessTime = DotaTime() end
-	-- Before the throttle: it keeps its own real-time clock. An error must never stop the bot; the first one is logged.
-	local benchOk, benchErr = pcall(Bench.Tick, bot)
-	if not benchOk and not bot.benchErrorShown then
-		bot.benchErrorShown = true
-		print('[BENCH-ERR] '..tostring(benchErr))
-	end
 	if DotaTime() > 30 and (DotaTime() - bot.lastBuybackFrameProcessTime < 2) then return end
 	bot.lastBuybackFrameProcessTime = DotaTime()
 	if not bot:IsIllusion() then BuybackUsageComplement() end

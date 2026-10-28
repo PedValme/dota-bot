@@ -23,8 +23,11 @@ function filesUnder(dir, extensions) {
   });
 }
 
+const entryFile = /^bots\/(bot_generic|hero_selection|team_desires|ability_item_usage_\w+|item_purchase_\w+|mode_\w+_generic)\.lua$/;
+const guard = "if dofile(GetScriptDirectory()..'/FunLib/bench_side') then return end";
+
 const errors = [];
-const lua = ["bots", "game"].flatMap((d) => filesUnder(join(root, d), [".lua"]));
+const lua =["bots", "game"].flatMap((d) => filesUnder(join(root, d), [".lua"]));
 // Type declarations (.d.ts) only describe Valve's API; they never run.
 const ts = filesUnder(join(root, "typescript"), [".ts"]).filter((f) => !f.endsWith(".d.ts"));
 for (const file of [...lua, ...ts]) {
@@ -38,6 +41,9 @@ for (const file of [...lua, ...ts]) {
       errors.push(`${rel}: syntax: ${e.message}`);
     }
   }
+  // Every file Valve loads as a bot entry point must start with the benchmark guard (bots/FunLib/bench_side.lua),
+  // or that file would keep running our code for the team that should play with Valve's bots.
+  if (entryFile.test(rel) && !source.startsWith(guard)) errors.push(`${rel}:1: missing the bench_side guard`);
   if (httpHelper.has(rel)) continue;
   source.split(/\r?\n/).forEach((line, i) => {
     if (network.test(line)) errors.push(`${rel}:${i + 1}: network code`);

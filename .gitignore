@@ -66,3 +66,4 @@ dist
 
 # user's personal customized settings
 game/Customize
+bots/Customize/bench_valve_team.lua
