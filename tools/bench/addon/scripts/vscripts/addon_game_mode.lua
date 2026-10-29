@@ -78,11 +78,28 @@ local function PrintRoster()
 		for i = 1, PlayerResource:GetPlayerCountForTeam(team) do
 			local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
 			if pid >= 0 then
-				print(string.format("[dotabench] roster team=%d pid=%d bot=%d hero=%s", team, pid,
-					PlayerResource:IsFakeClient(pid) and 1 or 0, PlayerResource:GetSelectedHeroName(pid)))
+				print(string.format("[dotabench] roster team=%d pid=%d bot=%d hero=%s name=%s", team, pid,
+					PlayerResource:IsFakeClient(pid) and 1 or 0, PlayerResource:GetSelectedHeroName(pid),
+					tostring(PlayerResource:GetPlayerName(pid))))
 			end
 		end
 	end
+end
+
+-- The A/B variant file the orchestrator left for dota-bot this match (bots/Customize/bench_variant.lua, the same
+-- file the bots read), so the orchestrator can check the match played the variant it was meant to.
+local function PrintVariant()
+	local ok, variant = pcall(require, "bots.Customize.bench_variant")
+	if not ok or type(variant) ~= "table" then
+		print("[dotabench] variant none")
+		return
+	end
+	local fields = {}
+	for k, v in pairs(variant) do
+		if k ~= "name" then table.insert(fields, tostring(k) .. "=" .. tostring(v)) end
+	end
+	table.sort(fields)
+	print("[dotabench] variant name=" .. tostring(variant.name) .. " " .. table.concat(fields, " "))
 end
 
 local function OnStateChange()
@@ -94,6 +111,7 @@ local function OnStateChange()
 	elseif state == DOTA_GAMERULES_STATE_PRE_GAME then
 		AddBots(cfg)
 		PrintRoster()
+		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
 		SendToServerConsole("host_timescale " .. tostring(cfg.timescale or 1))
 	end

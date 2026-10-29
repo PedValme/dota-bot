@@ -67,6 +67,7 @@ dist
 # user's personal customized settings
 game/Customize
 bots/Customize/bench_valve_team.lua
+bots/Customize/bench_variant.lua
 # dota-bot benchmark: per-match file and the junction to bots/ that tools/instalar.ps1 creates
 tools/bench/addon/scripts/vscripts/bench_partida.lua
 tools/bench/addon/scripts/vscripts/bots

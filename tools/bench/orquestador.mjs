@@ -1,28 +1,36 @@
 // dota-bot benchmark orchestrator: plays N local bot-vs-bot matches, dota-bot on one side and Valve's own bots on the
-// other (sides alternate), both teams with the same five heroes drawn per match, and records each winner from Dota's
-// Game State Integration (GSI). The match runs in the local custom game tools/bench/addon ("dotabench"), which keeps
-// the human out of the teams, adds the bots and speeds the match up.
+// other (sides alternate), five heroes drawn per match and asked for both teams (Valve's bots pick their own), and
+// records each winner from Dota's Game State Integration (GSI). The match runs in the local custom game
+// tools/bench/addon ("dotabench"), which keeps the human out of the teams, adds the bots and speeds the match up.
 //   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--velocidad 4] [--etiqueta texto]
-//                                    [--dota "<dota 2 beta>"] [--muestra-gsi <file>]
+//                                    [--variantes base,empuje] [--dota "<dota 2 beta>"] [--muestra-gsi <file>]
+// --variantes interleaves versions of dota-bot (VARIANTS) in one series: per block of heroes, every variant plays
+// both sides, and the order flips every block, so heroes, side, Dota's version and the PC's load hit every variant
+// alike. Each match is a row of bench/series.csv; "valida" says whether it can be counted.
 //
 // Limits, on purpose (Pedro, 2026-10-28: «solamente y acotado a steam y dota y lo que queremos»):
 // - Starts only <dota>/game/bin/win64/dota2.exe with fixed arguments, and only stops the dota2.exe it started.
 // - Does not start Steam (it must already be running) and refuses to run if any dota2.exe is already open.
 // - Listens only on 127.0.0.1 and only accepts GSI posts carrying its own token.
 // - Writes only: the GSI config in <dota>/game/dota/cfg/gamestate_integration/, bots/Customize/bench_valve_team.lua
-//   (which team plays with Valve's bots), tools/bench/addon/scripts/vscripts/bench_partida.lua (heroes, difficulty,
-//   speed; deleted at the end too), bench/partidas.csv and bench/lineas/ (per-match timelines, read from its own
+//   (which team plays with Valve's bots), bots/Customize/bench_variant.lua (with --variantes: the variant dota-bot
+//   plays; deleted when each match ends), tools/bench/addon/scripts/vscripts/bench_partida.lua (heroes, difficulty,
+//   speed; deleted at the end too), bench/series.csv and bench/lineas/ (per-match timelines, read from its own
 //   Dota's <dota>/game/dota/console.log), and, only with --muestra-gsi <file> (debugging), the last raw GSI post in
-//   that file. The team file lives only from launch until the
+//   that file. It reads <dota>/game/dota/steam.inf (Dota's version) and the PC's CPU and memory through Node's os
+//   module. The team file lives only from launch until the
 //   horn (scripts load before it); both temporary files are deleted when it ends, also on Ctrl+C, closing the window
 //   or an error. A hard kill of this script (Task Manager) leaves its Dota open and the GSI config in place
 //   (harmless), and bench_partida.lua (only dotabench reads it; the next match overwrites it); during a match's first
 //   minutes it could also leave the team file, which makes that team play with
 //   Valve's bots in any local game until the next run deletes it (or delete bots/Customize/bench_valve_team.lua).
+//   With --variantes it can also leave bots/Customize/bench_variant.lua at any point of a match: until the next run
+//   deletes it (or you do), dota-bot plays that variant in any local game.
 import { spawn, execFile } from "node:child_process";
 import { createServer } from "node:http";
 import { existsSync, writeFileSync, unlinkSync, appendFileSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 
 export const TOKEN = "dota-bot-bench"; // not a secret: only tells our GSI posts apart · fabrica:permitido
@@ -31,10 +39,71 @@ const RADIANT = 2;
 const DIRE = 3;
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const VALVE_TEAM_FILE = join(root, "bots", "Customize", "bench_valve_team.lua");
+const VARIANT_FILE = join(root, "bots", "Customize", "bench_variant.lua");
 const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", "bench_partida.lua");
-const CSV = join(root, "bench", "partidas.csv");
-const COLUMNS = ["fecha", "etiqueta", "partida", "dificultad", "dotabot", "ganador", "resultado", "minutos",
-  "kills_radiant", "kills_dire", "humano", "heroes", "ventaja_oro_max", "minuto_10k", "torres_fin"];
+// bench/partidas.csv holds the runs before 2026-10-29 (they cannot prove the human stayed out); new runs go here.
+const CSV = join(root, "bench", "series.csv");
+const COLUMNS = ["fecha", "etiqueta", "partida", "bloque", "variante", "valida", "motivo", "dificultad", "dotabot",
+  "ganador", "resultado", "minutos", "kills_radiant", "kills_dire", "humano", "heroes", "ventaja_oro_max",
+  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre"];
+
+// Versions of dota-bot a series can interleave (FunLib/bench_variant.lua reads them in the bots' VM).
+export const VARIANTS = {
+  base: { empuje: false, thinkless: 1 }, // before PR #11: push caps not relaxed with a 10k lead
+  empuje: { empuje: true, thinkless: 1 }, // PR #11
+  thinkless0: { empuje: true, thinkless: 0 }, // PR #11 and bots think every frame
+};
+
+export function variantLua(name) {
+  const fields = Object.entries(VARIANTS[name]).map(([k, v]) => `${k} = ${v}`).join(", ");
+  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { name = "${name}", ${fields} }\n`;
+}
+
+// Match i (0-based) of a series with these variants: block of 2 x variants matches sharing one hero draw, where every
+// variant plays once on each side; the side that starts and the variant order flip every block.
+export function schedule(i, variants) {
+  const n = Math.max(variants.length, 1);
+  const block = Math.floor(i / (2 * n));
+  const pos = i % (2 * n);
+  const even = block % 2 === 0;
+  const order = even ? variants : [...variants].reverse();
+  const first = even ? "radiant" : "dire";
+  const dotabot = pos < n ? first : first === "radiant" ? "dire" : "radiant";
+  return { block, dotabot, valveTeam: dotabot === "radiant" ? DIRE : RADIANT, variant: order[pos % n] ?? "" };
+}
+
+// Whether a match can be counted, and why not. With a variant, the bots themselves must have announced it in chat
+// (mode_farm_generic.lua) with the expected settings: the server finding the file does not prove the bots read it.
+export function validity({ outcome, roster, variant, loggedVariant, botVariant, version, firstVersion }) {
+  if (outcome !== "final") return "sin final";
+  if (roster.radiant !== 5 || roster.dire !== 5) return `reparto ${roster.radiant ?? 0}-${roster.dire ?? 0}`;
+  if (roster.humano !== "fuera" && roster.humano !== "heroe-quitado") return `humano ${roster.humano || "?"}`;
+  if (loggedVariant === null || loggedVariant === undefined) return "variante sin registro en el log";
+  if ((variant || "") !== loggedVariant) return `variante ${loggedVariant || "ninguna"} en el log`;
+  if (variant) {
+    const want = VARIANTS[variant];
+    if (!botVariant) return "los bots no anunciaron la variante";
+    if (botVariant.name !== variant || botVariant.empuje !== String(want.empuje) || botVariant.thinkless !== String(want.thinkless)) {
+      return `los bots cargaron ${botVariant.name} empuje=${botVariant.empuje} thinkless=${botVariant.thinkless}`;
+    }
+  }
+  if (version !== firstVersion) return `Dota cambió de versión (${firstVersion} -> ${version})`;
+  return "";
+}
+
+// Per variant: wins over the valid matches of complete blocks only (a block counts when all its matches are valid),
+// so a lost match cannot unbalance heroes or sides between variants.
+export function summarize(results, variants) {
+  const size = 2 * Math.max(variants.length, 1);
+  const byBlock = new Map();
+  for (const r of results) byBlock.set(r.bloque, [...(byBlock.get(r.bloque) ?? []), r]);
+  const complete = [...byBlock.values()].filter((b) => b.length === size && b.every((r) => r.valida === "si")).flat();
+  return (variants.length ? variants : [""]).map((v) => {
+    const rows = complete.filter((r) => r.variante === v);
+    return { variante: v, ganadas: rows.filter((r) => r.ganador === r.dotabot).length, validas: rows.length,
+      jugadas: results.filter((r) => r.variante === v).length };
+  });
+}
 const TIMELINES = join(root, "bench", "lineas");
 const DIFFICULTIES = ["passive", "easy", "medium", "hard", "unfair"];
 
@@ -57,11 +126,6 @@ export function drawHeroes(random = Math.random) {
 export function matchConfigLua(heroes, difficulty, timescale) {
   const list = heroes.map((h) => `"${h}"`).join(", ");
   return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, heroes = { ${list} } }\n`;
-}
-
-// Match i (0-based) puts dota-bot on Radiant when i is even, on Dire when odd; Valve plays the other side.
-export function sides(i) {
-  return i % 2 === 0 ? { dotabot: "radiant", valveTeam: DIRE } : { dotabot: "dire", valveTeam: RADIANT };
 }
 
 export function launchArgs() {
@@ -151,11 +215,31 @@ export function parseRoster(text) {
     if (m[2] === "0") humanInTeam = true;
     teams[m[1]]?.push(m[3].replace("npc_dota_hero_", ""));
   }
-  if (!teams[2].length && !teams[3].length) return { humano: "", heroes: "" };
+  if (!teams[2].length && !teams[3].length) return { humano: "", heroes: "", radiant: 0, dire: 0 };
   return {
     humano: humanInTeam ? "en-equipo" : removed ? "heroe-quitado" : "fuera",
     heroes: `${teams[2].join(" ")} / ${teams[3].join(" ")}`,
+    radiant: teams[2].length,
+    dire: teams[3].length,
   };
+}
+
+// The variant the bots announced in chat; their chat reaches console.log ("[dotabench-bot] variant=base empuje=false
+// thinkless=1"), their print does not.
+export function parseBotVariant(text) {
+  const m = text.match(/\[dotabench-bot\] variant=(\S+) empuje=(\S+) thinkless=([^\s']+)/);
+  return m ? { name: m[1], empuje: m[2], thinkless: m[3] } : null;
+}
+
+// The variant file the custom game found at the start ("[dotabench] variant name=base ..." or "variant none").
+export function parseVariant(text) {
+  const m = text.match(/\[dotabench\] variant (?:name=(\S+)|none)/);
+  return m ? m[1] ?? "" : null;
+}
+
+// Dota's build, from <dota>/game/dota/steam.inf.
+export function parseVersion(inf) {
+  return inf.match(/ClientVersion=(\d+)/)?.[1] ?? "";
 }
 
 export function timelineCsv(rows) {
@@ -179,6 +263,7 @@ function parseArgs(argv) {
     else if (k === "--dificultad") opt.dificultad = Number(v);
     else if (k === "--velocidad") opt.velocidad = Number(v);
     else if (k === "--etiqueta") opt.etiqueta = v;
+    else if (k === "--variantes") opt.variantes = String(v).split(",");
     else if (k === "--dota") opt.dota = v;
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else throw new Error(`Opción desconocida: ${k}`);
@@ -187,7 +272,27 @@ function parseArgs(argv) {
   if (!Number.isInteger(opt.dificultad) || opt.dificultad < 0 || opt.dificultad > 4) throw new Error("--dificultad: 0 a 4");
   if (!Number.isInteger(opt.velocidad) || opt.velocidad < 1 || opt.velocidad > 8) throw new Error("--velocidad: 1 a 8");
   if (!/^[\w.-]{1,40}$/.test(opt.etiqueta)) throw new Error("--etiqueta: letras, números, . _ -");
+  opt.variantes ??= [];
+  for (const v of opt.variantes) if (!Object.hasOwn(VARIANTS, v)) throw new Error(`--variantes: ${Object.keys(VARIANTS).join(", ")}`);
+  if (new Set(opt.variantes).size !== opt.variantes.length) throw new Error("--variantes: sin repetir");
+  const block = 2 * Math.max(opt.variantes.length, 1);
+  if (opt.variantes.length && opt.partidas % block !== 0) throw new Error(`--partidas: múltiplo de ${block} con esas variantes`);
   return opt;
+}
+
+// Whole-machine CPU use (all processes, Dota included) since the previous sample, from Node's os module.
+function cpuSampler() {
+  const total = () => os.cpus().reduce((a, c) => {
+    const t = c.times;
+    return { busy: a.busy + t.user + t.nice + t.sys + t.irq, all: a.all + t.user + t.nice + t.sys + t.irq + t.idle };
+  }, { busy: 0, all: 0 });
+  let prev = total();
+  return () => {
+    const now = total();
+    const pct = now.all > prev.all ? (100 * (now.busy - prev.busy)) / (now.all - prev.all) : 0;
+    prev = now;
+    return pct;
+  };
 }
 
 function running(image) {
@@ -211,11 +316,16 @@ async function main(argv) {
   }
   if (!(await running("steam.exe"))) throw new Error("Steam no está abierto; ábrelo y vuelve a correr esto.");
   if (await running("dota2.exe")) throw new Error("Ya hay un Dota abierto; ciérralo primero (no lo toco).");
-  if (existsSync(VALVE_TEAM_FILE)) {
-    // Only this script writes it: a leftover means an earlier run was killed hard.
-    unlinkSync(VALVE_TEAM_FILE);
-    console.log("Aviso: quedaba bench_valve_team.lua de una corrida interrumpida; lo borré.");
+  for (const f of [VALVE_TEAM_FILE, VARIANT_FILE]) {
+    if (!existsSync(f)) continue;
+    // Only this script writes them: a leftover means an earlier run was killed hard.
+    unlinkSync(f);
+    console.log(`Aviso: quedaba ${f} de una corrida interrumpida; lo borré.`);
   }
+  const steamInf = resolve(opt.dota, "game/dota/steam.inf");
+  const dotaVersion = () => { try { return parseVersion(readFileSync(steamInf, "utf8")); } catch { return ""; } };
+  const firstVersion = dotaVersion();
+  if (!firstVersion) throw new Error(`No leo la versión de Dota en ${steamInf}; sin ella no puedo validar la serie.`);
 
   let latest = null;
   let lastPost = 0;
@@ -245,10 +355,14 @@ async function main(argv) {
   const removeTeamFile = () => {
     try { if (existsSync(VALVE_TEAM_FILE)) unlinkSync(VALVE_TEAM_FILE); } catch {}
   };
+  const removeVariantFile = () => {
+    try { if (existsSync(VARIANT_FILE)) unlinkSync(VARIANT_FILE); } catch {}
+  };
   // Synchronous on purpose: it also runs from process.on('exit'), after an uncaught error or process.exit().
   const cleanup = () => {
     try { if (childAlive) child.kill(); } catch {}
     removeTeamFile();
+    removeVariantFile();
     try { if (existsSync(MATCH_FILE)) unlinkSync(MATCH_FILE); } catch {}
     try { if (existsSync(gsiFile)) unlinkSync(gsiFile); } catch {}
     try { server.close(); } catch {}
@@ -266,16 +380,22 @@ async function main(argv) {
     mkdirSync(dirname(CSV), { recursive: true });
     if (!existsSync(CSV)) appendFileSync(CSV, COLUMNS.join(",") + "\n");
     const results = [];
+    let heroes = [];
     for (let i = 0; i < opt.partidas; i++) {
       if (await running("dota2.exe")) throw new Error("Hay un Dota abierto que no es mío; paro sin tocarlo.");
-      const { dotabot, valveTeam } = sides(i);
+      const { block, dotabot, valveTeam, variant } = schedule(i, opt.variantes);
       writeFileSync(VALVE_TEAM_FILE, `-- written by tools/bench/orquestador.mjs for one match; deleted once the bots load\nreturn ${valveTeam}\n`);
-      const heroes = drawHeroes();
+      removeVariantFile();
+      if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
+      if (i % (2 * Math.max(opt.variantes.length, 1)) === 0) heroes = drawHeroes();
       writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad));
       latest = null;
       lastPost = 0;
       const short = heroes.map((h) => h.replace("npc_dota_hero_", "")).join(" ");
-      console.log(`Partida ${i + 1}/${opt.partidas}: dota-bot en ${dotabot}, Valve en ${valveTeam === RADIANT ? "radiant" : "dire"}; héroes ${short}.`);
+      console.log(`Partida ${i + 1}/${opt.partidas}${variant ? ` (variante ${variant})` : ""}: dota-bot en ${dotabot}, Valve en ${valveTeam === RADIANT ? "radiant" : "dire"}; héroes ${short}.`);
+      const cpu = cpuSampler();
+      const cpuSamples = [];
+      let nextSample = Date.now() + 30_000;
       const started = Date.now();
       child = spawn(exe, launchArgs(), { cwd: dirname(exe), stdio: "ignore" });
       childAlive = true;
@@ -285,6 +405,7 @@ async function main(argv) {
       let outcome = "timeout";
       while (Date.now() - started < opt.maxMin * 60_000) {
         await sleep(2000);
+        if (Date.now() >= nextSample) { cpuSamples.push(cpu()); nextSample += 30_000; }
         if (launchError) throw new Error(`No pude lanzar Dota: ${launchError.message}`);
         if (!childAlive) { outcome = "dota-cerrado"; break; }
         if (!lastPost && Date.now() - started > 8 * 60_000) { outcome = "sin-gsi"; break; }
@@ -294,6 +415,8 @@ async function main(argv) {
         if (isFinished(latest)) { outcome = "final"; break; }
       }
       removeTeamFile();
+      removeVariantFile();
+      const memFree = Math.round((100 * os.freemem()) / os.totalmem());
       if (childAlive) {
         await sleep(3000);
         child.kill();
@@ -307,36 +430,47 @@ async function main(argv) {
       // The custom game's per-minute timeline, from this launch's console.log (-condebug rewrites it each launch).
       const fecha = new Date().toISOString().slice(0, 16);
       let timeline = [];
-      let roster = { humano: "", heroes: "" };
+      let roster = { humano: "", heroes: "", radiant: 0, dire: 0 };
+      let loggedVariant = null;
+      let botVariant = null;
       try {
         // A log older than this launch belongs to another match (Dota failed before rewriting it).
         if (statSync(consoleLog).mtimeMs >= started) {
           const log = readFileSync(consoleLog, "utf8");
           timeline = parseTimeline(log);
           roster = parseRoster(log);
+          loggedVariant = parseVariant(log);
+          botVariant = parseBotVariant(log);
         }
       } catch {}
+      const version = dotaVersion();
+      const motivo = validity({ outcome, roster, variant, loggedVariant, botVariant, version, firstVersion });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));
       }
       const s = latest ?? {};
       const row = {
-        fecha, etiqueta: opt.etiqueta, partida: i + 1, dificultad: opt.dificultad,
+        fecha, etiqueta: opt.etiqueta, partida: i + 1, bloque: block + 1, variante: variant,
+        valida: motivo ? "no" : "si", motivo, dificultad: opt.dificultad,
         dotabot, ganador: outcome === "final" ? s.winner : "", resultado: outcome,
         minutos: s.clock ? Math.round(s.clock / 60) : "", kills_radiant: s.radiantKills ?? "",
         kills_dire: s.direKills ?? "", humano: roster.humano, heroes: roster.heroes || short,
         ...summarizeTimeline(timeline, dotabot),
+        dota_version: version,
+        cpu_media: cpuSamples.length ? Math.round(cpuSamples.reduce((a, b) => a + b, 0) / cpuSamples.length) : "",
+        cpu_max: cpuSamples.length ? Math.round(Math.max(...cpuSamples)) : "",
+        mem_libre: memFree,
       };
       appendFileSync(CSV, csvRow(row) + "\n");
       results.push(row);
-      console.log(`  ${outcome}${row.ganador ? `: gana ${row.ganador} (${row.ganador === dotabot ? "dota-bot" : "Valve"})` : ""}`);
+      console.log(`  ${outcome}${row.ganador ? `: gana ${row.ganador} (${row.ganador === dotabot ? "dota-bot" : "Valve"})` : ""}${motivo ? ` · NO VÁLIDA: ${motivo}` : ""}`);
       if (outcome === "sin-gsi") { console.log("Dota no envió datos por GSI; paro."); break; }
       await sleep(8000);
     }
-    const decided = results.filter((r) => r.resultado === "final");
-    const ours = decided.filter((r) => r.ganador === r.dotabot).length;
-    console.log(`dota-bot ganó ${ours} de ${decided.length} partidas terminadas (de ${results.length}). Detalle en bench/partidas.csv.`);
+    for (const s of summarize(results, opt.variantes)) {
+      console.log(`${s.variante ? `Variante ${s.variante}: ` : ""}dota-bot ganó ${s.ganadas} de ${s.validas} partidas válidas de bloques completos (jugó ${s.jugadas}). Detalle en bench/series.csv.`);
+    }
   } finally {
     cleanup();
   }

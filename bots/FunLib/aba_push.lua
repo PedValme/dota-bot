@@ -23,7 +23,7 @@ local function __TS__StringIncludes(self, searchString, position)
 end
 -- End of Lua Library inline imports
 local ____exports = {}
-local updateGameStateCache, updateLocationStateCache, updateUnitStateCache, presence_adjust, pingTimeDelta, StartToPushTime, BOT_MODE_DESIRE_EXTRA_LOW, hEnemyAncient, PUSH_CACHE_TTL, gameStateCache, locationStateCache, unitStateCache, BASE_ANC_RADIUS
+local Customize, updateGameStateCache, updateLocationStateCache, updateUnitStateCache, presence_adjust, pingTimeDelta, StartToPushTime, BOT_MODE_DESIRE_EXTRA_LOW, hEnemyAncient, PUSH_CACHE_TTL, gameStateCache, locationStateCache, unitStateCache, BASE_ANC_RADIUS
 local jmz = require(GetScriptDirectory().."/FunLib/jmz_func")
 local ____dota = require(GetScriptDirectory().."/ts_libs/dota/index")
 local Barracks = ____dota.Barracks
@@ -161,7 +161,7 @@ function ____exports.GetPushDesireHelper(bot, lane)
     if gameState.aliveAllyCount <= gameState.aliveEnemyCount - 2 then
         return BotModeDesire.None
     end
-    local bigLead = gameState.teamNetworth - gameState.enemyNetworth >= 10000
+    local bigLead = Customize.BenchVariant.empuje ~= false and gameState.teamNetworth - gameState.enemyNetworth >= 10000
     local enemyFountain = gameState.team == Team.Radiant and DireFountainTpPoint or RadiantFountainTpPoint
     local laneFront = GetLaneFrontLocation(gameState.team, lane, 0)
     if GetLocationToLocationDistance(laneFront, enemyFountain) < 5000 then
@@ -547,7 +547,7 @@ function ____exports.IsAnyTargetBackdooredAt(_bot, lane)
     end
     return not not (nearest and ____exports.HasBackdoorProtect(nearest))
 end
-local Customize = require(GetScriptDirectory().."/Customize/general")
+Customize = require(GetScriptDirectory().."/Customize/general")
 local ____Customize_1 = Customize
 local ____Customize_Enable_0
 if Customize.Enable then
