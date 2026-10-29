@@ -15,6 +15,10 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --va
   Dota y carga del PC caen igual sobre todas. `--partidas` debe ser múltiplo de 2 × variantes. El orquestador escribe
   `bots/Customize/bench_variant.lua` en cada partida (lo leen los bots con `FunLib/bench_variant.lua`) y lo borra al
   terminar; sin ese archivo el bot juega su código actual.
+- Que los bots aplican la variante se comprobó en el juego el 2026-10-29 con la variante `sonda` (`ThinkLess` 1000):
+  mismos héroes en Radiant, al minuto 10 dota-bot lanzó 24 hechizos con sonda y 152 sin ella. Los bots no pueden
+  escribir en el log (ni `print` ni chat llegan con tu usuario fuera de los equipos), así que en cada partida el
+  custom game confirma el archivo de variante y anota los hechizos por equipo (`rc`, `dc` en `lineas/`) como huella.
 - Validez (decisión de Pedro, DECISIONES 2026-10-29: no se acepta contaminación): cada partida va a `series.csv` con
   `valida` y `motivo`. Cuenta solo si terminó, hubo 5 bots por lado, tu usuario quedó fuera, el log confirma la
   variante y Dota no cambió de versión (`dota_version`, de `steam.inf`). También se anotan la CPU de la máquina
