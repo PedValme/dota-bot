@@ -2,44 +2,35 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- Se hizo (2026-10-28): benchmark automático completo. El orquestador (PR #4) lanza el custom game local dotabench
-  (`tools/bench/addon`, Workshop Tools instaladas): humano fuera, 10 bots con los mismos 5 héroes por lado, ×4, ganador
-  por GSI. Medido: primera partida válida, dota-bot gana a Valve Unfair en 43 min (kills 52-23). La anterior, 4 contra
-  5 en partida normal, la perdió con kills 84-26 (no válida).
-- Medido: `print` de los bots no llega a `console.log`; los `+cmd` tras `+map` corren antes de cargar; el VScript de un
-  custom game sí imprime y sí ejecuta comandos (`SendToServerConsole`); los errores del VM de bots salen como «error in
-  error handling» (20 al añadir bots), sin aislar.
-- Línea base `oha-vs-valve-unfair` (2026-10-28/29, bench/partidas.csv): **dota-bot gana 15 de 20** a los bots de
-  Valve en Unfair (5 contra 5, héroes espejo): 8 de 10 desde Radiant, 7 de 10 desde Dire; IC 95 % (Wilson) 53-89 %,
-  p≈0,04 frente a 50 %. Derrotas: 45, 49, 52, 73 y 75 min; en la 9 de la noche perdió con kills 46-13 (no cierra
-  partidas: hipótesis reforzada). Una partida extra quedó `sin-gsi` por falta de GPU (pantalla apagada) y no cuenta.
-  Máquina antes de la serie nocturna: CPU media 16 %, 60 % de memoria libre, 24 núcleos; la primera serie se midió
-  durante. Ritmo: 16-30 min reales por partida a ×4.
-- Línea de tiempo por minuto (2026-10-29, `bench/lineas/`): el custom game registra torres, cuarteles, Ancient, kills
-  y oro de los dos equipos (GSI solo da las estructuras de Radiant). Prueba: dota-bot +10.000 de oro desde el minuto
-  39 y +27.000 en el 58 con los 4 cuarteles de Valve en pie; ganó en el 59. Causa probable en
-  `FunLib/aba_push.lua` (fuente `typescript/bots/FunLib/aba_push.ts`), `GetPushDesireHelper`: tope 0,41 si los 5
-  enemigos viven y no hay superioridad numérica, y 0,08 en terreno alto sin 3 aliados juntos.
-- Siguiente acción: relajar esos topes con ventaja grande de oro (Lua y TS) y medir otra serie de 20 contra la línea
-  base (victorias y minutos desde `minuto_10k` hasta el final). Verificar héroes contra `BotImplemented`.
+- Hecho (2026-10-28/29): benchmark automático (orquestador + custom game dotabench: humano fuera, 5 contra 5 con
+  héroes espejo, ×4, ganador por GSI) y línea de tiempo por minuto de los dos equipos en `bench/lineas/`.
+- Línea base `oha-vs-valve-unfair` (bench/partidas.csv): **dota-bot gana 15 de 20** a Valve Unfair (8/10 Radiant,
+  7/10 Dire; IC 95 % 53-89 %, p≈0,04). Derrotas de 45-75 min, una con kills 46-13. Máquina antes de la serie
+  nocturna: CPU 16 %, 60 % de memoria libre. Ritmo: 16-30 min reales por partida.
+- Medido: dota-bot pasó 20 minutos con más de 10.000 de oro de ventaja (+27.000 en el 58) sin romper la base. Causa
+  probable en `FunLib/aba_push.lua` (fuente `typescript/bots/FunLib/aba_push.ts`), `GetPushDesireHelper`: tope 0,41 si
+  los 5 enemigos viven sin superioridad numérica y 0,08 en terreno alto sin 3 aliados juntos.
+- Siguiente acción: relajar esos topes con ventaja grande de oro (Lua y TS) y medir una serie de 20 contra la línea
+  base (victorias y minutos desde `minuto_10k` hasta el final).
 - Espera a Pedro: la prueba con un amigo en un lobby Local Host.
 
 ## Madurez
-Prototipo: OHA 7.41a (127 héroes) con la limpieza de seguridad, al día con 7.41f (2026-10-29: 7.41b-f no trae cambios
-estructurales; corregidos Witchbane y tres nombres de objetos mal escritos; docs/investigacion/2026-10-29-parches-7.41b-f.md).
-Pendiente de ese informe: preferencias de talentos de 16 héroes y ajustes de Tusk, Invoker y Outworld Destroyer.
+Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f (docs/investigacion/2026-10-29-parches-
+7.41b-f.md). Sin cambios de juego propios todavía.
 
 ## Entregado
-- 2026-10-28 · Investigación (docs/investigacion/), fork con limpieza y check (PR #1), junction (PR #2), orquestador
-  con GSI y guardia por equipo (PR #4), custom game dotabench (5 contra 5, héroes espejo, ×4).
+- 2026-10-28/29 · Investigación, fork limpio (PR #1), junctions (#2), orquestador con GSI y guardia por equipo (#4),
+  custom game dotabench (#5), línea base 15/20 (#7), al día con 7.41f (#8), línea de tiempo por minuto (#9).
 
 ## Siguientes pasos
-1. Serie de 10 partidas dota-bot contra Valve en Unfair (ver «Próxima sesión»).
+1. Mejorar el cierre de partidas (ver «Próxima sesión») y medirlo.
 2. Probar con amigos en un lobby Local Host.
-3. Mejorar un héroe débil (Invoker, Rubick o Morphling); ponerse al día con 7.41b-f (docs/PATCH_UPDATE_GUIDE.md).
+3. Del informe de parches: talentos de 16 héroes; Tusk, Invoker y Outworld Destroyer. Verificar los héroes del
+   benchmark contra `BotImplemented`. Aislar los «error in error handling» del VM de bots (20 al añadir bots).
 
 ## Problemas conocidos
-- Saludos de inicio con promoción del Workshop siguen saliendo (`mode_laning_generic.lua:248`,
-  `mode_farm_generic.lua:903`, `BotLib/hero_faceless_void.lua:151`); textos ofensivos solo con la burla encendida.
-- `custom_loader.lua` carga antes `game/Customize/general` si existe; FretBots `set`/`nudge` usan `loadstring` (host).
-- Dependencias npm heredadas: conflicto de `typescript`. API de Valve: 8 héroes mal soportados, sin facets ni Tormentor.
+- Saludos con promoción del Workshop (`mode_laning_generic.lua:248`, `mode_farm_generic.lua:903`,
+  `hero_faceless_void.lua:151`). `custom_loader.lua` carga antes `game/Customize/general`; FretBots `set`/`nudge` usan
+  `loadstring` (host). Dependencias npm heredadas con conflicto de `typescript`.
+- El `print` de los bots no llega a `console.log`; el VScript del custom game sí. API de Valve: 8 héroes mal
+  soportados, sin facets ni Tormentor.
