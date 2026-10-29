@@ -127,6 +127,15 @@ Customize.Fretbots = {
 -- When doing Local Host, you can potentially improve PC performance (FPS) by setting this to 1 to 10, which sacrifices some bot IQ/performance.
 -- This won't be very effective for FPS improvement because Valve has a lot of compute on their side that your PC have to handle for Local Hosting.
 Customize.ThinkLess = 1;
+
+-- dota-bot benchmark: the A/B variant of this match, if any (FunLib/bench_variant.lua); without it nothing changes.
+-- Server scripts (FretBots) may load this file too; only bot code reads the variant.
+Customize.BenchVariant = {}
+if GetScriptDirectory ~= nil then
+	local ok, variant = pcall(dofile, GetScriptDirectory()..'/FunLib/bench_variant')
+	if ok and type(variant) == 'table' then Customize.BenchVariant = variant end
+	if type(Customize.BenchVariant.thinkless) == 'number' then Customize.ThinkLess = Customize.BenchVariant.thinkless end
+end
 return Customize
 
 

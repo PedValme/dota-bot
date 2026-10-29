@@ -1,0 +1,3 @@
+fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano,heroes,ventaja_oro_max,minuto_10k,torres_fin,dota_version,cpu_media,cpu_max,mem_libre
+2026-10-29T18:03,prueba-sonda,1,1,sonda,no,sin final,4,radiant,,dota-cerrado,10,0,9,fuera,drow_ranger lina sand_king skywrath_mage lich / lion bristleback kunkka jakiro sniper,158,,11-11,6969,23,27,59
+2026-10-29T18:17,prueba-sonda,2,1,empuje,si,,4,radiant,radiant,final,43,73,15,fuera,drow_ranger lina sand_king skywrath_mage lich / bounty_hunter necrolyte sven warlock dragon_knight,33671,21,6-1,6969,20,25,54
