@@ -10,9 +10,10 @@
 - Medido: dota-bot pasó 20 minutos con más de 10.000 de oro de ventaja (+27.000 en el 58) sin romper la base. Causa
   probable en `FunLib/aba_push.lua` (fuente `typescript/bots/FunLib/aba_push.ts`), `GetPushDesireHelper`: tope 0,41 si
   los 5 enemigos viven sin superioridad numérica y 0,08 en terreno alto sin 3 aliados juntos.
-- Siguiente acción: relajar esos topes con ventaja grande de oro (Lua y TS) y medir una serie de 20 contra la línea
-  base (victorias y minutos desde `minuto_10k` hasta el final).
-- Espera a Pedro: la prueba con un amigo en un lobby Local Host.
+- Hecho: topes relajados con +10.000 de oro (PR #11). Siguiente: serie nocturna `cierre-v1` de 20 contra la línea
+  base; luego `ThinkLess` 0. Etapa 2 (DECISIONES 2026-10-29): puente capitán en 127.0.0.1 (probar primero que el Lua
+  llega a localhost), capitán de reglas y después subagente pic por partida; antes, aprobación de cuota de Pedro.
+- Espera a Pedro: avisar cuándo deja el PC para la serie; la prueba con un amigo en un lobby Local Host.
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f (docs/investigacion/2026-10-29-parches-
