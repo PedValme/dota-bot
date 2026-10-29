@@ -35,13 +35,65 @@ local function AddBots(cfg)
 	end
 end
 
+-- Humans never get a team: they watch. The setup screen can still drop the human into a free slot before the bots
+-- arrive, and then Dota gives them a random hero that nobody plays (seen 2026-10-29), so it is checked again at every
+-- state change and any human hero is removed.
+local function IsHuman(pid)
+	return pid ~= nil and pid >= 0 and PlayerResource:IsValidPlayerID(pid) and not PlayerResource:IsFakeClient(pid)
+end
+
+local function KeepHumanOut(pid, why)
+	local team = PlayerResource:GetTeam(pid)
+	if team == DOTA_TEAM_GOODGUYS or team == DOTA_TEAM_BADGUYS then
+		print(string.format("[dotabench] human player %d was on team %d (%s); moving out", pid, team, why))
+	end
+	PlayerResource:SetCustomTeamAssignment(pid, DOTA_TEAM_NOTEAM)
+	local player = PlayerResource:GetPlayer(pid)
+	-- pcall: a failure here must not skip the bots or the speed-up in OnStateChange.
+	if player and team ~= DOTA_TEAM_NOTEAM then pcall(player.SetTeam, player, DOTA_TEAM_NOTEAM) end
+end
+
+local function KeepHumansOut(why)
+	for pid = 0, 23 do
+		if IsHuman(pid) then KeepHumanOut(pid, why) end
+	end
+end
+
+local function OnNpcSpawned(event)
+	local unit = EntIndexToHScript(event.entindex)
+	if not unit or not unit.IsRealHero or not unit:IsRealHero() then return end
+	local pid = unit:GetPlayerOwnerID()
+	if not IsHuman(pid) then return end
+	print(string.format("[dotabench] human hero removed pid=%d team=%d %s", pid, unit:GetTeamNumber(), unit:GetUnitName()))
+	KeepHumanOut(pid, "hero spawned")
+	GameRules:GetGameModeEntity():SetThink(function()
+		if IsValidEntity(unit) then UTIL_Remove(unit) end
+		return nil
+	end, "dotabench_remove_" .. tostring(event.entindex), 0.1)
+end
+
+-- Who really plays each slot, once per match: the heroes the bots end up with can differ from the ones asked for.
+local function PrintRoster()
+	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
+		for i = 1, PlayerResource:GetPlayerCountForTeam(team) do
+			local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
+			if pid >= 0 then
+				print(string.format("[dotabench] roster team=%d pid=%d bot=%d hero=%s", team, pid,
+					PlayerResource:IsFakeClient(pid) and 1 or 0, PlayerResource:GetSelectedHeroName(pid)))
+			end
+		end
+	end
+end
+
 local function OnStateChange()
 	local cfg = MatchConfig()
 	local state = GameRules:State_Get()
+	KeepHumansOut("state " .. tostring(state))
 	if state == DOTA_GAMERULES_STATE_HERO_SELECTION or state == DOTA_GAMERULES_STATE_STRATEGY_TIME then
 		AddBots(cfg)
 	elseif state == DOTA_GAMERULES_STATE_PRE_GAME then
 		AddBots(cfg)
+		PrintRoster()
 		SendToServerConsole("sv_cheats 1")
 		SendToServerConsole("host_timescale " .. tostring(cfg.timescale or 1))
 	end
@@ -68,7 +120,7 @@ local function NetWorth(team)
 	local total = 0
 	for i = 1, PlayerResource:GetPlayerCountForTeam(team) do
 		local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
-		if pid >= 0 then total = total + PlayerResource:GetNetWorth(pid) end
+		if pid >= 0 and not IsHuman(pid) then total = total + PlayerResource:GetNetWorth(pid) end
 	end
 	return total
 end
@@ -100,11 +152,10 @@ local function TimelineThink()
 	return 1
 end
 
--- Humans never get a team: they watch.
 local function OnPlayerConnect(event)
 	local pid = event.PlayerID
-	if pid ~= nil and PlayerResource:IsValidPlayerID(pid) and not PlayerResource:IsFakeClient(pid) then
-		PlayerResource:SetCustomTeamAssignment(pid, DOTA_TEAM_NOTEAM)
+	if IsHuman(pid) then
+		KeepHumanOut(pid, "connect")
 		print("[dotabench] human player " .. tostring(pid) .. " kept out of the teams")
 	end
 end
@@ -126,5 +177,6 @@ function Activate()
 	GameRules:GetGameModeEntity():SetBotThinkingEnabled(true)
 	ListenToGameEvent("game_rules_state_change", OnStateChange, nil)
 	ListenToGameEvent("player_connect_full", OnPlayerConnect, nil)
+	ListenToGameEvent("npc_spawned", OnNpcSpawned, nil)
 	GameRules:GetGameModeEntity():SetThink(function() return TimelineThink() end, "dotabench_timeline", 1)
 end

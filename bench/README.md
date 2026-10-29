@@ -1,9 +1,9 @@
 # Benchmark: ¿juega mejor dota-bot que los bots de Valve?
 
 Partidas de bots contra bots sin clics, en un custom game local (`tools/bench/addon`, «dotabench»): dota-bot en un
-equipo y los bots de Valve en el otro, **los mismos cinco héroes en los dos lados** (sorteados en cada partida, uno por
-posición), misma dificultad, tu usuario fuera de los equipos, cambiando de lado en cada partida y acelerado. El
-ganador lo dice el propio Dota por Game State Integration (GSI).
+equipo y los bots de Valve en el otro, cinco héroes sorteados por partida (uno por posición; se piden para los dos
+lados, pero los bots de Valve eligen los suyos: no son espejo), misma dificultad, tu usuario fuera de los equipos,
+cambiando de lado en cada partida y acelerado. El ganador lo dice el propio Dota por Game State Integration (GSI).
 
 ```
 node tools/bench/orquestador.mjs --partidas 10 --dificultad 4 --velocidad 4 --etiqueta oha-vs-valve-unfair
@@ -24,9 +24,11 @@ node tools/bench/orquestador.mjs --partidas 10 --dificultad 4 --velocidad 4 --et
   (`torres_fin`, Radiant-Dire, de la última línea registrada). Las filas anteriores al 2026-10-29 no tienen esas
   columnas.
 - Depuración: `--muestra-gsi <archivo>` guarda en ese archivo el último mensaje de GSI tal cual.
-- Resultados: una fila por partida en `partidas.csv` (ganador, minutos, kills, héroes). La columna `humano` es el
-  equipo que GSI atribuye al espectador (desde dónde mira), no un lugar en la partida: en dotabench el humano queda
-  fuera de los equipos (lo dice el log: «human player 0 kept out of the teams»).
+- Resultados: una fila por partida en `partidas.csv` (ganador, minutos, kills, héroes). Desde 2026-10-29, `heroes` son
+  los reales («Radiant / Dire», del log) y `humano` dice si tu usuario quedó fuera: `fuera` (limpia), `heroe-quitado`
+  (Dota le dio héroe y el custom game lo quitó; cuenta) o `en-equipo` (descartar). Antes, `humano` era solo el lado
+  desde el que mira GSI: la línea base `oha-vs-valve-unfair` no puede probar que tu usuario quedara fuera (ver
+  ESTADO.md).
 - Dificultad: 0 pasiva … 4 injusta. Velocidad: 1 a 8 (por defecto ×4: una partida de 40 min dura unos 10).
 - Cuidado: `tools/bench/addon/scripts/vscripts/bots` es un enlace a `bots/`. No uses `git clean -x` ni borres
   `tools/bench/addon` en recursivo (podría borrar `bots/` a través del enlace); el enlace se quita con

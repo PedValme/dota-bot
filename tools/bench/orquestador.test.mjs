@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { sides, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
-  parseTimeline, summarizeTimeline, timelineCsv } from "./orquestador.mjs";
+  parseTimeline, summarizeTimeline, timelineCsv, parseRoster } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
 
@@ -75,4 +75,16 @@ test("the summary is from dota-bot's side", () => {
   assert.deepEqual(summarizeTimeline(rows, "dire"), { ventaja_oro_max: 2000, minuto_10k: "", torres_fin: "3-5" });
   assert.deepEqual(summarizeTimeline([], "dire"), { ventaja_oro_max: "", minuto_10k: "", torres_fin: "" });
   assert.equal(timelineCsv(rows).split("\n")[0], "min,rk,dk,rt,dt,rb,db,rhp,dhp,rnw,dnw,event");
+});
+
+const roster = (team, pid, bot, hero) =>
+  `10/29 12:26:40 [VScript] [dotabench] roster team=${team} pid=${pid} bot=${bot} hero=npc_dota_hero_${hero}`;
+
+test("the roster tells the real heroes and whether the human played a slot", () => {
+  const clean = [roster(2, 1, 1, "luna"), roster(2, 2, 1, "razor"), roster(3, 6, 1, "viper")].join("\r\n");
+  assert.deepEqual(parseRoster(clean), { humano: "fuera", heroes: "luna razor / viper" });
+  const removed = ["[VScript] [dotabench] human hero removed pid=0 team=2 npc_dota_hero_phantom_assassin", clean].join("\n");
+  assert.equal(parseRoster(removed).humano, "heroe-quitado");
+  assert.equal(parseRoster([clean, roster(2, 0, 0, "phantom_assassin")].join("\n")).humano, "en-equipo");
+  assert.deepEqual(parseRoster("no roster here"), { humano: "", heroes: "" });
 });

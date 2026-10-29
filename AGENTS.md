@@ -49,7 +49,7 @@ Code and tests are what the system really does; when a document and the code dis
   **Local Host** y **Local Dev Script**. En el PC de Pedro ya está instalado (2026-10-28). No se usan los instaladores
   de OHA (pedían administrador y enlazaban al Workshop del autor; se borraron).
 - Benchmark contra los bots de Valve: [bench/README.md](bench/README.md). `node tools/bench/orquestador.mjs` lanza el
-  custom game local dotabench sin clics (humano fuera de los equipos, mismos cinco héroes en los dos lados, acelerado)
+  custom game local dotabench sin clics (humano fuera de los equipos, cinco héroes sorteados, acelerado)
   y lee el ganador por GSI. Sus límites (solo Steam y Dota, lo que el benchmark necesita) están al inicio del archivo y
   son decisión de Pedro (DECISIONES.md, 2026-10-28). Cada archivo de entrada de `bots/` empieza con la guardia
   `FunLib/bench_side`: sin `Customize/bench_valve_team.lua` (lo crea y borra el orquestador) no hace nada; con él, ese
