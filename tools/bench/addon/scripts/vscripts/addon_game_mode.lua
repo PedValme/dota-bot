@@ -143,15 +143,25 @@ local function NetWorth(team)
 	return total
 end
 
+-- Abilities and items cast per team since the start. The bots' own VM cannot write to the log (neither print nor chat
+-- reach it), so this is the footprint of how they play: a variant that changes ThinkLess changes it.
+local casts = { [DOTA_TEAM_GOODGUYS] = 0, [DOTA_TEAM_BADGUYS] = 0 }
+local function OnAbilityUsed(event)
+	local pid = event.PlayerID
+	if pid == nil or not PlayerResource:IsValidPlayerID(pid) then return end
+	local team = PlayerResource:GetTeam(pid)
+	if casts[team] then casts[team] = casts[team] + 1 end
+end
+
 local function PrintTimeline(event)
 	local r, d = DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS
 	print(string.format(
-		"[dotabench] timeline event=%s min=%d rk=%d dk=%d rt=%d dt=%d rb=%d db=%d rhp=%d dhp=%d rnw=%d dnw=%d",
+		"[dotabench] timeline event=%s min=%d rk=%d dk=%d rt=%d dt=%d rb=%d db=%d rhp=%d dhp=%d rnw=%d dnw=%d rc=%d dc=%d",
 		event, math.floor(GameRules:GetDOTATime(false, false) / 60),
 		PlayerResource:GetTeamKills(r), PlayerResource:GetTeamKills(d),
 		CountStanding("npc_dota_tower", r), CountStanding("npc_dota_tower", d),
 		CountStanding("npc_dota_barracks", r), CountStanding("npc_dota_barracks", d),
-		AncientHealth(r), AncientHealth(d), NetWorth(r), NetWorth(d)))
+		AncientHealth(r), AncientHealth(d), NetWorth(r), NetWorth(d), casts[r], casts[d]))
 end
 
 local lastMinute = -1
@@ -196,9 +206,6 @@ function Activate()
 	ListenToGameEvent("game_rules_state_change", OnStateChange, nil)
 	ListenToGameEvent("player_connect_full", OnPlayerConnect, nil)
 	ListenToGameEvent("npc_spawned", OnNpcSpawned, nil)
-	-- The bots announce in chat the A/B variant they loaded (mode_farm_generic.lua); their print never reaches the log.
-	ListenToGameEvent("player_chat", function(event)
-		print("[dotabench] chat probe " .. tostring(event.playerid) .. " " .. tostring(event.text))
-	end, nil)
+	ListenToGameEvent("dota_player_used_ability", OnAbilityUsed, nil)
 	GameRules:GetGameModeEntity():SetThink(function() return TimelineThink() end, "dotabench_timeline", 1)
 end

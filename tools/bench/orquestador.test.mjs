@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
   parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, variantLua,
-  VARIANTS, summarize, parseBotVariant } from "./orquestador.mjs";
+  VARIANTS, summarize } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
 
@@ -34,11 +34,7 @@ test("the variant file is plain Lua data with the variant's fields", () => {
 
 test("a match counts only if it ended, 5v5 bots, human out, the right variant and the same Dota", () => {
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera" }, variant: "base", loggedVariant: "base",
-    botVariant: { name: "base", empuje: "false", thinkless: "1" }, version: "6969", firstVersion: "6969" };
-  assert.match(validity({ ...ok, botVariant: null }), /no anunciaron/);
-  assert.match(validity({ ...ok, botVariant: { ...ok.botVariant, empuje: "nil" } }), /cargaron/);
-  assert.match(validity({ ...ok, botVariant: { ...ok.botVariant, thinkless: "0" } }), /cargaron/);
-  assert.equal(validity({ ...ok, variant: "", loggedVariant: "", botVariant: null }), "");
+    version: "6969", firstVersion: "6969" };
   assert.equal(validity(ok), "");
   assert.equal(validity({ ...ok, roster: { ...ok.roster, humano: "heroe-quitado" } }), "");
   assert.match(validity({ ...ok, outcome: "timeout" }), /final/);
@@ -62,12 +58,6 @@ test("the summary counts only complete, fully valid blocks", () => {
     { variante: "base", ganadas: 1, validas: 2, jugadas: 4 },
     { variante: "empuje", ganadas: 2, validas: 2, jugadas: 4 },
   ]);
-});
-
-test("the bots' own announcement of the variant is read from the chat in the log", () => {
-  const line = "[Localization System] CLocalize::FindSafe failed to localize: '[dotabench-bot] variant=base empuje=false thinkless=1'";
-  assert.deepEqual(parseBotVariant(line), { name: "base", empuje: "false", thinkless: "1" });
-  assert.equal(parseBotVariant("nothing"), null);
 });
 
 test("the variant and Dota's version are read from the log and steam.inf", () => {
@@ -140,7 +130,7 @@ test("the summary is from dota-bot's side", () => {
   assert.deepEqual(summarizeTimeline(rows, "radiant"), { ventaja_oro_max: 11000, minuto_10k: 20, torres_fin: "3-5" });
   assert.deepEqual(summarizeTimeline(rows, "dire"), { ventaja_oro_max: 2000, minuto_10k: "", torres_fin: "3-5" });
   assert.deepEqual(summarizeTimeline([], "dire"), { ventaja_oro_max: "", minuto_10k: "", torres_fin: "" });
-  assert.equal(timelineCsv(rows).split("\n")[0], "min,rk,dk,rt,dt,rb,db,rhp,dhp,rnw,dnw,event");
+  assert.equal(timelineCsv(rows).split("\n")[0], "min,rk,dk,rt,dt,rb,db,rhp,dhp,rnw,dnw,rc,dc,event");
 });
 
 const roster = (team, pid, bot, hero) =>

@@ -52,6 +52,8 @@ export const VARIANTS = {
   base: { empuje: false, thinkless: 1 }, // before PR #11: push caps not relaxed with a 10k lead
   empuje: { empuje: true, thinkless: 1 }, // PR #11
   thinkless0: { empuje: true, thinkless: 0 }, // PR #11 and bots think every frame
+  // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
+  sonda: { empuje: true, thinkless: 1000 },
 };
 
 export function variantLua(name) {
@@ -72,21 +74,15 @@ export function schedule(i, variants) {
   return { block, dotabot, valveTeam: dotabot === "radiant" ? DIRE : RADIANT, variant: order[pos % n] ?? "" };
 }
 
-// Whether a match can be counted, and why not. With a variant, the bots themselves must have announced it in chat
-// (mode_farm_generic.lua) with the expected settings: the server finding the file does not prove the bots read it.
-export function validity({ outcome, roster, variant, loggedVariant, botVariant, version, firstVersion }) {
+// Whether a match can be counted, and why not. The variant is confirmed by the custom game reading the same file at
+// pre-game; the bots' VM cannot write to the log (neither print nor chat reach it, tried 2026-10-29), so that they
+// apply it was checked once with the "sonda" variant (bench/README.md) and each match logs casts per team.
+export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion }) {
   if (outcome !== "final") return "sin final";
   if (roster.radiant !== 5 || roster.dire !== 5) return `reparto ${roster.radiant ?? 0}-${roster.dire ?? 0}`;
   if (roster.humano !== "fuera" && roster.humano !== "heroe-quitado") return `humano ${roster.humano || "?"}`;
   if (loggedVariant === null || loggedVariant === undefined) return "variante sin registro en el log";
   if ((variant || "") !== loggedVariant) return `variante ${loggedVariant || "ninguna"} en el log`;
-  if (variant) {
-    const want = VARIANTS[variant];
-    if (!botVariant) return "los bots no anunciaron la variante";
-    if (botVariant.name !== variant || botVariant.empuje !== String(want.empuje) || botVariant.thinkless !== String(want.thinkless)) {
-      return `los bots cargaron ${botVariant.name} empuje=${botVariant.empuje} thinkless=${botVariant.thinkless}`;
-    }
-  }
   if (version !== firstVersion) return `Dota cambió de versión (${firstVersion} -> ${version})`;
   return "";
 }
@@ -224,13 +220,6 @@ export function parseRoster(text) {
   };
 }
 
-// The variant the bots announced in chat; their chat reaches console.log ("[dotabench-bot] variant=base empuje=false
-// thinkless=1"), their print does not.
-export function parseBotVariant(text) {
-  const m = text.match(/\[dotabench-bot\] variant=(\S+) empuje=(\S+) thinkless=([^\s']+)/);
-  return m ? { name: m[1], empuje: m[2], thinkless: m[3] } : null;
-}
-
 // The variant file the custom game found at the start ("[dotabench] variant name=base ..." or "variant none").
 export function parseVariant(text) {
   const m = text.match(/\[dotabench\] variant (?:name=(\S+)|none)/);
@@ -243,7 +232,7 @@ export function parseVersion(inf) {
 }
 
 export function timelineCsv(rows) {
-  const cols = ["min", "rk", "dk", "rt", "dt", "rb", "db", "rhp", "dhp", "rnw", "dnw", "event"];
+  const cols = ["min", "rk", "dk", "rt", "dt", "rb", "db", "rhp", "dhp", "rnw", "dnw", "rc", "dc", "event"];
   return [cols.join(","), ...rows.map((r) => cols.map((c) => r[c] ?? "").join(","))].join("\n") + "\n";
 }
 
@@ -432,7 +421,6 @@ async function main(argv) {
       let timeline = [];
       let roster = { humano: "", heroes: "", radiant: 0, dire: 0 };
       let loggedVariant = null;
-      let botVariant = null;
       try {
         // A log older than this launch belongs to another match (Dota failed before rewriting it).
         if (statSync(consoleLog).mtimeMs >= started) {
@@ -440,11 +428,10 @@ async function main(argv) {
           timeline = parseTimeline(log);
           roster = parseRoster(log);
           loggedVariant = parseVariant(log);
-          botVariant = parseBotVariant(log);
         }
       } catch {}
       const version = dotaVersion();
-      const motivo = validity({ outcome, roster, variant, loggedVariant, botVariant, version, firstVersion });
+      const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));

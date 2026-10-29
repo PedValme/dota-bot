@@ -888,17 +888,8 @@ function PickOneAnnouncer()
 	end
 end
 
-local benchVariantAnnounced = false
 function AnnounceMessages()
 	if DotaTime() > 60 then return end
-
-	-- dota-bot benchmark: say once which A/B variant this team's bots really loaded (FunLib/bench_variant.lua). The
-	-- chat line reaches console.log, so the orchestrator checks the variant from the bots' own VM.
-	if bot.isAnnouncer and not benchVariantAnnounced and Customize.BenchVariant and Customize.BenchVariant.name then
-		benchVariantAnnounced = true
-		bot:ActionImmediate_Chat(string.format("[dotabench-bot] variant=%s empuje=%s thinkless=%s",
-			tostring(Customize.BenchVariant.name), tostring(Customize.BenchVariant.empuje), tostring(Customize.ThinkLess)), true)
-	end
 
 	local welcome_msgs = Localization.Get('welcome_msgs')
 	if ((J.IsModeTurbo() and DotaTime() > -50 + team * 2) or (not J.IsModeTurbo() and DotaTime() > -75 + team * 2))
