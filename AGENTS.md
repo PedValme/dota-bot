@@ -17,7 +17,9 @@ once it exists.
 - Handoff: ESTADO.md, its "Next session" block (in the repository's language).
 - The owner's standing rules this repository needs that the global rules do not already carry, one line each with its
   source:
-  - El bot no hace llamadas de red ni envía datos de jugadores; el check lo vigila (DECISIONES.md, 2026-10-28).
+  - El bot no hace llamadas de red ni envía datos de jugadores; el check lo vigila (DECISIONES.md, 2026-10-28). Única
+    excepción: el puente del capitán en 127.0.0.1, sin datos de jugadores (DECISIONES.md, 2026-10-29).
+  - Capitán LLM con pic: perfil openai con Sol de orquestador, un subagente por partida (DECISIONES.md, 2026-10-29).
   - Lo que se trae de `upstream` se revisa como código de terceros antes de fusionarlo (DECISIONES.md, 2026-10-28).
   - El orquestador del benchmark solo toca Steam y Dota y lo que el benchmark necesita (DECISIONES.md, 2026-10-28).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).
