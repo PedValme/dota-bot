@@ -137,6 +137,27 @@ export function summarizeTimeline(rows, dotabot) {
   };
 }
 
+// The custom game logs who really plays ("[dotabench] roster team=2 pid=1 bot=1 hero=npc_dota_hero_luna") and
+// whether the human got a hero it had to remove. humano: "fuera" (clean), "heroe-quitado" (removed, the match still
+// counts) or "en-equipo" (a human slot played the match: discard it). heroes: the real ones, Radiant / Dire.
+export function parseRoster(text) {
+  const teams = { 2: [], 3: [] };
+  let humanInTeam = false;
+  let removed = false;
+  for (const line of text.split(/\r?\n/)) {
+    if (line.includes("[dotabench] human hero removed")) removed = true;
+    const m = line.match(/\[dotabench\] roster team=(\d) pid=\d+ bot=(\d) hero=(\S+)/);
+    if (!m) continue;
+    if (m[2] === "0") humanInTeam = true;
+    teams[m[1]]?.push(m[3].replace("npc_dota_hero_", ""));
+  }
+  if (!teams[2].length && !teams[3].length) return { humano: "", heroes: "" };
+  return {
+    humano: humanInTeam ? "en-equipo" : removed ? "heroe-quitado" : "fuera",
+    heroes: `${teams[2].join(" ")} / ${teams[3].join(" ")}`,
+  };
+}
+
 export function timelineCsv(rows) {
   const cols = ["min", "rk", "dk", "rt", "dt", "rb", "db", "rhp", "dhp", "rnw", "dnw", "event"];
   return [cols.join(","), ...rows.map((r) => cols.map((c) => r[c] ?? "").join(","))].join("\n") + "\n";
@@ -286,9 +307,14 @@ async function main(argv) {
       // The custom game's per-minute timeline, from this launch's console.log (-condebug rewrites it each launch).
       const fecha = new Date().toISOString().slice(0, 16);
       let timeline = [];
+      let roster = { humano: "", heroes: "" };
       try {
         // A log older than this launch belongs to another match (Dota failed before rewriting it).
-        if (statSync(consoleLog).mtimeMs >= started) timeline = parseTimeline(readFileSync(consoleLog, "utf8"));
+        if (statSync(consoleLog).mtimeMs >= started) {
+          const log = readFileSync(consoleLog, "utf8");
+          timeline = parseTimeline(log);
+          roster = parseRoster(log);
+        }
       } catch {}
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
@@ -299,7 +325,7 @@ async function main(argv) {
         fecha, etiqueta: opt.etiqueta, partida: i + 1, dificultad: opt.dificultad,
         dotabot, ganador: outcome === "final" ? s.winner : "", resultado: outcome,
         minutos: s.clock ? Math.round(s.clock / 60) : "", kills_radiant: s.radiantKills ?? "",
-        kills_dire: s.direKills ?? "", humano: s.human ?? "", heroes: short,
+        kills_dire: s.direKills ?? "", humano: roster.humano, heroes: roster.heroes || short,
         ...summarizeTimeline(timeline, dotabot),
       };
       appendFileSync(CSV, csvRow(row) + "\n");
