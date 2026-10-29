@@ -3,7 +3,7 @@
 // Game State Integration (GSI). The match runs in the local custom game tools/bench/addon ("dotabench"), which keeps
 // the human out of the teams, adds the bots and speeds the match up.
 //   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--velocidad 4] [--etiqueta texto]
-//                                    [--dota "<dota 2 beta>"]
+//                                    [--dota "<dota 2 beta>"] [--muestra-gsi <file>]
 //
 // Limits, on purpose (Pedro, 2026-10-28: «solamente y acotado a steam y dota y lo que queremos»):
 // - Starts only <dota>/game/bin/win64/dota2.exe with fixed arguments, and only stops the dota2.exe it started.
@@ -11,7 +11,9 @@
 // - Listens only on 127.0.0.1 and only accepts GSI posts carrying its own token.
 // - Writes only: the GSI config in <dota>/game/dota/cfg/gamestate_integration/, bots/Customize/bench_valve_team.lua
 //   (which team plays with Valve's bots), tools/bench/addon/scripts/vscripts/bench_partida.lua (heroes, difficulty,
-//   speed; deleted at the end too) and bench/partidas.csv. The team file lives only from launch until the
+//   speed; deleted at the end too), bench/partidas.csv and bench/lineas/ (per-match timelines, read from its own
+//   Dota's <dota>/game/dota/console.log), and, only with --muestra-gsi <file> (debugging), the last raw GSI post in
+//   that file. The team file lives only from launch until the
 //   horn (scripts load before it); both temporary files are deleted when it ends, also on Ctrl+C, closing the window
 //   or an error. A hard kill of this script (Task Manager) leaves its Dota open and the GSI config in place
 //   (harmless), and bench_partida.lua (only dotabench reads it; the next match overwrites it); during a match's first
@@ -19,7 +21,7 @@
 //   Valve's bots in any local game until the next run deletes it (or delete bots/Customize/bench_valve_team.lua).
 import { spawn, execFile } from "node:child_process";
 import { createServer } from "node:http";
-import { existsSync, writeFileSync, unlinkSync, appendFileSync, mkdirSync } from "node:fs";
+import { existsSync, writeFileSync, unlinkSync, appendFileSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,7 +34,8 @@ const VALVE_TEAM_FILE = join(root, "bots", "Customize", "bench_valve_team.lua");
 const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", "bench_partida.lua");
 const CSV = join(root, "bench", "partidas.csv");
 const COLUMNS = ["fecha", "etiqueta", "partida", "dificultad", "dotabot", "ganador", "resultado", "minutos",
-  "kills_radiant", "kills_dire", "humano", "heroes"];
+  "kills_radiant", "kills_dire", "humano", "heroes", "ventaja_oro_max", "minuto_10k", "torres_fin"];
+const TIMELINES = join(root, "bench", "lineas");
 const DIFFICULTIES = ["passive", "easy", "medium", "hard", "unfair"];
 
 // One hero per position, from the heroes Valve's own bots were built for (their original pool, as recalled; not yet
@@ -105,6 +108,40 @@ export function readGsi(payload) {
   };
 }
 
+// The custom game logs "[dotabench] timeline event=minute|end min=.. rk=.. ..." lines (addon_game_mode.lua).
+export function parseTimeline(text) {
+  const rows = [];
+  for (const line of text.split(/\r?\n/)) {
+    const at = line.indexOf("[dotabench] timeline ");
+    if (at < 0) continue;
+    const row = {};
+    for (const pair of line.slice(at + 21).trim().split(/\s+/)) {
+      const [k, v] = pair.split("=");
+      if (k && v !== undefined) row[k] = k === "event" ? v : Number(v);
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+// From dota-bot's side: its biggest net worth lead, the first minute it led by 10k, and towers standing at the end.
+export function summarizeTimeline(rows, dotabot) {
+  if (!rows.length) return { ventaja_oro_max: "", minuto_10k: "", torres_fin: "" };
+  const lead = (r) => (dotabot === "radiant" ? r.rnw - r.dnw : r.dnw - r.rnw);
+  const last = rows[rows.length - 1];
+  const first10k = rows.find((r) => lead(r) >= 10000);
+  return {
+    ventaja_oro_max: Math.max(...rows.map(lead)),
+    minuto_10k: first10k ? first10k.min : "",
+    torres_fin: `${last.rt}-${last.dt}`,
+  };
+}
+
+export function timelineCsv(rows) {
+  const cols = ["min", "rk", "dk", "rt", "dt", "rb", "db", "rhp", "dhp", "rnw", "dnw", "event"];
+  return [cols.join(","), ...rows.map((r) => cols.map((c) => r[c] ?? "").join(","))].join("\n") + "\n";
+}
+
 export function isFinished(s) {
   return s !== null && s.state === "DOTA_GAMERULES_STATE_POST_GAME" && s.winner !== null;
 }
@@ -122,6 +159,7 @@ function parseArgs(argv) {
     else if (k === "--velocidad") opt.velocidad = Number(v);
     else if (k === "--etiqueta") opt.etiqueta = v;
     else if (k === "--dota") opt.dota = v;
+    else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else throw new Error(`Opción desconocida: ${k}`);
   }
   if (!Number.isInteger(opt.partidas) || opt.partidas < 1 || opt.partidas > 50) throw new Error("--partidas: 1 a 50");
@@ -144,6 +182,7 @@ async function main(argv) {
   const exe = resolve(opt.dota, "game/bin/win64/dota2.exe");
   const gsiDir = resolve(opt.dota, "game/dota/cfg/gamestate_integration");
   const gsiFile = join(gsiDir, "gamestate_integration_dotabot.cfg");
+  const consoleLog = resolve(opt.dota, "game/dota/console.log");
   if (!existsSync(exe)) throw new Error(`No encuentro ${exe}; usa --dota`);
   if (!existsSync(gsiDir)) throw new Error(`No existe ${gsiDir}`);
   if (!existsSync(resolve(opt.dota, "game/dota_addons/dotabench/addoninfo.txt"))) {
@@ -170,8 +209,10 @@ async function main(argv) {
     req.on("end", () => {
       res.writeHead(200).end();
       try {
-        const s = readGsi(JSON.parse(body));
+        const payload = JSON.parse(body);
+        const s = readGsi(payload);
         if (s) [latest, lastPost] = [s, Date.now()];
+        if (s && opt.muestra) writeFileSync(opt.muestra, JSON.stringify(payload, null, 1));
       } catch {}
     });
   });
@@ -242,12 +283,24 @@ async function main(argv) {
       if (outcome === "dota-cerrado" && (await running("dota2.exe"))) {
         throw new Error("Mi Dota se cerró pero hay otro dota2.exe abierto; paro sin tocarlo.");
       }
+      // The custom game's per-minute timeline, from this launch's console.log (-condebug rewrites it each launch).
+      const fecha = new Date().toISOString().slice(0, 16);
+      let timeline = [];
+      try {
+        // A log older than this launch belongs to another match (Dota failed before rewriting it).
+        if (statSync(consoleLog).mtimeMs >= started) timeline = parseTimeline(readFileSync(consoleLog, "utf8"));
+      } catch {}
+      if (timeline.length) {
+        mkdirSync(TIMELINES, { recursive: true });
+        writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));
+      }
       const s = latest ?? {};
       const row = {
-        fecha: new Date().toISOString().slice(0, 16), etiqueta: opt.etiqueta, partida: i + 1, dificultad: opt.dificultad,
+        fecha, etiqueta: opt.etiqueta, partida: i + 1, dificultad: opt.dificultad,
         dotabot, ganador: outcome === "final" ? s.winner : "", resultado: outcome,
         minutos: s.clock ? Math.round(s.clock / 60) : "", kills_radiant: s.radiantKills ?? "",
         kills_dire: s.direKills ?? "", humano: s.human ?? "", heroes: short,
+        ...summarizeTimeline(timeline, dotabot),
       };
       appendFileSync(CSV, csvRow(row) + "\n");
       results.push(row);

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sides, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT }
-  from "./orquestador.mjs";
+import { sides, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
+  parseTimeline, summarizeTimeline, timelineCsv } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
 
@@ -56,6 +56,23 @@ test("a finished match needs post-game and a winner", () => {
 
 test("CSV rows keep their columns", () => {
   const row = csvRow({ fecha: "2026-10-28T19:00", etiqueta: "a,b", partida: 1, dotabot: "radiant", ganador: "dire" });
-  assert.equal(row.split(",").length, 12);
+  assert.equal(row.split(",").length, 15);
   assert.ok(row.includes("a;b"));
+});
+
+const tl = (event, min, rnw, dnw, rt = 11, dt = 11) =>
+  `10/29 10:00:00 [VScript] [dotabench] timeline event=${event} min=${min} rk=1 dk=2 rt=${rt} dt=${dt} rb=6 db=6 rhp=4500 dhp=4500 rnw=${rnw} dnw=${dnw}`;
+
+test("the custom game's timeline lines are parsed and the rest of the log ignored", () => {
+  const rows = parseTimeline(["noise", tl("minute", 0, 3000, 3000), "more noise", tl("end", 40, 60000, 45000, 7, 2)].join("\r\n"));
+  assert.equal(rows.length, 2);
+  assert.deepEqual(rows[1], { event: "end", min: 40, rk: 1, dk: 2, rt: 7, dt: 2, rb: 6, db: 6, rhp: 4500, dhp: 4500, rnw: 60000, dnw: 45000 });
+});
+
+test("the summary is from dota-bot's side", () => {
+  const rows = parseTimeline([tl("minute", 10, 20000, 15000), tl("minute", 20, 40000, 29000), tl("end", 30, 50000, 52000, 3, 5)].join("\n"));
+  assert.deepEqual(summarizeTimeline(rows, "radiant"), { ventaja_oro_max: 11000, minuto_10k: 20, torres_fin: "3-5" });
+  assert.deepEqual(summarizeTimeline(rows, "dire"), { ventaja_oro_max: 2000, minuto_10k: "", torres_fin: "3-5" });
+  assert.deepEqual(summarizeTimeline([], "dire"), { ventaja_oro_max: "", minuto_10k: "", torres_fin: "" });
+  assert.equal(timelineCsv(rows).split("\n")[0], "min,rk,dk,rt,dt,rb,db,rhp,dhp,rnw,dnw,event");
 });
