@@ -9,14 +9,15 @@
 - Medido: `print` de los bots no llega a `console.log`; los `+cmd` tras `+map` corren antes de cargar; el VScript de un
   custom game sí imprime y sí ejecuta comandos (`SendToServerConsole`); los errores del VM de bots salen como «error in
   error handling» (20 al añadir bots), sin aislar.
-- Serie `oha-vs-valve-unfair` (2026-10-28, bench/partidas.csv): dota-bot gana 4 de 6 partidas válidas (2 de 3 en
-  cada lado); victorias de 39-53 min, derrotas de 45 y 73 min. La 7 quedó `sin-gsi`: Dota no encontró GPU («No usable
-  DX11 adapters», rasterizador por software) y se colgó al arrancar, probablemente pantalla apagada o sesión
-  bloqueada; el orquestador paró y limpió. Máquina medida durante la serie (no antes, como pide la regla): CPU 8 %,
-  57 % de memoria libre, 24 núcleos. El ×4 rinde menos: unos 30 min reales por partida.
-- Siguiente acción: completar la serie (4 partidas más, `--partidas 4`, con la pantalla del PC encendida) y leer el
-  total; verificar la lista de héroes contra `BotImplemented` de `npc_heroes.txt`.
-- Espera a Pedro: cuándo puede dejar el PC con la pantalla activa unas 2 horas.
+- Línea base `oha-vs-valve-unfair` (2026-10-28/29, bench/partidas.csv): **dota-bot gana 15 de 20** a los bots de
+  Valve en Unfair (5 contra 5, héroes espejo): 8 de 10 desde Radiant, 7 de 10 desde Dire; IC 95 % (Wilson) 53-89 %,
+  p≈0,04 frente a 50 %. Derrotas: 45, 49, 52, 73 y 75 min; en la 9 de la noche perdió con kills 46-13 (no cierra
+  partidas: hipótesis reforzada). Una partida extra quedó `sin-gsi` por falta de GPU (pantalla apagada) y no cuenta.
+  Máquina antes de la serie nocturna: CPU media 16 %, 60 % de memoria libre, 24 núcleos; la primera serie se midió
+  durante. Ritmo: 16-30 min reales por partida a ×4.
+- Siguiente acción: actualizar a 7.41f (docs/PATCH_UPDATE_GUIDE.md); luego medir estructuras por minuto para atacar
+  el cierre de partidas, comparando contra esta línea base. Verificar los héroes contra `BotImplemented`.
+- Espera a Pedro: la prueba con un amigo en un lobby Local Host.
 
 ## Madurez
 Prototipo: es OHA 7.41/7.41a (127 héroes) con la limpieza de seguridad; sin cambios de juego propios.
