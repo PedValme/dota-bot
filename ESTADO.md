@@ -15,8 +15,13 @@
   partidas: hipótesis reforzada). Una partida extra quedó `sin-gsi` por falta de GPU (pantalla apagada) y no cuenta.
   Máquina antes de la serie nocturna: CPU media 16 %, 60 % de memoria libre, 24 núcleos; la primera serie se midió
   durante. Ritmo: 16-30 min reales por partida a ×4.
-- Siguiente acción: medir estructuras por minuto (GSI) para atacar el cierre de partidas, comparando contra esta
-  línea base. Verificar los héroes del benchmark contra `BotImplemented`.
+- Línea de tiempo por minuto (2026-10-29, `bench/lineas/`): el custom game registra torres, cuarteles, Ancient, kills
+  y oro de los dos equipos (GSI solo da las estructuras de Radiant). Prueba: dota-bot +10.000 de oro desde el minuto
+  39 y +27.000 en el 58 con los 4 cuarteles de Valve en pie; ganó en el 59. Causa probable en
+  `FunLib/aba_push.lua` (fuente `typescript/bots/FunLib/aba_push.ts`), `GetPushDesireHelper`: tope 0,41 si los 5
+  enemigos viven y no hay superioridad numérica, y 0,08 en terreno alto sin 3 aliados juntos.
+- Siguiente acción: relajar esos topes con ventaja grande de oro (Lua y TS) y medir otra serie de 20 contra la línea
+  base (victorias y minutos desde `minuto_10k` hasta el final). Verificar héroes contra `BotImplemented`.
 - Espera a Pedro: la prueba con un amigo en un lobby Local Host.
 
 ## Madurez

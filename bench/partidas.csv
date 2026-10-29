@@ -1,4 +1,4 @@
-fecha,etiqueta,partida,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano,heroes
+fecha,etiqueta,partida,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano,heroes,ventaja_oro_max,minuto_10k,torres_fin
 2026-10-28T20:04,prueba-orquestador,1,4,radiant,dire,final,79,84,26,radiant,elegidos por los bots (4 contra 5; no válida)
 2026-10-28T20:35,prueba-custom-game,1,4,radiant,radiant,final,43,52,23,radiant,chaos_knight lina tidehunter jakiro warlock
 2026-10-28T20:51,oha-vs-valve-unfair,1,4,radiant,radiant,final,39,57,26,radiant,phantom_assassin necrolyte dragon_knight bane dazzle
@@ -22,3 +22,5 @@ fecha,etiqueta,partida,dificultad,dotabot,ganador,resultado,minutos,kills_radian
 2026-10-29T09:00,oha-vs-valve-unfair,12,4,dire,radiant,final,75,43,56,radiant,sven viper dragon_knight skywrath_mage warlock
 2026-10-29T09:15,oha-vs-valve-unfair,13,4,radiant,radiant,final,43,35,23,radiant,luna zuus axe vengefulspirit dazzle
 2026-10-29T09:39,oha-vs-valve-unfair,14,4,dire,dire,final,64,29,78,radiant,chaos_knight viper bristleback jakiro oracle
+2026-10-29T10:36,muestra-gsi,1,4,radiant,radiant,final,63,38,29,radiant,drow_ranger lina axe jakiro crystal_maiden
+2026-10-29T11:02,prueba-lineas,1,4,radiant,radiant,final,59,55,27,radiant,skeleton_king lina sand_king lion oracle,27262,39,4-3

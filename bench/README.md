@@ -18,6 +18,12 @@ node tools/bench/orquestador.mjs --partidas 10 --dificultad 4 --velocidad 4 --et
 - Si el orquestador se cierra a la fuerza (Administrador de tareas), su Dota queda abierto y, en los primeros minutos
   de una partida, puede quedar `bots/Customize/bench_valve_team.lua`: mientras exista, un equipo juega con los bots de
   Valve en cualquier partida local. La siguiente corrida lo borra; también se puede borrar a mano.
+- Línea de tiempo: el custom game escribe cada minuto torres, cuarteles, vida del Ancient, kills y oro de los dos
+  equipos; el orquestador la guarda en `lineas/<etiqueta>-<fecha>-<n>.csv` y resume en `partidas.csv` la ventaja de oro
+  máxima de dota-bot (`ventaja_oro_max`), el minuto en que llegó a +10.000 (`minuto_10k`) y las torres en pie al final
+  (`torres_fin`, Radiant-Dire, de la última línea registrada). Las filas anteriores al 2026-10-29 no tienen esas
+  columnas.
+- Depuración: `--muestra-gsi <archivo>` guarda en ese archivo el último mensaje de GSI tal cual.
 - Resultados: una fila por partida en `partidas.csv` (ganador, minutos, kills, héroes). La columna `humano` es el
   equipo que GSI atribuye al espectador (desde dónde mira), no un lugar en la partida: en dotabench el humano queda
   fuera de los equipos (lo dice el log: «human player 0 kept out of the teams»).

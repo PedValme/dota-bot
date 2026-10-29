@@ -1,7 +1,8 @@
 -- dota-bot benchmark custom game ("dotabench", local only, never published). Launched by tools/bench/orquestador.mjs
 -- with "+dota_launch_custom_game dotabench dota". It does what console arguments cannot do after the map loads:
 -- keeps the human out of both teams, adds ten bots with the same five heroes on each side (bench_partida.lua, written
--- by the orchestrator per match) and speeds the match up. Who wins is read by the orchestrator through GSI.
+-- by the orchestrator per match), speeds the match up and logs a per-minute timeline of both teams. Who wins is read
+-- by the orchestrator through GSI.
 
 local DEFAULT = {
 	difficulty = "unfair",
@@ -46,6 +47,59 @@ local function OnStateChange()
 	end
 end
 
+-- Match timeline for the benchmark: one console line per game minute (and one at the end) with both teams'
+-- structures, kills and net worth. The orchestrator reads them from console.log (Dota runs with -condebug).
+local function CountStanding(classname, team)
+	local n = 0
+	for _, unit in ipairs(Entities:FindAllByClassname(classname)) do
+		if unit:GetTeamNumber() == team and unit:IsAlive() then n = n + 1 end
+	end
+	return n
+end
+
+local function AncientHealth(team)
+	for _, unit in ipairs(Entities:FindAllByClassname("npc_dota_fort")) do
+		if unit:GetTeamNumber() == team then return unit:IsAlive() and unit:GetHealth() or 0 end
+	end
+	return 0
+end
+
+local function NetWorth(team)
+	local total = 0
+	for i = 1, PlayerResource:GetPlayerCountForTeam(team) do
+		local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
+		if pid >= 0 then total = total + PlayerResource:GetNetWorth(pid) end
+	end
+	return total
+end
+
+local function PrintTimeline(event)
+	local r, d = DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS
+	print(string.format(
+		"[dotabench] timeline event=%s min=%d rk=%d dk=%d rt=%d dt=%d rb=%d db=%d rhp=%d dhp=%d rnw=%d dnw=%d",
+		event, math.floor(GameRules:GetDOTATime(false, false) / 60),
+		PlayerResource:GetTeamKills(r), PlayerResource:GetTeamKills(d),
+		CountStanding("npc_dota_tower", r), CountStanding("npc_dota_tower", d),
+		CountStanding("npc_dota_barracks", r), CountStanding("npc_dota_barracks", d),
+		AncientHealth(r), AncientHealth(d), NetWorth(r), NetWorth(d)))
+end
+
+local lastMinute = -1
+local function TimelineThink()
+	local state = GameRules:State_Get()
+	if state == DOTA_GAMERULES_STATE_GAME_IN_PROGRESS then
+		local minute = math.floor(GameRules:GetDOTATime(false, false) / 60)
+		if minute > lastMinute then
+			lastMinute = minute
+			PrintTimeline("minute")
+		end
+	elseif state >= DOTA_GAMERULES_STATE_POST_GAME then
+		PrintTimeline("end")
+		return nil
+	end
+	return 1
+end
+
 -- Humans never get a team: they watch.
 local function OnPlayerConnect(event)
 	local pid = event.PlayerID
@@ -72,4 +126,5 @@ function Activate()
 	GameRules:GetGameModeEntity():SetBotThinkingEnabled(true)
 	ListenToGameEvent("game_rules_state_change", OnStateChange, nil)
 	ListenToGameEvent("player_connect_full", OnPlayerConnect, nil)
+	GameRules:GetGameModeEntity():SetThink(function() return TimelineThink() end, "dotabench_timeline", 1)
 end
