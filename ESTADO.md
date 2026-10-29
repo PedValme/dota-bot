@@ -15,12 +15,14 @@
   partidas: hipótesis reforzada). Una partida extra quedó `sin-gsi` por falta de GPU (pantalla apagada) y no cuenta.
   Máquina antes de la serie nocturna: CPU media 16 %, 60 % de memoria libre, 24 núcleos; la primera serie se midió
   durante. Ritmo: 16-30 min reales por partida a ×4.
-- Siguiente acción: actualizar a 7.41f (docs/PATCH_UPDATE_GUIDE.md); luego medir estructuras por minuto para atacar
-  el cierre de partidas, comparando contra esta línea base. Verificar los héroes contra `BotImplemented`.
+- Siguiente acción: medir estructuras por minuto (GSI) para atacar el cierre de partidas, comparando contra esta
+  línea base. Verificar los héroes del benchmark contra `BotImplemented`.
 - Espera a Pedro: la prueba con un amigo en un lobby Local Host.
 
 ## Madurez
-Prototipo: es OHA 7.41/7.41a (127 héroes) con la limpieza de seguridad; sin cambios de juego propios.
+Prototipo: OHA 7.41a (127 héroes) con la limpieza de seguridad, al día con 7.41f (2026-10-29: 7.41b-f no trae cambios
+estructurales; corregidos Witchbane y tres nombres de objetos mal escritos; docs/investigacion/2026-10-29-parches-7.41b-f.md).
+Pendiente de ese informe: preferencias de talentos de 16 héroes y ajustes de Tusk, Invoker y Outworld Destroyer.
 
 ## Entregado
 - 2026-10-28 · Investigación (docs/investigacion/), fork con limpieza y check (PR #1), junction (PR #2), orquestador
