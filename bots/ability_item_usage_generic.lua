@@ -6490,7 +6490,7 @@ end
 --行巫之祸
 X.ConsiderItemDesire["item_heavy_blade"] = function( hItem )
 
-	local nCastRange = 500
+	local nCastRange = 700 -- 7.41d: cleanse range 500 -> 700
 	local sCastType = 'unit'
 	local hEffectTarget = nil
 	local sCastMotive = nil

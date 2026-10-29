@@ -1354,7 +1354,7 @@ ____exports.ConsiderIsTimeToFarm.npc_dota_hero_hoodwink = function()
     if not HasItem(bot, "item_maelstrom") and botNetWorth < 12000 then
         return true
     end
-    if not HasItem(bot, "item_gleipnir") and botNetWorth < 18000 then
+    if not HasItem(bot, "item_gungir") and botNetWorth < 18000 then -- Gleipnir's internal name
         return true
     end
     return false
