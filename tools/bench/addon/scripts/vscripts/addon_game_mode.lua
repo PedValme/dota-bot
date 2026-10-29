@@ -198,9 +198,7 @@ function Activate()
 	ListenToGameEvent("npc_spawned", OnNpcSpawned, nil)
 	-- The bots announce in chat the A/B variant they loaded (mode_farm_generic.lua); their print never reaches the log.
 	ListenToGameEvent("player_chat", function(event)
-		if type(event.text) == "string" and string.find(event.text, "[dotabench-bot]", 1, true) then
-			print("[dotabench] bot chat " .. event.text)
-		end
+		print("[dotabench] chat probe " .. tostring(event.playerid) .. " " .. tostring(event.text))
 	end, nil)
 	GameRules:GetGameModeEntity():SetThink(function() return TimelineThink() end, "dotabench_timeline", 1)
 end
