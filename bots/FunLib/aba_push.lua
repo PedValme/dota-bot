@@ -161,10 +161,11 @@ function ____exports.GetPushDesireHelper(bot, lane)
     if gameState.aliveAllyCount <= gameState.aliveEnemyCount - 2 then
         return BotModeDesire.None
     end
+    local bigLead = gameState.teamNetworth - gameState.enemyNetworth >= 10000
     local enemyFountain = gameState.team == Team.Radiant and DireFountainTpPoint or RadiantFountainTpPoint
     local laneFront = GetLaneFrontLocation(gameState.team, lane, 0)
     if GetLocationToLocationDistance(laneFront, enemyFountain) < 5000 then
-        if #alliesHere < 3 or gameState.aliveAllyCount < gameState.aliveEnemyCount then
+        if #alliesHere < 3 or not bigLead and gameState.aliveAllyCount < gameState.aliveEnemyCount then
             nMaxDesire = math.min(nMaxDesire, 0.08)
         end
     end
@@ -172,7 +173,7 @@ function ____exports.GetPushDesireHelper(bot, lane)
         nMaxDesire = math.min(nMaxDesire, 0.25)
     end
     if gameState.aliveEnemyCount >= 5 and gameState.aliveAllyCount <= gameState.aliveEnemyCount then
-        nMaxDesire = math.min(nMaxDesire, 0.41)
+        nMaxDesire = math.min(nMaxDesire, bigLead and 0.7 or 0.41)
     end
     local closeEnemies = getCachedEnemiesNearLoc(
         bot:GetLocation(),

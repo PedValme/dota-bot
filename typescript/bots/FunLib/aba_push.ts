@@ -294,11 +294,14 @@ export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     if (gameState.aliveAllyCount <= gameState.aliveEnemyCount - 2) {
         return BotModeDesire.None;
     }
+    // dota-bot: with a big net worth lead the team must close the game (measured 2026-10-29: OHA sat 20 minutes on
+    // +10k gold without breaking the base), so the "outnumbered" and "all enemies alive" caps below are relaxed.
+    const bigLead = gameState.teamNetworth - gameState.enemyNetworth >= 10000;
     // Don't push deep (past T2 toward enemy base) when alone or outnumbered
     const enemyFountain = gameState.team === Team.Radiant ? DireFountainTpPoint : RadiantFountainTpPoint;
     const laneFront = GetLaneFrontLocation(gameState.team, lane, 0);
     if (GetLocationToLocationDistance(laneFront, enemyFountain) < 5000) {
-        if (alliesHere.length < 3 || gameState.aliveAllyCount < gameState.aliveEnemyCount) {
+        if (alliesHere.length < 3 || (!bigLead && gameState.aliveAllyCount < gameState.aliveEnemyCount)) {
             nMaxDesire = math.min(nMaxDesire, 0.08);
         }
     }
@@ -308,7 +311,7 @@ export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     }
     // Caution when all enemies alive and no advantage
     if (gameState.aliveEnemyCount >= 5 && gameState.aliveAllyCount <= gameState.aliveEnemyCount) {
-        nMaxDesire = math.min(nMaxDesire, 0.41);
+        nMaxDesire = math.min(nMaxDesire, bigLead ? 0.7 : 0.41);
     }
     // Cap push desire when enemy heroes are very close — bot should fight, not push
     const closeEnemies = getCachedEnemiesNearLoc(bot.GetLocation(), 900);
