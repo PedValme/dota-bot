@@ -22,8 +22,9 @@ once it exists.
   - Capitán LLM con pic: perfil openai con Sol de orquestador, un subagente por partida (DECISIONES.md, 2026-10-29).
   - Lo que se trae de `upstream` se revisa como código de terceros antes de fusionarlo (DECISIONES.md, 2026-10-28).
   - El orquestador del benchmark solo toca Steam y Dota y lo que el benchmark necesita (DECISIONES.md, 2026-10-28).
-  - Mejora en 3 etapas (empuje, `ThinkLess` 0, LLM), cada una en serie A/B intercalada; sin contaminación: solo
-    cuentan partidas `valida=si` (DECISIONES.md, 2026-10-29).
+  - Sin contaminación: solo cuentan partidas `valida=si` (DECISIONES.md, 2026-10-29). Las 3 etapas quedaron
+    reemplazadas por una mejora grande con argumentos sólidos (cerebro de equipo con datos y criterio de juego), medida
+    una sola vez al final, no una corrida por cada detalle (DECISIONES.md, 2026-10-30; diseño en `trabajo/cerebro-equipo.md`).
   - El objetivo es Turbo, medido imitado en el custom game con `--modo turbo` (DECISIONES.md, 2026-10-29).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).
 
