@@ -22,6 +22,26 @@ local function MatchConfig()
 	return DEFAULT
 end
 
+-- Imitated Turbo (Pedro, 2026-10-29: the benchmark target is Turbo, and the real mode cannot run in a custom game).
+-- Turbo couriers (1100 speed, which is also how dota-bot detects Turbo and switches to its Turbo logic), gold and
+-- experience x2 and faster respawn. Towers, runes and other Turbo details stay as in normal mode.
+local TURBO = { gold = 2, xp = 2, respawn = 0.75 }
+
+local function ApplyTurbo()
+	local mode = GameRules:GetGameModeEntity()
+	mode:SetUseTurboCouriers(true)
+	mode:SetRespawnTimeScale(TURBO.respawn)
+	mode:SetModifyGoldFilter(function(_, event)
+		event.gold = math.floor(event.gold * TURBO.gold)
+		return true
+	end, {})
+	mode:SetModifyExperienceFilter(function(_, event)
+		event.experience = math.floor(event.experience * TURBO.xp)
+		return true
+	end, {})
+	print(string.format("[dotabench] turbo on gold=%s xp=%s respawn=%s couriers=turbo", TURBO.gold, TURBO.xp, TURBO.respawn))
+end
+
 local botsAdded = false
 
 local function AddBots(cfg)
@@ -172,14 +192,17 @@ local function PrintTimeline(event)
 		AncientHealth(r), AncientHealth(d), NetWorth(r), NetWorth(d), casts[r], casts[d]))
 end
 
--- Which game mode this match really is: Turbo couriers run at 1100 (that is how dota-bot itself detects Turbo,
--- FunLib/jmz_func.lua J.IsModeTurbo), and the courier is there in every mode.
+-- Courier speeds at minute 1: Turbo couriers run at 1100, which is how dota-bot detects Turbo
+-- (FunLib/jmz_func.lua J.IsModeTurbo), so this shows whether its Turbo logic is on.
 local function PrintMode()
 	local speeds = {}
-	for _, courier in ipairs(Entities:FindAllByClassname("npc_dota_courier")) do
+	local units = FindUnitsInRadius(DOTA_TEAM_GOODGUYS, Vector(0, 0, 0), nil, FIND_UNITS_EVERYWHERE,
+		DOTA_UNIT_TARGET_TEAM_BOTH, DOTA_UNIT_TARGET_COURIER, DOTA_UNIT_TARGET_FLAG_INVULNERABLE + DOTA_UNIT_TARGET_FLAG_OUT_OF_WORLD,
+		FIND_ANY_ORDER, false)
+	for _, courier in ipairs(units) do
 		table.insert(speeds, tostring(math.floor(courier:GetIdealSpeed())))
 	end
-	print("[dotabench] mode courier_speed=" .. (speeds[1] or "none") .. " all=" .. table.concat(speeds, "/"))
+	print("[dotabench] mode couriers=" .. #speeds .. " speeds=" .. table.concat(speeds, "/"))
 end
 
 local lastMinute = -1
@@ -222,6 +245,7 @@ function Activate()
 	GameRules:SetPreGameTime(30)
 	GameRules:SetSameHeroSelectionEnabled(true)
 	GameRules:GetGameModeEntity():SetBotThinkingEnabled(true)
+	if MatchConfig().turbo then ApplyTurbo() else print("[dotabench] turbo off") end
 	ListenToGameEvent("game_rules_state_change", OnStateChange, nil)
 	ListenToGameEvent("player_connect_full", OnPlayerConnect, nil)
 	ListenToGameEvent("npc_spawned", OnNpcSpawned, nil)

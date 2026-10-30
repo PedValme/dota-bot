@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
   parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, variantLua,
-  VARIANTS, summarize } from "./orquestador.mjs";
+  VARIANTS, summarize, parseModo } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
 
@@ -83,8 +83,19 @@ test("both teams get the same five heroes, one per position, from the pool", () 
 
 test("the match config is plain Lua data for the custom game", () => {
   const lua = matchConfigLua(["npc_dota_hero_axe", "npc_dota_hero_lina"], 4, 4);
-  assert.match(lua, /return \{ difficulty = "unfair", timescale = 4, heroes = \{ "npc_dota_hero_axe", "npc_dota_hero_lina" \} \}/);
+  assert.match(lua, /return \{ difficulty = "unfair", timescale = 4, turbo = false, heroes = \{ "npc_dota_hero_axe", "npc_dota_hero_lina" \} \}/);
   assert.match(matchConfigLua(["x"], 0, 1), /difficulty = "passive"/);
+  assert.match(matchConfigLua(["x"], 4, 4, true), /turbo = true/);
+});
+
+test("the mode the custom game applied is read from the log and must match the series", () => {
+  assert.equal(parseModo("[VScript] [dotabench] turbo on gold=2 xp=2 respawn=0.75 couriers=turbo"), "turbo");
+  assert.equal(parseModo("[VScript] [dotabench] turbo off"), "normal");
+  assert.equal(parseModo("nothing"), "");
+  const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera" }, variant: "", loggedVariant: "", version: "1", firstVersion: "1" };
+  assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), "");
+  assert.match(validity({ ...ok, modo: "turbo", loggedModo: "normal" }), /modo/);
+  assert.match(validity({ ...ok, modo: "turbo", loggedModo: "" }), /modo/);
 });
 
 test("the GSI config posts only to localhost with the token", () => {
@@ -112,7 +123,7 @@ test("a finished match needs post-game and a winner", () => {
 
 test("CSV rows keep their columns", () => {
   const row = csvRow({ fecha: "2026-10-28T19:00", etiqueta: "a,b", partida: 1, dotabot: "radiant", ganador: "dire" });
-  assert.equal(row.split(",").length, 23);
+  assert.equal(row.split(",").length, 24);
   assert.ok(row.includes("a;b"));
 });
 
