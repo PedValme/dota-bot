@@ -124,6 +124,28 @@ function updateUnitStateCache()
     }
     return unitStateCache
 end
+local GROUP_LANE_HOLD = 12
+local GroupLane = {}
+local function TeamGroupLane(bot, lane)
+    local team = GetTeam()
+    local held = GroupLane[team]
+    if held and DotaTime() - held.time < GROUP_LANE_HOLD then
+        return held.lane
+    end
+    local chosen = ____exports.WhichLaneToPush(bot, lane)
+    GroupLane[team] = {lane = chosen, time = DotaTime()}
+    return chosen
+end
+local function CountAlliesOnLane(lane, laneFront)
+    local pushMode = lane == Lane.Top and BotMode.PushTowerTop or (lane == Lane.Mid and BotMode.PushTowerMid or BotMode.PushTowerBot)
+    local n = 0
+    for ____, ally in ipairs(GetUnitList(UnitType.AlliedHeroes)) do
+        if jmz.IsValidHero(ally) and not ally:IsIllusion() and (ally:GetActiveMode() == pushMode or GetUnitToLocationDistance(ally, laneFront) <= 1600) then
+            n = n + 1
+        end
+    end
+    return n
+end
 function ____exports.GetPushDesireHelper(bot, lane)
     if bot.laneToPush == nil then
         bot.laneToPush = lane
@@ -155,7 +177,10 @@ function ____exports.GetPushDesireHelper(bot, lane)
     if enemiesAtAncient >= 1 then
         return BotModeDesire.ExtraLow
     end
-    if #alliesHere <= 1 and gameState.aliveEnemyCount >= 3 then
+    local groupPush = Customize.BenchVariant.grupo == true and gameState.teamNetworth - gameState.enemyNetworth >= 5000
+    local groupLane = groupPush and TeamGroupLane(bot, lane) == lane
+    local groupLaneEven = groupLane and gameState.aliveAllyCount >= gameState.aliveEnemyCount
+    if #alliesHere <= 1 and gameState.aliveEnemyCount >= 3 and not groupLaneEven then
         return BotModeDesire.None
     end
     if gameState.aliveAllyCount <= gameState.aliveEnemyCount - 2 then
@@ -165,7 +190,8 @@ function ____exports.GetPushDesireHelper(bot, lane)
     local enemyFountain = gameState.team == Team.Radiant and DireFountainTpPoint or RadiantFountainTpPoint
     local laneFront = GetLaneFrontLocation(gameState.team, lane, 0)
     if GetLocationToLocationDistance(laneFront, enemyFountain) < 5000 then
-        if #alliesHere < 3 or not bigLead and gameState.aliveAllyCount < gameState.aliveEnemyCount then
+        local alliesForDeepPush = groupLaneEven and CountAlliesOnLane(lane, laneFront) or #alliesHere
+        if alliesForDeepPush < 3 or not bigLead and gameState.aliveAllyCount < gameState.aliveEnemyCount then
             nMaxDesire = math.min(nMaxDesire, 0.08)
         end
     end
@@ -173,7 +199,8 @@ function ____exports.GetPushDesireHelper(bot, lane)
         nMaxDesire = math.min(nMaxDesire, 0.25)
     end
     if gameState.aliveEnemyCount >= 5 and gameState.aliveAllyCount <= gameState.aliveEnemyCount then
-        nMaxDesire = math.min(nMaxDesire, bigLead and 0.7 or 0.41)
+        local evenGroupPush = groupPush and gameState.aliveAllyCount >= gameState.aliveEnemyCount
+        nMaxDesire = math.min(nMaxDesire, (bigLead or evenGroupPush) and 0.7 or 0.41)
     end
     local closeEnemies = getCachedEnemiesNearLoc(
         bot:GetLocation(),
@@ -285,6 +312,21 @@ function ____exports.GetPushDesireHelper(bot, lane)
     end
     local pushLane = ____exports.WhichLaneToPush(bot, lane)
     local isCurrentLanePushLane = pushLane == lane
+    if groupPush then
+        if not groupLane then
+            return BotModeDesire.None
+        end
+        if aAliveCount >= eAliveCount and #enemiesHere <= #alliesHere then
+            local leadDesire = 0.5 + RemapValClamped(networthAdvantage, 3000, 20000, 0, 1.5)
+            return math.min(
+                nMaxDesire,
+                math.max(
+                    0.65,
+                    leadDesire * jmz.GetHP(bot)
+                )
+            )
+        end
+    end
     if not jmz.IsCore(bot) and isCurrentLanePushLane or jmz.IsCore(bot) and (jmz.IsLateGame() and isCurrentLanePushLane or isMidOrEarlyGame) then
         local allowNumbers = eAliveCount == 0 or aAliveCoreCount >= eAliveCoreCount or aAliveCoreCount >= 1 and aAliveCount >= eAliveCount + 2 or networthAdvantage > 8000 and aAliveCount >= eAliveCount - 1 or levelAdvantage > 2 and aAliveCount >= eAliveCount - 1
         if allowNumbers then

@@ -2,6 +2,17 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
+- **2026-10-30, etapa «remate»** (DECISIONES 2026-10-30): rama `claude/remate`, variantes `grupo` (con +5.000 todo el
+  equipo empuja una sola línea, `FunLib/aba_push.lua` y su `.ts`) y `grupo_farm` (además farmea con +6.000,
+  `mode_farm_generic.lua`); apagadas sin archivo de variante. Revisadas por Opus y corregidas.
+- Serie `remate-ab` (18 válidas, Turbo, `node tools/bench/resumir-serie.mjs remate-ab`): victorias base 5/6, grupo 5/6,
+  grupo_farm 4/6. Con `grupo`, 4-5 bots empujan juntos el 34 % del tiempo (base 9 %), cierre desde +10.000 en 10-14
+  min (base 5-19) y partidas 2 min más cortas de mediana; pero perdió una partida con +18.000 (la 17): el equipo
+  empujaba mid sin romper y las megacreeps le tiraron la base por bot (defender esa línea, 1 % del tiempo). `farm` no
+  aporta. Conclusión: el mecanismo funciona; no está listo para encenderse por defecto. (Tras la serie se corrigió
+  un caso 4 contra 5 que señaló la segunda revisión de Opus; la serie lo midió sin esa corrección.)
+- Siguiente (propuesto a Pedro, sin hacer): `grupo` v2 que ceda el mínimo de 0,65 cuando una T3, cuarteles o el Ancient
+  propios están bajo ataque, y una serie `base,grupo` de 12-18 partidas. `grupo_farm` se descarta.
 - **2026-10-29/30, noche de reconocimiento** (DECISIONES 2026-10-29, Pedro): leer todo el bot, el custom game y cómo
   operan en Dota, y comprobarlo en partidas Turbo imitado. Entregable: [docs/mapa.md](docs/mapa.md), con cada dato
   marcado como visto en el juego, leído en el código o supuesto. Léelo antes de cualquier prueba.
