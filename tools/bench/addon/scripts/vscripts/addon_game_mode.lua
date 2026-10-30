@@ -122,6 +122,27 @@ local function OnStateChange()
 		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
 		SendToServerConsole("host_timescale " .. tostring(cfg.timescale or 1))
+		-- TEMP: look for a way to run Turbo in a custom game.
+		SendToServerConsole("script_help2")
+		for label, obj in pairs({ GameRules = GameRules, GameMode = GameRules:GetGameModeEntity() }) do
+			local seen = {}
+			local mt = getmetatable(obj)
+			while mt and not seen[mt] do
+				seen[mt] = true
+				local idx = rawget(mt, "__index")
+				if type(idx) == "table" then
+					for name in pairs(idx) do
+						local n = tostring(name)
+						if n:find("Turbo") or n:find("Respawn") or n:find("Gold") or n:find("XP") or n:find("Mode") or n:find("Courier") then
+							print("[dotabench] api " .. label .. "." .. n)
+						end
+					end
+					mt = getmetatable(idx)
+				else
+					mt = nil
+				end
+			end
+		end
 	end
 end
 
@@ -212,7 +233,6 @@ end
 
 function Activate()
 	print("[dotabench] loaded")
-	SendToServerConsole("script_help2") -- TEMP: dump the VScript API to look for Turbo
 	GameRules:SetCustomGameTeamMaxPlayers(DOTA_TEAM_GOODGUYS, 5)
 	GameRules:SetCustomGameTeamMaxPlayers(DOTA_TEAM_BADGUYS, 5)
 	GameRules:SetCustomGameSetupAutoLaunchDelay(0)
