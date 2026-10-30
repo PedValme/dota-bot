@@ -58,7 +58,21 @@ if Customize.BenchVariant.builds == true then
 			end
 		end
 		for _, sItem in ipairs( tHeroBuild ) do Register( sItem ) end
-		sPurchaseList = tHeroBuild
+		-- The data lists end after about six completed items; OHA's late extras (Shard, Moon Shard, upgraded Aghanim's,
+		-- level 2 travel boots) follow, so the comparison is about the build, not about stopping buying. A copy: the
+		-- data table is shared by every bot of the team.
+		local tList = {}
+		for _, sItem in ipairs( tHeroBuild ) do tList[#tList + 1] = sItem end
+		local tExtras = { item_aghanims_shard = true, item_moon_shard = true, item_ultimate_scepter_2 = true, item_travel_boots_2 = true }
+		for _, sItem in ipairs( sPurchaseList ) do
+			if tExtras[sItem] then
+				local bListed = false
+				for _, sHave in ipairs( tList ) do if sHave == sItem then bListed = true end end
+				if not bListed then tList[#tList + 1] = sItem end
+			end
+		end
+		tHeroBuild = tList
+		sPurchaseList = tList
 		print( '[bench] builds ' .. botName .. ' pos=' .. tostring( J.GetPosition( bot ) ) .. ' ' .. table.concat( tHeroBuild, ',' ) )
 	end
 end

@@ -67,17 +67,31 @@ async function main() {
     const early = pick(pop.early_game_items, items, (x) => buyable(x) && completed(x), 3, 0.3);
     const mid = pick(pop.mid_game_items, items, (x) => buyable(x) && completed(x) && cost(x) >= 1500, 3, 0.3);
     const late = pick(pop.late_game_items, items, (x) => buyable(x) && completed(x) && cost(x) >= 2500, 3, 0.3);
+    // One pair of boots: the first base upgrade only (travel boots and the support upgrades build on it); a core with
+    // none gets the most popular one, or plain boots, right after its starting items.
+    const BASE_BOOTS = ['power_treads', 'phase_boots', 'arcane_boots', 'tranquil_boots'];
+    const rest = [...early, ...mid, ...late];
+    const firstBoots = rest.find((n) => BASE_BOOTS.includes(n));
+    const trimmed = rest.filter((n) => !BASE_BOOTS.includes(n) || n === firstBoots).filter((n) => n !== 'boots');
+    if (!firstBoots) {
+      const popular = pick(pop.early_game_items, items, (x) => BASE_BOOTS.includes(x), 1, 0)[0];
+      trimmed.unshift(popular ?? 'boots');
+    }
+    // An item that is already part of an earlier one (a Yasha after a Manta) would be bought a second time: drop it.
+    const parts = (n, acc = new Set()) => {
+      for (const c of consts[n]?.components ?? []) { if (!acc.has(c)) { acc.add(c); parts(c, acc); } }
+      return acc;
+    };
     const seen = new Set();
+    const absorbed = new Set();
     const list = [];
-    for (const n of [...start, ...early, ...mid, ...late]) {
-      if (seen.has(n) && !START_SKIP_OK.has(n)) continue;
+    for (const n of [...start, ...trimmed]) {
+      if ((seen.has(n) && !START_SKIP_OK.has(n)) || absorbed.has(n)) continue;
       seen.add(n);
+      for (const c of parts(n)) absorbed.add(c);
       list.push('item_' + n);
     }
-    // A boots upgrade already covers plain boots.
-    const upgrades = ['power_treads', 'phase_boots', 'arcane_boots', 'tranquil_boots', 'travel_boots', 'guardian_greaves', 'boots_of_bearing'];
-    const finalList = list.some((n) => upgrades.includes(n.slice(5))) ? list.filter((n) => n !== 'item_boots') : list;
-    if (early.length + mid.length >= 3) builds[hero] = finalList;
+    if (early.length + mid.length >= 3) builds[hero] = list;
   }
 
   const lines = Object.keys(builds).sort().map((hero) => `\t${hero} = { ${builds[hero].map((n) => `'${n}'`).join(', ')} },`);

@@ -192,7 +192,10 @@ local function BaseThreats()
 			local h, c = 0, 0
 			for _, e in ipairs(enemies) do if Dist(e:GetLocation(), loc) <= 1200 then h = h + 1 end end
 			for _, cr in ipairs(enemyCreeps) do if cr:IsAlive() and Dist(cr:GetLocation(), loc) <= 900 then c = c + 1 end end
-			if h > heroes or (h == heroes and c > creeps) then heroes, creeps, at, inner = h, c, loc, s ~= t3 end
+			if h > heroes or (h == heroes and c > creeps) then heroes, creeps, at = h, c, loc end
+			-- "Past the T3" when an enemy hero is at any structure behind it, whichever structure wins the count above
+			-- (barracks sit within 1200 of their T3, so a winner-based flag flickered with a lone split-pusher).
+			if s ~= t3 and (h > 0 or c >= 3) then inner = true end
 		end
 		-- Creeps alone threaten when they are many (a normal wave with its catapult at a T3 is not an emergency) or
 		-- past the T3.
@@ -408,7 +411,9 @@ function B.Update()
 		-- ground, lost the fight there and the base after it (series cerebro-ab). Needs at least four alive, no fewer
 		-- than them, and the fight around the group evaluated clearly ours.
 		local fightHere = B.EvaluateFight(center, now)
-		local close = (hasAegis or lead >= LEAD_CLOSE) and aliveA >= 4 and aliveA >= aliveE and fightHere >= 1.2
+		-- Hysteresis: 1.2 to start closing, 1.0 to keep at it (the evaluation moves with what the team sees).
+		local close = (hasAegis or lead >= LEAD_CLOSE) and aliveA >= 4 and aliveA >= aliveE
+			and fightHere >= (p.state == 'CERRAR' and 1.0 or 1.2)
 		-- And back out in time: once the closing goes wrong (an ally down and the fight no longer ours), stop and farm
 		-- instead of feeding the rest of the team into the towers.
 		if p.state == 'CERRAR' and allyDeaths >= 1 and fightHere < 1.0 then
@@ -425,6 +430,7 @@ function B.Update()
 		if lane == nil then
 			-- Every lane is at the enemy T3 and the team cannot go in yet: farm and wait for Aegis or a bigger lead.
 			SetState('LINEA', { reason = string.format('esperando high ground lead=%d', lead) }, now)
+			lineaHoldUntil = now + 10
 			return
 		end
 		local rally = RallyPoint(lane)
