@@ -202,7 +202,8 @@ local function PrintMode()
 	for _, courier in ipairs(units) do
 		table.insert(speeds, tostring(math.floor(courier:GetIdealSpeed())))
 	end
-	print("[dotabench] mode couriers=" .. #speeds .. " speeds=" .. table.concat(speeds, "/"))
+	print("[dotabench] mode couriers=" .. #speeds .. " speeds=" .. table.concat(speeds, "/")
+		.. " by_class=" .. #Entities:FindAllByClassname("npc_dota_courier"))
 end
 
 local lastMinute = -1
@@ -245,6 +246,8 @@ function Activate()
 	GameRules:SetPreGameTime(30)
 	GameRules:SetSameHeroSelectionEnabled(true)
 	GameRules:GetGameModeEntity():SetBotThinkingEnabled(true)
+	-- One courier per player, as in normal Dota; custom games give none unless this is on.
+	GameRules:GetGameModeEntity():SetFreeCourierModeEnabled(true)
 	if MatchConfig().turbo then ApplyTurbo() else print("[dotabench] turbo off") end
 	ListenToGameEvent("game_rules_state_change", OnStateChange, nil)
 	ListenToGameEvent("player_connect_full", OnPlayerConnect, nil)
