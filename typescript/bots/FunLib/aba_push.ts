@@ -316,10 +316,12 @@ export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     // "remate" (see TeamGroupLane): is this lane the team's push lane?
     const groupPush = Customize.BenchVariant.grupo === true && gameState.teamNetworth - gameState.enemyNetworth >= 5000;
     const groupLane = groupPush && TeamGroupLane(bot, lane) === lane;
+    // The safety gates below relax for the group only at even numbers, never when a hero down
+    const groupLaneEven = groupLane && gameState.aliveAllyCount >= gameState.aliveEnemyCount;
 
     // --- Push safety gates ---
     // Never push alone when 3+ enemies alive (a bot walking to join the team's group push is not alone)
-    if (alliesHere.length <= 1 && gameState.aliveEnemyCount >= 3 && !groupLane) {
+    if (alliesHere.length <= 1 && gameState.aliveEnemyCount >= 3 && !groupLaneEven) {
         return BotModeDesire.None;
     }
     // Never push with 2+ hero count disadvantage
@@ -334,7 +336,7 @@ export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     const enemyFountain = gameState.team === Team.Radiant ? DireFountainTpPoint : RadiantFountainTpPoint;
     const laneFront = GetLaneFrontLocation(gameState.team, lane, 0);
     if (GetLocationToLocationDistance(laneFront, enemyFountain) < 5000) {
-        const alliesForDeepPush = groupLane ? CountAlliesOnLane(lane, laneFront) : alliesHere.length;
+        const alliesForDeepPush = groupLaneEven ? CountAlliesOnLane(lane, laneFront) : alliesHere.length;
         if (alliesForDeepPush < 3 || (!bigLead && gameState.aliveAllyCount < gameState.aliveEnemyCount)) {
             nMaxDesire = math.min(nMaxDesire, 0.08);
         }

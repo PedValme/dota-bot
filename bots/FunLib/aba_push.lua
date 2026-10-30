@@ -179,7 +179,8 @@ function ____exports.GetPushDesireHelper(bot, lane)
     end
     local groupPush = Customize.BenchVariant.grupo == true and gameState.teamNetworth - gameState.enemyNetworth >= 5000
     local groupLane = groupPush and TeamGroupLane(bot, lane) == lane
-    if #alliesHere <= 1 and gameState.aliveEnemyCount >= 3 and not groupLane then
+    local groupLaneEven = groupLane and gameState.aliveAllyCount >= gameState.aliveEnemyCount
+    if #alliesHere <= 1 and gameState.aliveEnemyCount >= 3 and not groupLaneEven then
         return BotModeDesire.None
     end
     if gameState.aliveAllyCount <= gameState.aliveEnemyCount - 2 then
@@ -189,7 +190,7 @@ function ____exports.GetPushDesireHelper(bot, lane)
     local enemyFountain = gameState.team == Team.Radiant and DireFountainTpPoint or RadiantFountainTpPoint
     local laneFront = GetLaneFrontLocation(gameState.team, lane, 0)
     if GetLocationToLocationDistance(laneFront, enemyFountain) < 5000 then
-        local alliesForDeepPush = groupLane and CountAlliesOnLane(lane, laneFront) or #alliesHere
+        local alliesForDeepPush = groupLaneEven and CountAlliesOnLane(lane, laneFront) or #alliesHere
         if alliesForDeepPush < 3 or not bigLead and gameState.aliveAllyCount < gameState.aliveEnemyCount then
             nMaxDesire = math.min(nMaxDesire, 0.08)
         end
