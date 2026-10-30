@@ -34,7 +34,8 @@ test("the variant file is plain Lua data with the variant's fields", () => {
 
 test("a match counts only if it ended, 5v5 bots, human out, the right variant and the same Dota", () => {
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera" }, variant: "base", loggedVariant: "base",
-    version: "6969", firstVersion: "6969" };
+    version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal" };
+  assert.match(validity({ ...ok, loggedModo: undefined }), /modo/);
   assert.equal(validity(ok), "");
   assert.equal(validity({ ...ok, roster: { ...ok.roster, humano: "heroe-quitado" } }), "");
   assert.match(validity({ ...ok, outcome: "timeout" }), /final/);

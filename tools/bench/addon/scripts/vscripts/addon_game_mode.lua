@@ -26,20 +26,30 @@ end
 -- Turbo couriers (1100 speed, which is also how dota-bot detects Turbo and switches to its Turbo logic), gold and
 -- experience x2 and faster respawn. Towers, runes and other Turbo details stay as in normal mode.
 local TURBO = { gold = 2, xp = 2, respawn = 0.75 }
+-- Only income is doubled: death loss, buyback, purchases, sells and ability costs stay as they are.
+local INCOME = {}
+for _, name in ipairs({ "GameTick", "Building", "HeroKill", "CreepKill", "NeutralKill", "RoshanKill", "CourierKill",
+	"BountyRune", "SharedGold", "AbilityGold", "WardKill" }) do
+	local reason = _G["DOTA_ModifyGold_" .. name]
+	if reason ~= nil then INCOME[reason] = true end
+end
 
 local function ApplyTurbo()
 	local mode = GameRules:GetGameModeEntity()
 	mode:SetUseTurboCouriers(true)
 	mode:SetRespawnTimeScale(TURBO.respawn)
 	mode:SetModifyGoldFilter(function(_, event)
-		event.gold = math.floor(event.gold * TURBO.gold)
+		if event.gold > 0 and INCOME[event.reason_const] then event.gold = math.floor(event.gold * TURBO.gold) end
 		return true
 	end, {})
 	mode:SetModifyExperienceFilter(function(_, event)
 		event.experience = math.floor(event.experience * TURBO.xp)
 		return true
 	end, {})
-	print(string.format("[dotabench] turbo on gold=%s xp=%s respawn=%s couriers=turbo", TURBO.gold, TURBO.xp, TURBO.respawn))
+	local n = 0
+	for _ in pairs(INCOME) do n = n + 1 end
+	print(string.format("[dotabench] turbo on gold=%s xp=%s respawn=%s couriers=turbo income_reasons=%d", TURBO.gold,
+		TURBO.xp, TURBO.respawn, n))
 end
 
 local botsAdded = false

@@ -77,7 +77,7 @@ export function schedule(i, variants) {
 // Whether a match can be counted, and why not. The variant is confirmed by the custom game reading the same file at
 // pre-game; the bots' VM cannot write to the log (neither print nor chat reach it, tried 2026-10-29), so that they
 // apply it was checked once with the "sonda" variant (bench/README.md) and each match logs casts per team.
-export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo = "normal" }) {
+export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo }) {
   if (outcome !== "final") return "sin final";
   if (modo !== loggedModo) return `modo ${loggedModo || "sin registro"} en el log`;
   if (roster.radiant !== 5 || roster.dire !== 5) return `reparto ${roster.radiant ?? 0}-${roster.dire ?? 0}`;
