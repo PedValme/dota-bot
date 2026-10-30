@@ -372,7 +372,8 @@ function GetDesireHelper()
 	and not J.IsDefending(bot)
 	and (bot:GetUnitName() ~= 'npc_dota_hero_lone_druid_bear' or (bot:HasScepter() and not J.IsValid(LoneDruid.hero)))
 	and (DotaTime() > 8 * 60 or bot:GetLevel() >= 8 or ( bot:GetAttackRange() < 220 and bot:GetLevel() >= 6 ))
-	and networthAdvantage < 6000
+	-- dota-bot "remate" (Pedro, 2026-10-30): the benchmark variant "farm = true" keeps farming with a 6k+ lead.
+	and (networthAdvantage < 6000 or Customize.BenchVariant.farm == true)
 	and not J.IsLateGame()
 	then
 		if J.GetDistanceFromEnemyFountain(bot) > 4000

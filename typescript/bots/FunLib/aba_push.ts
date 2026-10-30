@@ -225,6 +225,34 @@ type LaneState = { target?: Unit | null; lockUntil?: number };
 const ObjectiveState: Record<number, Partial<Record<Lane, LaneState>>> = {};
 
 /* -----------------------------------------------------------------------------
+ * dota-bot "remate" (Pedro, 2026-10-30; benchmark variant "grupo = true" only): with a 5k net worth lead the whole
+ * team pushes one lane together instead of 1 to 3 bots spread over the map (docs/mapa.md: 4-5 bots pushed together
+ * only 8% of the time). The lane is held per team for GROUP_LANE_HOLD seconds so the team does not swing between lanes.
+ * ---------------------------------------------------------------------------*/
+const GROUP_LANE_HOLD = 12;
+const GroupLane: Record<number, { lane: Lane; time: number }> = {};
+function TeamGroupLane(bot: Unit, lane: Lane): Lane {
+    const team = GetTeam();
+    const held = GroupLane[team];
+    if (held && DotaTime() - held.time < GROUP_LANE_HOLD) return held.lane;
+    const chosen = WhichLaneToPush(bot, lane);
+    GroupLane[team] = { lane: chosen, time: DotaTime() };
+    return chosen;
+}
+// Allies already pushing this lane or at its front: they count as the group for a deep push, so bots that arrive one
+// by one are not turned back while the rest of the team is on its way.
+function CountAlliesOnLane(lane: Lane, laneFront: Vector): number {
+    const pushMode = lane === Lane.Top ? BotMode.PushTowerTop : lane === Lane.Mid ? BotMode.PushTowerMid : BotMode.PushTowerBot;
+    let n = 0;
+    for (const ally of GetUnitList(UnitType.AlliedHeroes)) {
+        if (jmz.IsValidHero(ally) && !ally.IsIllusion() && (ally.GetActiveMode() === pushMode || GetUnitToLocationDistance(ally, laneFront) <= 1600)) {
+            n++;
+        }
+    }
+    return n;
+}
+
+/* -----------------------------------------------------------------------------
  * Desire front-door
  * ---------------------------------------------------------------------------*/
 export function GetPushDesire(bot: Unit, lane: Lane): BotModeDesire {
@@ -285,9 +313,13 @@ export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     // If Ancient under direct pressure → strongly deprioritize pushes
     if (enemiesAtAncient >= 1) return BotModeDesire.ExtraLow;
 
+    // "remate" (see TeamGroupLane): is this lane the team's push lane?
+    const groupPush = Customize.BenchVariant.grupo === true && gameState.teamNetworth - gameState.enemyNetworth >= 5000;
+    const groupLane = groupPush && TeamGroupLane(bot, lane) === lane;
+
     // --- Push safety gates ---
-    // Never push alone when 3+ enemies alive
-    if (alliesHere.length <= 1 && gameState.aliveEnemyCount >= 3) {
+    // Never push alone when 3+ enemies alive (a bot walking to join the team's group push is not alone)
+    if (alliesHere.length <= 1 && gameState.aliveEnemyCount >= 3 && !groupLane) {
         return BotModeDesire.None;
     }
     // Never push with 2+ hero count disadvantage
@@ -302,7 +334,8 @@ export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     const enemyFountain = gameState.team === Team.Radiant ? DireFountainTpPoint : RadiantFountainTpPoint;
     const laneFront = GetLaneFrontLocation(gameState.team, lane, 0);
     if (GetLocationToLocationDistance(laneFront, enemyFountain) < 5000) {
-        if (alliesHere.length < 3 || (!bigLead && gameState.aliveAllyCount < gameState.aliveEnemyCount)) {
+        const alliesForDeepPush = groupLane ? CountAlliesOnLane(lane, laneFront) : alliesHere.length;
+        if (alliesForDeepPush < 3 || (!bigLead && gameState.aliveAllyCount < gameState.aliveEnemyCount)) {
             nMaxDesire = math.min(nMaxDesire, 0.08);
         }
     }
@@ -312,7 +345,9 @@ export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     }
     // Caution when all enemies alive and no advantage
     if (gameState.aliveEnemyCount >= 5 && gameState.aliveAllyCount <= gameState.aliveEnemyCount) {
-        nMaxDesire = math.min(nMaxDesire, bigLead ? 0.7 : 0.41);
+        // "remate" relaxes this cap only at even numbers (5 v 5), never when a hero down
+        const evenGroupPush = groupPush && gameState.aliveAllyCount >= gameState.aliveEnemyCount;
+        nMaxDesire = math.min(nMaxDesire, bigLead || evenGroupPush ? 0.7 : 0.41);
     }
     // Cap push desire when enemy heroes are very close — bot should fight, not push
     const closeEnemies = getCachedEnemiesNearLoc(bot.GetLocation(), 900);
@@ -454,6 +489,17 @@ export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     // Decide which lane to push; consider mid early, ally proximity, etc.
     const pushLane = WhichLaneToPush(bot, lane);
     const isCurrentLanePushLane = pushLane === lane;
+
+    // "remate": only the team's push lane, with a floor of 0.65 so it beats farming (capped at 0.6) and laning but not
+    // a fight; the safety caps above (low HP, enemies close, deep push with fewer than 3 allies) still apply. Without
+    // even numbers, or outnumbered right here, it falls back to the normal push logic below.
+    if (groupPush) {
+        if (!groupLane) return BotModeDesire.None;
+        if (aAliveCount >= eAliveCount && enemiesHere.length <= alliesHere.length) {
+            const leadDesire = 0.5 + RemapValClamped(networthAdvantage, 3000, 20000, 0.0, 1.5);
+            return math.min(nMaxDesire, math.max(0.65, leadDesire * jmz.GetHP(bot))) as BotModeDesire;
+        }
+    }
 
     // Enhanced group push logic - more aggressive when team has advantages
     if ((!jmz.IsCore(bot) && isCurrentLanePushLane) || (jmz.IsCore(bot) && ((jmz.IsLateGame() && isCurrentLanePushLane) || isMidOrEarlyGame))) {

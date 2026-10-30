@@ -2,7 +2,9 @@
 -- conditions. tools/bench/orquestador.mjs writes Customize/bench_variant.lua (git-ignored) for each match, e.g.
 -- "return { empuje = false, thinkless = 1 }", and deletes it when the match ends. Without that file it returns an
 -- empty table and the bot plays its normal, current code. Fields:
---   empuje    false: the push caps before PR #11 (no relaxing with a 10k net worth lead), FunLib/aba_push.lua
+--   empuje    true: PR #11, relaxed push caps with a 10k net worth lead (off by default), FunLib/aba_push.lua
+--   grupo     true: with a 5k lead the whole team pushes one lane together, FunLib/aba_push.lua
+--   farm      true: keep farming with a 6k+ lead, mode_farm_generic.lua
 --   thinkless number: overrides Customize.ThinkLess, Customize/general.lua
 -- dofile (not require) so a stale answer is never cached between matches.
 local ok, variant = pcall(dofile, GetScriptDirectory()..'/Customize/bench_variant')
