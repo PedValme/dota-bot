@@ -1389,7 +1389,7 @@ end
 
 -- Seconds left of the longest disable on a visible unit, from its modifiers (enemy modifiers and their remaining
 -- time can be read, checked in game 2026-10-30); nil if no disable modifier is found.
-local tDisableWords = { 'stun', 'bash', 'hex', 'sheep', 'nightmare', 'root', 'ensnare', 'entangle', 'frozen', 'sleep',
+local tDisableWords = { 'stun', 'bash', 'hex', 'sheep', 'voodoo', 'nightmare', 'root', 'ensnare', 'entangle', 'frozen', 'sleep',
 	'fear', 'taunt', 'cyclone', 'eul', 'reverse_polarity', 'black_hole', 'chrono', 'ravage', 'duel', 'impale',
 	'fissure', 'grip', 'shackle', 'petrif', 'hypno' }
 function J.GetDisableRemaining( npcTarget )
@@ -3281,6 +3281,12 @@ function J.GetTeamFightLocation( bot )
 		then
 			local allyList = J.GetSpecialModeAllies( member, 1400, BOT_MODE_ATTACK )
 			targetLocation = J.GetCenterOfUnits( allyList )
+			-- dota-bot team brain (variant "cerebro"): a fight the brain called may start before anyone is in ATTACK
+			-- mode; the center of no units is (0, 0), the middle of the map, so use the brain's engage point instead.
+			if #allyList == 0 and J.TeamBrain().Enabled() and J.TeamBrain().plan.engage ~= nil
+			then
+				targetLocation = J.TeamBrain().plan.engage.loc
+			end
 			break
 		end
 	end

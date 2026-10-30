@@ -609,7 +609,14 @@ export function GetDefendDesire(bot: Unit, lane: Lane): BotModeDesire {
     // }
 
     // 2) compute and publish
-    const res = GetDefendDesireHelper(bot, lane);
+    let res = GetDefendDesireHelper(bot, lane);
+    // dota-bot team brain (variant "cerebro"): the plan's defenders defend before any other rule (OHA turned defence
+    // off while 3 allies pushed, and only counted heroes, not creeps). Applied after OHA's helper so the per-bot
+    // defend state that DefendThink reads stays fresh.
+    if (TeamBrain.Enabled()) {
+        const planned = TeamBrain.DefendDesire(bot, lane);
+        if (planned !== undefined) res = planned as BotModeDesire;
+    }
     // jmz.Utils.SetCachedVars(cacheKey, res);
     (bot as any).defendDesire = res;
     return res;
@@ -618,13 +625,6 @@ export function GetDefendDesire(bot: Unit, lane: Lane): BotModeDesire {
 export function GetDefendDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     if ((bot as any).laneToDefend == null) (bot as any).laneToDefend = lane;
     if ((bot as any).DefendLaneDesire == null) (bot as any).DefendLaneDesire = [0, 0, 0];
-
-    // dota-bot team brain (variant "cerebro"): the plan's defenders defend before any other rule (OHA turned defence
-    // off while 3 allies pushed, and only counted heroes, not creeps).
-    if (TeamBrain.Enabled()) {
-        const planned = TeamBrain.DefendDesire(bot, lane);
-        if (planned !== undefined) return planned as BotModeDesire;
-    }
 
     // Update caches
     const gameState = updateDefendGameStateCache();

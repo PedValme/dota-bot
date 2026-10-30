@@ -93,10 +93,13 @@ local function TrackEnemyUlts(enemies, now)
 	end
 end
 
--- Net worth lead from item costs, as OHA's J.GetInventoryNetworth (which needs a bot, so it fails here): allies'
--- inventories, and for each enemy the larger of the most valuable inventory we have seen it carry and what our heroes
--- carry per level at its level (GetHeroLevel works on hidden enemies). Seen items alone made unseen enemies count as
--- poor: in a smoke game the brain read +6k in an even game and went to Roshan.
+-- Net worth lead. Allies: their exact net worth. Enemies (theirs cannot be read): for each, the larger of the most
+-- valuable inventory we have seen it carry and the typical net worth of an enemy hero at its level (GetHeroLevel works
+-- on hidden enemies). Tried first and dropped (smoke games of 2026-10-30): items seen only (unseen enemies counted as
+-- poor: +6k read in an even game) and our own items per level (our item lead vanished: -5k read while +5k ahead).
+-- NW_BY_LEVEL: median net worth of Valve's bots per level in 33 observed Turbo-imitated matches (bench/observaciones).
+local NW_BY_LEVEL = { 686, 892, 1111, 1400, 1785, 2088, 2569, 3251, 3808, 4454, 5167, 5736, 6670, 7708, 8407, 9275,
+	10070, 11159, 12001, 13030, 13979, 15059, 16798, 18551, 18443, 21267, 25320, 26460, 29294, 32788 }
 local enemyItems = {}
 local function ItemsCost(u)
 	local cost = 0
@@ -107,9 +110,8 @@ local function ItemsCost(u)
 	return cost
 end
 local function NetWorthLead(allies, enemies)
-	local mine, levels = 0, 0
-	for _, a in ipairs(allies) do mine = mine + ItemsCost(a); levels = levels + a:GetLevel() end
-	local perLevel = mine / math.max(1, levels)
+	local mine = 0
+	for _, a in ipairs(allies) do mine = mine + a:GetNetWorth() end
 	for _, e in ipairs(enemies) do
 		local name = e:GetUnitName()
 		if not e:HasModifier('modifier_arc_warden_tempest_double') and not string.find(name, 'lone_druid_bear') then
@@ -119,7 +121,8 @@ local function NetWorthLead(allies, enemies)
 	end
 	local theirs = 0
 	for _, pid in ipairs(GetTeamPlayers(GetOpposingTeam())) do
-		theirs = theirs + math.max(enemyItems[pid] or 0, perLevel * (GetHeroLevel(pid) or 0))
+		local level = math.max(1, math.min(30, GetHeroLevel(pid) or 1))
+		theirs = theirs + math.max(enemyItems[pid] or 0, NW_BY_LEVEL[level])
 	end
 	return mine - theirs
 end
@@ -180,15 +183,19 @@ local function BaseThreats()
 		for _, t in ipairs(BASE[lane].towers) do local u = GetTower(team, t); if u ~= nil and u:IsAlive() then table.insert(structures, u) end end
 		for _, b in ipairs(BASE[lane].barracks) do local u = GetBarracks(team, b); if u ~= nil and u:IsAlive() then table.insert(structures, u) end end
 		if lane == LANE_MID then local a = GetAncient(team); if a ~= nil then table.insert(structures, a) end end
-		local heroes, creeps, at = 0, 0, nil
+		local heroes, creeps, at, inner = 0, 0, nil, false
+		local t3 = GetTower(team, BASE[lane].towers[1])
 		for _, s in ipairs(structures) do
 			local loc = s:GetLocation()
 			local h, c = 0, 0
 			for _, e in ipairs(enemies) do if Dist(e:GetLocation(), loc) <= 1200 then h = h + 1 end end
 			for _, cr in ipairs(enemyCreeps) do if cr:IsAlive() and Dist(cr:GetLocation(), loc) <= 900 then c = c + 1 end end
-			if h > heroes or (h == heroes and c > creeps) then heroes, creeps, at = h, c, loc end
+			if h > heroes or (h == heroes and c > creeps) then heroes, creeps, at, inner = h, c, loc, s ~= t3 end
 		end
-		if at ~= nil and (heroes >= 1 or creeps >= 3) then threats[lane] = { heroes = heroes, creeps = creeps, loc = at } end
+		-- Creeps alone threaten when they are many (a normal wave at a T3 is not an emergency) or past the T3.
+		if at ~= nil and (heroes >= 1 or creeps >= 5 or (inner and creeps >= 3)) then
+			threats[lane] = { heroes = heroes, creeps = creeps, loc = at }
+		end
 	end
 	return threats
 end
@@ -218,12 +225,14 @@ local function EnemyStructuresStanding()
 	return n
 end
 
--- The lane to push: the nearest next enemy tower to the group, preferring lanes whose creep wave is ahead.
-local function ChooseLane(center)
-	local best, bestScore = LANE_MID, math.huge
+-- The lane to push: the nearest next enemy tower to the group, preferring lanes whose creep wave is ahead. Unless the
+-- team can go into the base (closing), lanes already at the enemy T3 are skipped: high ground waits for Aegis or a big
+-- lead (pro data: half of the first T3s fall with Aegis), and the outer towers are free gold meanwhile.
+local function ChooseLane(center, closing)
+	local best, bestScore = nil, math.huge
 	for _, lane in ipairs(LANES) do
-		local tower = NextEnemyTower(lane)
-		if tower ~= nil then
+		local tower, tier = NextEnemyTower(lane)
+		if tower ~= nil and (closing or tier < 3) then
 			local score = Dist(center, tower:GetLocation()) - 1500 * GetLaneFrontAmount(GetTeam(), lane, false)
 			if score < bestScore then best, bestScore = lane, score end
 		end
@@ -251,12 +260,14 @@ local function FallbackPoint(center)
 	return best or GetAncient(GetTeam()):GetLocation()
 end
 
+-- Roshan respawns 8 to 11 minutes after dying; counted as up only after the longest, also in Turbo (the benchmark's
+-- imitated Turbo keeps Roshan as in normal mode, and waiting at an empty pit is worse than arriving late).
 local function RoshanAlive(now)
 	local killed = GetRoshanKillTime()
 	if killed == nil or killed <= 0 then return now > 0 end
-	local turbo = J ~= nil and J.IsModeTurbo and J.IsModeTurbo()
-	return now - killed > (turbo and 6 or 11) * 60
+	return now - killed > 11 * 60
 end
+local ROSHAN_MAX = 60 -- seconds the team may spend on a Roshan attempt
 
 local function SetState(state, info, now)
 	local p = B.plan
@@ -323,17 +334,21 @@ function B.Update()
 
 	if now < 0 then SetState('LINEA', { reason = 'pregame' }, now) return end
 
-	-- 1) Defend the base first, whatever the lead.
+	-- 1) Defend the base first, whatever the lead. Enemy heroes there make the whole plan DEFENDER; creeps alone only
+	-- send the nearest one or two allies (p.creepDefense), and the rest of the team keeps its plan.
 	local threats = BaseThreats()
 	local worstLane, worst = nil, nil
 	for lane, t in pairs(threats) do
 		if worst == nil or t.heroes > worst.heroes or (t.heroes == worst.heroes and t.creeps > worst.creeps) then worstLane, worst = lane, t end
 	end
-	if worst ~= nil then
-		local k = worst.heroes >= 3 and 5 or (worst.heroes >= 1 and worst.heroes + 1 or (worst.creeps >= 6 and 2 or 1))
+	p.creepDefense = nil
+	if worst ~= nil and worst.heroes >= 1 then
+		local k = worst.heroes >= 3 and 5 or worst.heroes + 1
 		SetState('DEFENDER', { lane = worstLane, defendLane = worstLane, rally = worst.loc,
 			defenders = NearestAllies(worst.loc, k), reason = string.format('heroes=%d creeps=%d k=%d', worst.heroes, worst.creeps, k) }, now)
 		return
+	elseif worst ~= nil then
+		p.creepDefense = { lane = worstLane, defenders = NearestAllies(worst.loc, worst.creeps >= 8 and 2 or 1) }
 	end
 
 	-- Hold the current state a little unless something above overrides it.
@@ -351,46 +366,62 @@ function B.Update()
 	if enemyDeaths - allyDeaths >= 2 and aliveA >= aliveE + 2 then
 		if p.state == 'TOMAR' or p.state == 'ROSHAN' then return end -- keep the objective chosen for this window
 		local okR, roshLoc = pcall(function() return J.GetCurrentRoshanLocation() end)
+		local lane = ChooseLane(center, true)
 		if RoshanAlive(now) and not hasAegis and okR and roshLoc ~= nil and Dist(center, roshLoc) < 3500 then
 			SetState('ROSHAN', { reason = 'tras pelea' }, now)
-		else
-			local lane = ChooseLane(center)
+		elseif lane ~= nil then
 			SetState('TOMAR', { lane = lane, rally = RallyPoint(lane), reason = string.format('deaths %d-%d', allyDeaths, enemyDeaths) }, now)
 		end
 		holdUntil = now + 15
 		return
 	end
+	if p.state == 'ROSHAN' and now - p.since > ROSHAN_MAX then
+		SetState('LINEA', { reason = 'roshan sin exito' }, now)
+		holdUntil = now + 20
+		return
+	end
 	if (p.state == 'TOMAR' or p.state == 'ROSHAN') and now < holdUntil and aliveA > aliveE then return end
+	-- After a stalled push, farm for a while (OHA's behaviour) before trying again.
+	if p.state == 'LINEA' and now < holdUntil then return end
 
 	-- 4) Clear lead at even or better numbers: Roshan, or group and push one lane; into the base with Aegis or +10k.
 	-- Hysteresis: a group already formed keeps going while the lead stays above 3.5k and at most one hero is down.
 	local grouped = p.state == 'AGRUPAR' or p.state == 'EMPUJAR' or p.state == 'CERRAR'
 	if (lead >= LEAD_GROUP and aliveA >= aliveE) or (grouped and lead >= LEAD_GROUP - 1500 and aliveA >= aliveE - 1) then
 		local turbo = J ~= nil and J.IsModeTurbo and J.IsModeTurbo()
-		if RoshanAlive(now) and not hasAegis and now > (turbo and 10 or 20) * 60 and aliveA >= 4 and aliveA > aliveE - 1
+		local roshanFresh = p.state ~= 'ROSHAN' or now - p.since <= ROSHAN_MAX
+		if RoshanAlive(now) and not hasAegis and now > (turbo and 10 or 20) * 60 and aliveA >= 4 and roshanFresh
 			and lead >= LEAD_GROUP and (p.state == 'ROSHAN' or aliveE <= 3) then
 			SetState('ROSHAN', { reason = string.format('lead=%d', lead) }, now)
 			return
 		end
+		local close = hasAegis or lead >= LEAD_CLOSE
 		local lane = p.lane
-		if lane == nil or not grouped or (p.state == 'AGRUPAR' and now - p.since > 40) then
-			lane = ChooseLane(center)
+		local laneAtT3 = false
+		if lane ~= nil then local _, tier = NextEnemyTower(lane); laneAtT3 = tier >= 3 and not close end
+		if lane == nil or not grouped or laneAtT3 or (p.state == 'AGRUPAR' and now - p.since > 40) then
+			lane = ChooseLane(center, close)
+		end
+		if lane == nil then
+			-- Every lane is at the enemy T3 and the team cannot go in yet: farm and wait for Aegis or a bigger lead.
+			SetState('LINEA', { reason = string.format('esperando high ground lead=%d', lead) }, now)
+			return
 		end
 		local rally = RallyPoint(lane)
 		local gathered = 0
 		for _, a in ipairs(allies) do if a:IsAlive() and Dist(a:GetLocation(), rally) <= 1800 then gathered = gathered + 1 end end
 		local need = math.max(3, math.min(4, aliveA - 1))
 		local pushing = p.state == 'EMPUJAR' or p.state == 'CERRAR'
-		if pushing or gathered >= need then
+		-- Gathering has a time limit: after 35 s the push starts with whoever is there.
+		if pushing or gathered >= need or (p.state == 'AGRUPAR' and now - p.since > 35) then
 			if not pushing then pushStart = { time = now, enemyTowers = EnemyStructuresStanding() } end
 			local standing = EnemyStructuresStanding()
 			if standing < pushStart.enemyTowers then pushStart = { time = now, enemyTowers = standing } end
-			if now - pushStart.time > PUSH_STALL and allyDeaths > 0 then
-				SetState('REAGRUPAR', { rally = FallbackPoint(center), reason = 'empuje estancado' }, now)
+			if now - pushStart.time > PUSH_STALL then
+				SetState('LINEA', { reason = 'empuje estancado' }, now)
 				holdUntil = now + 30
 				return
 			end
-			local close = hasAegis or lead >= LEAD_CLOSE
 			SetState(close and 'CERRAR' or 'EMPUJAR', { lane = lane, rally = rally, reason = string.format('lead=%d gathered=%d', lead, gathered) }, now)
 		else
 			SetState('AGRUPAR', { lane = lane, rally = rally, reason = string.format('lead=%d gathered=%d/%d', lead, gathered, need) }, now)
@@ -413,7 +444,11 @@ end
 B.Enabled = Enabled
 
 function B.IsDefender(bot)
-	return B.plan.state == 'DEFENDER' and B.plan.defenders[bot:GetPlayerID()] == true
+	local pid = bot:GetPlayerID()
+	if B.plan.state == 'DEFENDER' and B.plan.defenders[pid] == true then return true, B.plan.defendLane end
+	local cd = B.plan.creepDefense
+	if cd ~= nil and cd.defenders[pid] == true then return true, cd.lane end
+	return false, nil
 end
 
 -- Push desire for one lane (FunLib/aba_push.lua).
@@ -438,9 +473,8 @@ end
 
 -- Defend desire for one lane (FunLib/aba_defend.lua).
 function B.DefendDesire(bot, lane)
-	local p = B.plan
-	if p.state ~= 'DEFENDER' then return nil end
-	if B.IsDefender(bot) then return lane == p.defendLane and 0.95 or 0 end
+	local defender, defendLane = B.IsDefender(bot)
+	if defender then return lane == defendLane and 0.95 or 0 end
 	return nil
 end
 
@@ -454,15 +488,17 @@ function B.RallyFor(bot)
 	return nil
 end
 
--- Whether farming is the plan (mode_farm_generic.lua lifts its "no farming with a 6k lead" rule).
+-- Whether farming is the plan (mode_farm_generic.lua lifts its "no farming with a 6k lead" rule): only after a lost
+-- fight; in LINEA OHA's own rule stays.
 function B.FarmAllowed()
-	local s = B.plan.state
-	return s == 'LINEA' or s == 'REAGRUPAR'
+	return B.plan.state == 'REAGRUPAR'
 end
 
--- Roshan desire (mode_roshan_generic.lua).
+-- Roshan desire (mode_roshan_generic.lua); a badly hurt bot is left to its own modes.
 function B.RoshanDesire(bot)
-	if B.plan.state == 'ROSHAN' and not B.IsDefender(bot) then return 0.9 end
+	if B.plan.state == 'ROSHAN' and not B.IsDefender(bot) and bot:GetHealth() / math.max(1, bot:GetMaxHealth()) >= 0.35 then
+		return 0.9
+	end
 	return nil
 end
 
@@ -480,9 +516,18 @@ function B.InEngage(bot)
 end
 
 -- Whether helping a caught ally is worth it: not while regrouping, and only if the fight there looks winnable.
+-- The evaluation is cached 0.2 s per ally (it runs every frame per bot during fights) and the bar is 0.9, not 1.0,
+-- because it is asymmetric: allies count with cooldowns, enemies without, plus the unseen ones.
+local helpCache = {}
 function B.ShouldHelpAlly(bot, ally)
 	if B.plan.state == 'REAGRUPAR' and Dist(bot:GetLocation(), ally:GetLocation()) > 900 then return false end
-	return B.EvaluateFight(ally:GetLocation()) >= 1.0
+	local pid, now = ally:GetPlayerID(), DotaTime()
+	local c = helpCache[pid]
+	if c == nil or now - c.time > 0.2 then
+		c = { time = now, value = B.EvaluateFight(ally:GetLocation(), now) }
+		helpCache[pid] = c
+	end
+	return c.value >= 0.9
 end
 
 function B.Focus(bot)

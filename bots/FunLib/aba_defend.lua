@@ -888,12 +888,6 @@ function ____exports.GetDefendDesireHelper(bot, lane)
     if bot.DefendLaneDesire == nil then
         bot.DefendLaneDesire = {0, 0, 0}
     end
-    if TeamBrain.Enabled() then
-        local planned = TeamBrain.DefendDesire(bot, lane)
-        if planned ~= nil then
-            return planned
-        end
-    end
     local gameState = updateDefendGameStateCache()
     local locationState = updateDefendLocationStateCache()
     local team = gameState.team
@@ -1228,6 +1222,12 @@ function ____exports.GetDefendDesire(bot, lane)
         return BotModeDesire.None
     end
     local res = ____exports.GetDefendDesireHelper(bot, lane)
+    if TeamBrain.Enabled() then
+        local planned = TeamBrain.DefendDesire(bot, lane)
+        if planned ~= nil then
+            res = planned
+        end
+    end
     bot.defendDesire = res
     return res
 end
