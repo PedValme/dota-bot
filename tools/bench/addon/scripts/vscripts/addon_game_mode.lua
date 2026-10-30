@@ -164,6 +164,16 @@ local function PrintTimeline(event)
 		AncientHealth(r), AncientHealth(d), NetWorth(r), NetWorth(d), casts[r], casts[d]))
 end
 
+-- Which game mode this match really is: Turbo couriers run at 1100 (that is how dota-bot itself detects Turbo,
+-- FunLib/jmz_func.lua J.IsModeTurbo), and the courier is there in every mode.
+local function PrintMode()
+	local speeds = {}
+	for _, courier in ipairs(Entities:FindAllByClassname("npc_dota_courier")) do
+		table.insert(speeds, tostring(math.floor(courier:GetIdealSpeed())))
+	end
+	print("[dotabench] mode courier_speed=" .. (speeds[1] or "none") .. " all=" .. table.concat(speeds, "/"))
+end
+
 local lastMinute = -1
 local function TimelineThink()
 	local state = GameRules:State_Get()
@@ -172,6 +182,7 @@ local function TimelineThink()
 		if minute > lastMinute then
 			lastMinute = minute
 			PrintTimeline("minute")
+			if minute == 1 then PrintMode() end
 		end
 	elseif state >= DOTA_GAMERULES_STATE_POST_GAME then
 		PrintTimeline("end")

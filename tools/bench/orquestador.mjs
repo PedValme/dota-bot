@@ -124,11 +124,14 @@ export function matchConfigLua(heroes, difficulty, timescale) {
   return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, heroes = { ${list} } }\n`;
 }
 
-export function launchArgs() {
+// Turbo is Dota's game mode 23 (DOTA_GAMEMODE_TURBO); the custom game logs the courier speed to confirm it.
+export function launchArgs(modo = "normal") {
   return [
     // No window or resolution flags: they could stick in the owner's video settings.
     "-console", "-condebug", "-novid", "-gamestateintegration",
-    "+sv_cheats", "1", "+sv_lan", "1", "+dota_launch_custom_game", "dotabench", "dota",
+    "+sv_cheats", "1", "+sv_lan", "1",
+    ...(modo === "turbo" ? ["+dota_force_gamemode", "23"] : []),
+    "+dota_launch_custom_game", "dotabench", "dota",
   ];
 }
 
@@ -253,6 +256,7 @@ function parseArgs(argv) {
     else if (k === "--velocidad") opt.velocidad = Number(v);
     else if (k === "--etiqueta") opt.etiqueta = v;
     else if (k === "--variantes") opt.variantes = String(v).split(",");
+    else if (k === "--modo") opt.modo = v;
     else if (k === "--dota") opt.dota = v;
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else throw new Error(`Opción desconocida: ${k}`);
@@ -262,6 +266,8 @@ function parseArgs(argv) {
   if (!Number.isInteger(opt.velocidad) || opt.velocidad < 1 || opt.velocidad > 8) throw new Error("--velocidad: 1 a 8");
   if (!/^[\w.-]{1,40}$/.test(opt.etiqueta)) throw new Error("--etiqueta: letras, números, . _ -");
   opt.variantes ??= [];
+  opt.modo ??= "normal";
+  if (!["normal", "turbo"].includes(opt.modo)) throw new Error("--modo: normal o turbo");
   for (const v of opt.variantes) if (!Object.hasOwn(VARIANTS, v)) throw new Error(`--variantes: ${Object.keys(VARIANTS).join(", ")}`);
   if (new Set(opt.variantes).size !== opt.variantes.length) throw new Error("--variantes: sin repetir");
   const block = 2 * Math.max(opt.variantes.length, 1);
@@ -386,7 +392,7 @@ async function main(argv) {
       const cpuSamples = [];
       let nextSample = Date.now() + 30_000;
       const started = Date.now();
-      child = spawn(exe, launchArgs(), { cwd: dirname(exe), stdio: "ignore" });
+      child = spawn(exe, launchArgs(opt.modo), { cwd: dirname(exe), stdio: "ignore" });
       childAlive = true;
       child.on("exit", () => { childAlive = false; });
       let launchError = null;
