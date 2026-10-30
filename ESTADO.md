@@ -13,11 +13,12 @@
   tu usuario ahora mira como espectador con visión elegible.
 - Si se retoma: serie `turbo-empuje-ab` (40 partidas `--modo turbo --variantes base,empuje`, unas 6-7 h), luego
   `ThinkLess` 0 y la etapa 3 (puente en 127.0.0.1, capitán de reglas, pic; antes, aprobación de cuota). El cambio de
-  empuje (PR #11) sigue activo en el bot aunque en normal no ayudó.
+  empuje (PR #11) está apagado por defecto desde el 2026-10-29 (Pedro): el bot juega como OHA; solo la variante
+  `empuje` del benchmark lo enciende.
 
 ## Madurez
-Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Primer cambio de juego propio (empuje
-con +10.000 de oro) medido en normal sin mejora; pendiente en Turbo.
+Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Sin cambios de juego propios activos
+(el de empuje se midió sin mejora y quedó apagado).
 
 ## Entregado
 - 2026-10-28/29 · Investigación, fork limpio (PR #1), junctions (#2), orquestador con GSI y guardia por equipo (#4),

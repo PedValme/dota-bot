@@ -161,7 +161,7 @@ function ____exports.GetPushDesireHelper(bot, lane)
     if gameState.aliveAllyCount <= gameState.aliveEnemyCount - 2 then
         return BotModeDesire.None
     end
-    local bigLead = Customize.BenchVariant.empuje ~= false and gameState.teamNetworth - gameState.enemyNetworth >= 10000
+    local bigLead = Customize.BenchVariant.empuje == true and gameState.teamNetworth - gameState.enemyNetworth >= 10000
     local enemyFountain = gameState.team == Team.Radiant and DireFountainTpPoint or RadiantFountainTpPoint
     local laneFront = GetLaneFrontLocation(gameState.team, lane, 0)
     if GetLocationToLocationDistance(laneFront, enemyFountain) < 5000 then
