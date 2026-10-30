@@ -23,7 +23,9 @@ local nextUpdate = -1000
 local wasAlive = {}
 local deathTimes = { ally = {}, enemy = {} }
 local enemyUltSeen = {} -- unit name -> DotaTime() we last saw it cast its ultimate (enemy cooldowns are hidden)
-local holdUntil = -1000
+local holdUntil = -1000      -- REAGRUPAR, TOMAR and ROSHAN windows
+local lineaHoldUntil = -1000 -- farming after a stalled push or a failed Roshan
+local lastRoshanFail = -1000
 local pushStart = { time = -1000, enemyTowers = 0 }
 
 local UPDATE_EVERY = 0.2
@@ -192,8 +194,9 @@ local function BaseThreats()
 			for _, cr in ipairs(enemyCreeps) do if cr:IsAlive() and Dist(cr:GetLocation(), loc) <= 900 then c = c + 1 end end
 			if h > heroes or (h == heroes and c > creeps) then heroes, creeps, at, inner = h, c, loc, s ~= t3 end
 		end
-		-- Creeps alone threaten when they are many (a normal wave at a T3 is not an emergency) or past the T3.
-		if at ~= nil and (heroes >= 1 or creeps >= 5 or (inner and creeps >= 3)) then
+		-- Creeps alone threaten when they are many (a normal wave with its catapult at a T3 is not an emergency) or
+		-- past the T3.
+		if at ~= nil and (heroes >= 1 or creeps >= 7 or (inner and creeps >= 3)) then
 			threats[lane] = { heroes = heroes, creeps = creeps, loc = at }
 		end
 	end
@@ -362,12 +365,17 @@ function B.Update()
 	end
 	if p.state == 'REAGRUPAR' and now < holdUntil then return end
 
+	-- Roshan is an option only once a team can kill it (from minute 10 in Turbo, 20 in normal) and not within 3 min of
+	-- a failed attempt.
+	local turbo = J ~= nil and J.IsModeTurbo and J.IsModeTurbo()
+	local roshanReady = RoshanAlive(now) and not hasAegis and now > (turbo and 10 or 20) * 60 and now - lastRoshanFail > 180
+
 	-- 3) Fight won: take the nearest objective before they respawn.
 	if enemyDeaths - allyDeaths >= 2 and aliveA >= aliveE + 2 then
 		if p.state == 'TOMAR' or p.state == 'ROSHAN' then return end -- keep the objective chosen for this window
 		local okR, roshLoc = pcall(function() return J.GetCurrentRoshanLocation() end)
 		local lane = ChooseLane(center, true)
-		if RoshanAlive(now) and not hasAegis and okR and roshLoc ~= nil and Dist(center, roshLoc) < 3500 then
+		if roshanReady and okR and roshLoc ~= nil and Dist(center, roshLoc) < 3500 then
 			SetState('ROSHAN', { reason = 'tras pelea' }, now)
 		elseif lane ~= nil then
 			SetState('TOMAR', { lane = lane, rally = RallyPoint(lane), reason = string.format('deaths %d-%d', allyDeaths, enemyDeaths) }, now)
@@ -377,21 +385,19 @@ function B.Update()
 	end
 	if p.state == 'ROSHAN' and now - p.since > ROSHAN_MAX then
 		SetState('LINEA', { reason = 'roshan sin exito' }, now)
-		holdUntil = now + 20
+		lastRoshanFail = now
+		lineaHoldUntil = now + 20
 		return
 	end
 	if (p.state == 'TOMAR' or p.state == 'ROSHAN') and now < holdUntil and aliveA > aliveE then return end
-	-- After a stalled push, farm for a while (OHA's behaviour) before trying again.
-	if p.state == 'LINEA' and now < holdUntil then return end
+	-- After a stalled push or a failed Roshan, farm for a while (OHA's behaviour) before trying again.
+	if p.state == 'LINEA' and now < lineaHoldUntil then return end
 
 	-- 4) Clear lead at even or better numbers: Roshan, or group and push one lane; into the base with Aegis or +10k.
 	-- Hysteresis: a group already formed keeps going while the lead stays above 3.5k and at most one hero is down.
 	local grouped = p.state == 'AGRUPAR' or p.state == 'EMPUJAR' or p.state == 'CERRAR'
 	if (lead >= LEAD_GROUP and aliveA >= aliveE) or (grouped and lead >= LEAD_GROUP - 1500 and aliveA >= aliveE - 1) then
-		local turbo = J ~= nil and J.IsModeTurbo and J.IsModeTurbo()
-		local roshanFresh = p.state ~= 'ROSHAN' or now - p.since <= ROSHAN_MAX
-		if RoshanAlive(now) and not hasAegis and now > (turbo and 10 or 20) * 60 and aliveA >= 4 and roshanFresh
-			and lead >= LEAD_GROUP and (p.state == 'ROSHAN' or aliveE <= 3) then
+		if roshanReady and aliveA >= 4 and lead >= LEAD_GROUP and (p.state == 'ROSHAN' or aliveE <= 3) then
 			SetState('ROSHAN', { reason = string.format('lead=%d', lead) }, now)
 			return
 		end
@@ -419,7 +425,7 @@ function B.Update()
 			if standing < pushStart.enemyTowers then pushStart = { time = now, enemyTowers = standing } end
 			if now - pushStart.time > PUSH_STALL then
 				SetState('LINEA', { reason = 'empuje estancado' }, now)
-				holdUntil = now + 30
+				lineaHoldUntil = now + 30
 				return
 			end
 			SetState(close and 'CERRAR' or 'EMPUJAR', { lane = lane, rally = rally, reason = string.format('lead=%d gathered=%d', lead, gathered) }, now)
