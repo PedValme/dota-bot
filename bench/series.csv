@@ -25,3 +25,10 @@ fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,
 2026-10-30T01:38,empuje-ab,22,6,base,si,,4,dire,dire,final,54,20,56,fuera,skeleton_king sniper dragon_knight bane oracle / juggernaut kunkka bloodseeker bristleback lion,35793,34,2-4,6969,25,37,51
 2026-10-30T02:01,empuje-ab,23,6,empuje,si,,4,radiant,dire,final,57,44,45,fuera,skeleton_king sniper dragon_knight bane oracle / pudge kunkka razor earthshaker vengefulspirit,6513,,0-4,6969,23,38,50
 2026-10-30T02:19,empuje-ab,24,6,base,si,,4,radiant,radiant,final,47,56,29,fuera,skeleton_king sniper dragon_knight bane oracle / vengefulspirit bristleback lina lich phantom_assassin,20486,24,7-3,6969,24,29,50
+2026-10-30T04:22,mapa-prueba,1,1,,si,,4,radiant,dire,final,31,24,38,fuera,sven lina sand_king jakiro dazzle / sniper bloodseeker death_prophet lich witch_doctor,9736,,0-8,6969,27,33,53,turbo
+2026-10-30T04:42,mapa-turbo,1,1,,si,,4,radiant,radiant,final,44,39,39,fuera,skeleton_king razor tidehunter bane oracle / sven kunkka sand_king zuus bristleback,43422,40,3-2,6969,25,36,52,turbo
+2026-10-30T04:55,mapa-turbo,2,1,,si,,4,dire,dire,final,34,22,35,fuera,skeleton_king razor tidehunter bane oracle / axe phantom_assassin bounty_hunter lich sniper,41332,17,4-7,6969,25,34,51,turbo
+2026-10-30T05:07,mapa-turbo,3,2,,si,,4,dire,dire,final,31,9,30,fuera,phantom_assassin lina tidehunter lion dazzle / omniknight drow_ranger pudge sand_king sven,42553,9,5-8,6969,25,33,51,turbo
+2026-10-30T05:20,mapa-turbo,4,2,,si,,4,radiant,radiant,final,35,60,15,fuera,phantom_assassin lina tidehunter lion dazzle / sniper sand_king vengefulspirit juggernaut necrolyte,71073,10,8-3,6969,26,33,51,turbo
+2026-10-30T05:34,mapa-modos,1,1,,si,,4,radiant,radiant,final,28,41,8,fuera,juggernaut death_prophet kunkka bane dazzle / sniper luna tiny skeleton_king lion,58659,9,10-1,6969,25,33,51,turbo
+2026-10-30T05:55,mapa-modos,2,1,,si,,4,dire,dire,final,51,20,34,fuera,juggernaut death_prophet kunkka bane dazzle / crystal_maiden luna warlock drow_ranger oracle,73487,26,3-3,6969,25,32,50,turbo

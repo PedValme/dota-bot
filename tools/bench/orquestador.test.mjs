@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
   parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, variantLua,
-  VARIANTS, summarize, parseModo } from "./orquestador.mjs";
+  VARIANTS, summarize, parseModo, observationLines } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
 
@@ -84,9 +84,28 @@ test("both teams get the same five heroes, one per position, from the pool", () 
 
 test("the match config is plain Lua data for the custom game", () => {
   const lua = matchConfigLua(["npc_dota_hero_axe", "npc_dota_hero_lina"], 4, 4);
-  assert.match(lua, /return \{ difficulty = "unfair", timescale = 4, turbo = false, heroes = \{ "npc_dota_hero_axe", "npc_dota_hero_lina" \} \}/);
+  assert.match(lua, /return \{ difficulty = "unfair", timescale = 4, turbo = false, observar = false, heroes = \{ "npc_dota_hero_axe", "npc_dota_hero_lina" \} \}/);
   assert.match(matchConfigLua(["x"], 0, 1), /difficulty = "passive"/);
   assert.match(matchConfigLua(["x"], 4, 4, true), /turbo = true/);
+  assert.match(matchConfigLua(["x"], 4, 4), /observar = false/);
+  assert.match(matchConfigLua(["x"], 4, 4, true, true), /observar = true/);
+});
+
+test("observer mode keeps the custom game's lines and the engine's bot lines, nothing else", () => {
+  const log = [
+    "10/29 22:41:21 [VScript] [dotabench] obs t=30 buy pid=1 lion item_tango cost=90",
+    "10/29 22:45:38 [VScript] Script Runtime Error: error in error handling",
+    "10/29 22:41:36 Script function 'GetDesire' on bot npc_dota_hero_witch_doctor took 29.029ms",
+    "10/29 22:46:26 [Server] Client (account 0) tried to execute invalid order (37). Item can't be used from stash.",
+    "10/29 22:45:59 Building: npc_dota_goodguys_tower1_mid destroyed at 725.300049.",
+    "10/30 00:40:00 Attempting to call GetNearbyHeroes() on enemies when filtering by bot mode!",
+    "10/30 00:40:01 [VScript] [WARN] Ability build failed",
+    "10/29 22:45:37 **** Panel  has fill-parent-flow for width",
+    "10/29 22:45:40 [Localization System] CLocalize::FindSafe failed to localize: 'invalid index'",
+  ].join("\r\n");
+  const kept = observationLines(log).trim().split("\n");
+  assert.equal(kept.length, 7);
+  assert.ok(!kept.some((l) => /Panel|Localization/.test(l)));
 });
 
 test("the mode the custom game applied is read from the log and must match the series", () => {

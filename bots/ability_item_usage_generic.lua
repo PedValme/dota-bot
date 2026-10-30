@@ -8392,8 +8392,25 @@ function AbilityUsageThink()
 	if BotBuild ~= nil and not J.IsNoAbilityIllution(bot) then BotBuild.SkillsComplement() end
 end
 
+-- Benchmark observer mode (FunLib/bench_observe.lua): the active mode and its desire, every 2 seconds.
+local benchObserve = dofile(GetScriptDirectory()..'/FunLib/bench_observe')
+local benchModeNames = {}
+for _, name in ipairs({ 'NONE', 'LANING', 'ATTACK', 'ROAM', 'RETREAT', 'SECRET_SHOP', 'SIDE_SHOP', 'RUNE',
+	'PUSH_TOWER_TOP', 'PUSH_TOWER_MID', 'PUSH_TOWER_BOT', 'DEFEND_TOWER_TOP', 'DEFEND_TOWER_MID', 'DEFEND_TOWER_BOT',
+	'ASSEMBLE', 'TEAM_ROAM', 'FARM', 'DEFEND_ALLY', 'EVASIVE_MANEUVERS', 'ROSHAN', 'ITEM', 'WARD', 'OUTPOST' }) do
+	local value = _G['BOT_MODE_'..name]
+	if value ~= nil then benchModeNames[value] = name end
+end
+
 function BuybackUsageThink()
 	if RefreshBotHandle() then return end
+	if benchObserve and DotaTime() - (bot.benchObserveTime or -1000) >= 2 then
+		bot.benchObserveTime = DotaTime()
+		local mode = bot:GetActiveMode()
+		print(string.format('[bench] mode t=%d pid=%d %s %s %.2f alive=%d', math.floor(DotaTime()), bot:GetPlayerID(),
+			string.gsub(botName, 'npc_dota_hero_', ''), benchModeNames[mode] or tostring(mode), bot:GetActiveModeDesire(),
+			bot:IsAlive() and 1 or 0))
+	end
 	if bot.lastBuybackFrameProcessTime == nil then bot.lastBuybackFrameProcessTime = DotaTime() end
 	if DotaTime() > 30 and (DotaTime() - bot.lastBuybackFrameProcessTime < 2) then return end
 	bot.lastBuybackFrameProcessTime = DotaTime()

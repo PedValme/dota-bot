@@ -1,9 +1,10 @@
 // dota-bot benchmark orchestrator: plays N local bot-vs-bot matches, dota-bot on one side and Valve's own bots on the
-// other (sides alternate), five heroes drawn per match and asked for both teams (Valve's bots pick their own), and
+// other (sides alternate), five heroes drawn per match and asked for both teams (only Radiant gets them; Dire picks its own, whoever plays it), and
 // records each winner from Dota's Game State Integration (GSI). The match runs in the local custom game
 // tools/bench/addon ("dotabench"), which keeps the human out of the teams, adds the bots and speeds the match up.
 //   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--velocidad 4] [--etiqueta texto]
-//                                    [--variantes base,empuje] [--dota "<dota 2 beta>"] [--muestra-gsi <file>]
+//                                    [--variantes base,empuje] [--modo turbo] [--observar] [--dota "<dota 2 beta>"]
+//                                    [--muestra-gsi <file>]
 // --variantes interleaves versions of dota-bot (VARIANTS) in one series: per block of heroes, every variant plays
 // both sides, and the order flips every block, so heroes, side, Dota's version and the PC's load hit every variant
 // alike. Each match is a row of bench/series.csv; "valida" says whether it can be counted.
@@ -16,7 +17,9 @@
 //   (which team plays with Valve's bots), bots/Customize/bench_variant.lua (with --variantes: the variant dota-bot
 //   plays; deleted when each match ends), tools/bench/addon/scripts/vscripts/bench_partida.lua (heroes, difficulty,
 //   speed; deleted at the end too), bench/series.csv and bench/lineas/ (per-match timelines, read from its own
-//   Dota's <dota>/game/dota/console.log), and, only with --muestra-gsi <file> (debugging), the last raw GSI post in
+//   Dota's <dota>/game/dota/console.log), with --observar bench/observaciones/ (per-match observer lines from that
+//   same log; and bots/Customize/bench_observe.lua, deleted when each match ends, so the bots log their mode), and,
+//   only with --muestra-gsi <file> (debugging), the last raw GSI post in
 //   that file. It reads <dota>/game/dota/steam.inf (Dota's version) and the PC's CPU and memory through Node's os
 //   module. The team file lives only from launch until the
 //   horn (scripts load before it); both temporary files are deleted when it ends, also on Ctrl+C, closing the window
@@ -25,7 +28,8 @@
 //   minutes it could also leave the team file, which makes that team play with
 //   Valve's bots in any local game until the next run deletes it (or delete bots/Customize/bench_valve_team.lua).
 //   With --variantes it can also leave bots/Customize/bench_variant.lua at any point of a match: until the next run
-//   deletes it (or you do), dota-bot plays that variant in any local game.
+//   deletes it (or you do), dota-bot plays that variant in any local game. With --observar it can likewise leave
+//   bots/Customize/bench_observe.lua: the bots then print and log their mode in any local game (they play the same).
 import { spawn, execFile } from "node:child_process";
 import { createServer } from "node:http";
 import { existsSync, writeFileSync, unlinkSync, appendFileSync, mkdirSync, readFileSync, statSync } from "node:fs";
@@ -40,6 +44,7 @@ const DIRE = 3;
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const VALVE_TEAM_FILE = join(root, "bots", "Customize", "bench_valve_team.lua");
 const VARIANT_FILE = join(root, "bots", "Customize", "bench_variant.lua");
+const OBSERVE_FILE = join(root, "bots", "Customize", "bench_observe.lua"); // --observar: the bots log their mode
 const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", "bench_partida.lua");
 // bench/partidas.csv holds the runs before 2026-10-29 (they cannot prove the human stayed out); new runs go here.
 const CSV = join(root, "bench", "series.csv");
@@ -75,8 +80,8 @@ export function schedule(i, variants) {
 }
 
 // Whether a match can be counted, and why not. The variant is confirmed by the custom game reading the same file at
-// pre-game; the bots' VM cannot write to the log (neither print nor chat reach it, tried 2026-10-29), so that they
-// apply it was checked once with the "sonda" variant (bench/README.md) and each match logs casts per team.
+// pre-game; that the bots apply it was checked once with the "sonda" variant (bench/README.md) and each match logs
+// casts per team. (The bots' print does reach the log, but only in observer mode: OHA silences it otherwise.)
 export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo }) {
   if (outcome !== "final") return "sin final";
   if (modo !== loggedModo) return `modo ${loggedModo || "sin registro"} en el log`;
@@ -102,11 +107,12 @@ export function summarize(results, variants) {
   });
 }
 const TIMELINES = join(root, "bench", "lineas");
+const OBSERVATIONS = join(root, "bench", "observaciones");
 const DIFFICULTIES = ["passive", "easy", "medium", "hard", "unfair"];
 
 // One hero per position, from the heroes Valve's own bots were built for (their original pool, as recalled; not yet
 // checked against "BotImplemented" in the game's npc_heroes.txt), so the Valve side is not crippled by an unsupported
-// hero. Both teams get the same five.
+// hero. Both teams ask for the same five; only Radiant keeps them (Dire picks its own, seen 2026-10-30).
 export const HERO_POOL = [
   ["juggernaut", "phantom_assassin", "luna", "sven", "chaos_knight", "drow_ranger", "skeleton_king"],
   ["lina", "zuus", "sniper", "viper", "death_prophet", "razor", "necrolyte"],
@@ -122,9 +128,18 @@ export function drawHeroes(random = Math.random) {
 // Lua read by the custom game (tools/bench/addon/scripts/vscripts/addon_game_mode.lua).
 // turbo: the custom game imitates Turbo (Dota's real Turbo cannot run in a custom game: forcing game mode 23 changes
 // nothing and the VScript API has no switch for it, both checked 2026-10-29).
-export function matchConfigLua(heroes, difficulty, timescale, turbo = false) {
+export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false) {
   const list = heroes.map((h) => `"${h}"`).join(", ");
-  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, heroes = { ${list} } }\n`;
+  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, heroes = { ${list} } }\n`;
+}
+
+// With --observar: the custom game's lines and the engine's lines about the bots (script errors, slow bot functions,
+// invalid orders, buildings, bot skill builds and ward spots), kept per match in bench/observaciones/.
+const OBSERVED = ["[dotabench]", "[bench]", "[Error]", "[ERROR]", "[WARN]", "[Reload]", "[PosSwap]", "[ARDM]",
+  "Stack Trace", "GetNearbyHeroes", "LoadScript", "bot scripting using", "Script Runtime Error", "Script function '",
+  "invalid order", "Building:", "in its bot skill build", "Bot ward spot", "XP Fountain"];
+export function observationLines(text) {
+  return text.split(/\r?\n/).filter((line) => OBSERVED.some((k) => line.includes(k))).join("\n") + "\n";
 }
 
 export function launchArgs() {
@@ -265,6 +280,7 @@ function parseArgs(argv) {
     else if (k === "--modo") opt.modo = v;
     else if (k === "--dota") opt.dota = v;
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
+    else if (k === "--observar") { opt.observar = true; i -= 1; } // a flag: takes no value
     else throw new Error(`Opción desconocida: ${k}`);
   }
   if (!Number.isInteger(opt.partidas) || opt.partidas < 1 || opt.partidas > 50) throw new Error("--partidas: 1 a 50");
@@ -317,7 +333,7 @@ async function main(argv) {
   }
   if (!(await running("steam.exe"))) throw new Error("Steam no está abierto; ábrelo y vuelve a correr esto.");
   if (await running("dota2.exe")) throw new Error("Ya hay un Dota abierto; ciérralo primero (no lo toco).");
-  for (const f of [VALVE_TEAM_FILE, VARIANT_FILE]) {
+  for (const f of [VALVE_TEAM_FILE, VARIANT_FILE, OBSERVE_FILE]) {
     if (!existsSync(f)) continue;
     // Only this script writes them: a leftover means an earlier run was killed hard.
     unlinkSync(f);
@@ -358,6 +374,7 @@ async function main(argv) {
   };
   const removeVariantFile = () => {
     try { if (existsSync(VARIANT_FILE)) unlinkSync(VARIANT_FILE); } catch {}
+    try { if (existsSync(OBSERVE_FILE)) unlinkSync(OBSERVE_FILE); } catch {}
   };
   // Synchronous on purpose: it also runs from process.on('exit'), after an uncaught error or process.exit().
   const cleanup = () => {
@@ -388,8 +405,9 @@ async function main(argv) {
       writeFileSync(VALVE_TEAM_FILE, `-- written by tools/bench/orquestador.mjs for one match; deleted once the bots load\nreturn ${valveTeam}\n`);
       removeVariantFile();
       if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
+      if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
       if (i % (2 * Math.max(opt.variantes.length, 1)) === 0) heroes = drawHeroes();
-      writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad, opt.modo === "turbo"));
+      writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar)));
       latest = null;
       lastPost = 0;
       const short = heroes.map((h) => h.replace("npc_dota_hero_", "")).join(" ");
@@ -442,6 +460,10 @@ async function main(argv) {
           roster = parseRoster(log);
           loggedVariant = parseVariant(log);
           loggedModo = parseModo(log);
+          if (opt.observar) {
+            mkdirSync(OBSERVATIONS, { recursive: true });
+            writeFileSync(join(OBSERVATIONS, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.log`), observationLines(log));
+          }
         }
       } catch {}
       const version = dotaVersion();
