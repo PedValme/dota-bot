@@ -1,5 +1,25 @@
 # Cerebro de equipo: diseño para aprobar
 
+## Resultado de la primera versión (2026-10-30, serie `cerebro-ab`, 24 partidas válidas, Turbo imitado)
+
+Construido como variante `cerebro` (`bots/team_desires.lua`, `bots/FunLib/team_brain.lua` y enganches en los modos),
+revisado tres veces por Opus. `node tools/bench/resumir-serie.mjs cerebro-ab`:
+
+| | Victorias | Radiant | Dire | Cierre desde +10k (mediana) | Duración | 4-5 bots empujando juntos |
+|---|---|---|---|---|---|---|
+| base | 11/12 | 6/6 | 5/6 | 19 min | 38 min | 14 % |
+| cerebro | 8/12 | 6/6 | 2/6 | 10 min | 29 min | 27 % |
+
+- **Cerrar:** lo consigue. Remata en la mitad de tiempo, cerca de los 7,5 min de los profesionales.
+- **Ganar:** gana menos. Perdió 3 partidas después de ir +10.000 (base, 1), las cuatro derrotas en Dire.
+  Con 12 partidas por variante no es concluyente (p≈0,3), pero el patrón se repite.
+- **Cómo pierde, según los registros (`[bench] plan`):**
+  - entra en CERRAR, pierde la pelea en el high ground y encadena REAGRUPAR y DEFENDER;
+  - un solo héroe enemigo haciendo split-push dispara DEFENDER con 2 defensores una y otra vez y rompe cada empuje.
+- **Ventaja estimada:** con la curva de patrimonio por nivel, error mediano de 1.900 frente a la real y signo
+  correcto el 97 % (calibrada y validada con las mismas partidas).
+- **No se enciende por defecto.**
+
 Pedro, 2026-10-30: «quiero que postulemos una mejor cuantiosa basada en argumentos solidos y mejoremos», con criterio de
 juego en profundidad y no solo timings y oro (DECISIONES 2026-10-30). Este documento es la propuesta. Nada está
 construido; se construye con tu visto bueno y se mide **una sola vez**, al final.
