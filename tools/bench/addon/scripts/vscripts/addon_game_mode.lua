@@ -35,9 +35,11 @@ local function AddBots(cfg)
 	end
 end
 
--- Humans never get a team: they watch. The setup screen can still drop the human into a free slot before the bots
--- arrive, and then Dota gives them a random hero that nobody plays (seen 2026-10-29), so it is checked again at every
--- state change and any human hero is removed.
+-- Humans never play: they watch as spectators (team 1), which gives the broadcast view with a choice of Radiant,
+-- Dire or both teams' vision; out of every team they would only see the fog of war. The setup screen can still drop
+-- the human into a free slot before the bots arrive, and then Dota gives them a random hero that nobody plays (seen
+-- 2026-10-29), so it is checked again at every state change and any human hero is removed.
+local SPECTATORS = 1 -- DOTA_TEAM_SPECTATOR
 local function IsHuman(pid)
 	return pid ~= nil and pid >= 0 and PlayerResource:IsValidPlayerID(pid) and not PlayerResource:IsFakeClient(pid)
 end
@@ -47,10 +49,10 @@ local function KeepHumanOut(pid, why)
 	if team == DOTA_TEAM_GOODGUYS or team == DOTA_TEAM_BADGUYS then
 		print(string.format("[dotabench] human player %d was on team %d (%s); moving out", pid, team, why))
 	end
-	PlayerResource:SetCustomTeamAssignment(pid, DOTA_TEAM_NOTEAM)
+	PlayerResource:SetCustomTeamAssignment(pid, SPECTATORS)
 	local player = PlayerResource:GetPlayer(pid)
 	-- pcall: a failure here must not skip the bots or the speed-up in OnStateChange.
-	if player and team ~= DOTA_TEAM_NOTEAM then pcall(player.SetTeam, player, DOTA_TEAM_NOTEAM) end
+	if player and team ~= SPECTATORS then pcall(player.SetTeam, player, SPECTATORS) end
 end
 
 local function KeepHumansOut(why)
@@ -74,6 +76,9 @@ end
 
 -- Who really plays each slot, once per match: the heroes the bots end up with can differ from the ones asked for.
 local function PrintRoster()
+	for pid = 0, 23 do
+		if IsHuman(pid) then print(string.format("[dotabench] human player %d watches from team %d", pid, PlayerResource:GetTeam(pid))) end
+	end
 	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
 		for i = 1, PlayerResource:GetPlayerCountForTeam(team) do
 			local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
