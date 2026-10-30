@@ -53,3 +53,6 @@ fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,
 2026-10-30T10:32,remate-ab,17,3,grupo,si,,4,dire,radiant,final,38,24,37,fuera,sven death_prophet tidehunter vengefulspirit dazzle / earthshaker dragon_knight warlock skeleton_king jakiro,18820,21,6-0,6969,22,26,50,turbo
 2026-10-30T10:46,remate-ab,18,3,grupo_farm,si,,4,dire,dire,final,33,14,50,fuera,sven death_prophet tidehunter vengefulspirit dazzle / dragon_knight witch_doctor lion bloodseeker zuus,61707,20,4-6,6969,21,24,50,turbo
 2026-10-30T14:11,sonda-equipo,1,1,,si,,4,radiant,radiant,final,31,62,5,fuera,skeleton_king death_prophet kunkka skywrath_mage warlock / razor sand_king tiny lion pudge,90944,7,11-0,6969,20,29,49,turbo
+2026-10-30T14:28,sonda-api,1,1,,si,,4,radiant,radiant,final,27,30,13,fuera,drow_ranger death_prophet tidehunter bane oracle / nevermore bloodseeker lina skeleton_king kunkka,24958,12,10-5,6969,26,31,48,turbo
+2026-10-30T14:44,cerebro-humo,1,1,cerebro,si,,4,radiant,radiant,final,28,27,17,fuera,luna viper axe vengefulspirit witch_doctor / dazzle omniknight earthshaker windrunner dragon_knight,27269,25,7-3,6969,26,42,49,turbo
+2026-10-30T14:54,cerebro-humo,2,1,cerebro,si,,4,dire,radiant,final,26,30,14,fuera,luna viper axe vengefulspirit witch_doctor / razor earthshaker oracle jakiro omniknight,2386,,7-4,6969,21,30,50,turbo

@@ -3,6 +3,7 @@ local bot = GetBot()
 if bot == nil or bot:IsInvulnerable() or not bot:IsHero() or not string.find(bot:GetUnitName(), "hero") or bot:IsIllusion() then return end
 
 local J = require( GetScriptDirectory()..'/FunLib/jmz_func' )
+local TeamBrain = require( GetScriptDirectory()..'/FunLib/team_brain' )
 
 local PING_RECENCY = 8        -- respond to pings within this many seconds
 local ASSEMBLE_DURATION = 5    -- stay in assemble mode for this long after ping
@@ -15,6 +16,17 @@ local assembleExpireTime = 0
 
 function GetDesire()
 	if not bot:IsAlive() then return BOT_MODE_DESIRE_NONE end
+
+	-- dota-bot team brain (variant "cerebro"): gather at the plan's rally point before a push, or fall back to a tower
+	-- after a lost fight (FunLib/team_brain.lua).
+	if TeamBrain.Enabled() then
+		local rally, desire = TeamBrain.RallyFor(bot)
+		if rally ~= nil then
+			assembleLoc = rally
+			assembleExpireTime = GameTime() + 1
+			return desire
+		end
+	end
 
 	-- Check for recent human normal pings (not danger pings)
 	local human, ping = J.GetHumanPing()

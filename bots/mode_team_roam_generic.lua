@@ -11,6 +11,7 @@ Customize.ThinkLess = Customize.Enable and Customize.ThinkLess or 1
 local J = require(GetScriptDirectory()..'/FunLib/jmz_func')
 local Item = require(GetScriptDirectory()..'/FunLib/aba_item')
 local Roles = require(GetScriptDirectory()..'/FunLib/aba_role')
+local TeamBrain = require(GetScriptDirectory()..'/FunLib/team_brain')
 local AttackSpecialUnit = dofile(GetScriptDirectory()..'/FunLib/aba_special_units')
 
 local X = {}
@@ -270,7 +271,7 @@ function ConsiderHelpAlly()
             and (#nInRangeAlly + 1 >= #nInRangeEnemy) then
                 if (enemyHero:GetAttackTarget() == nClosestAlly or J.IsChasingTarget(enemyHero, nClosestAlly))
                 or nClosestAlly:WasRecentlyDamagedByHero(enemyHero, 2.5) then
-                    return enemyHero, true
+                    return X.BrainHelpTarget(nClosestAlly, enemyHero)
                 end
             end
         end
@@ -1242,6 +1243,15 @@ function X.UpdateCommonCamp(creep, AvailableCamp)
 	return AvailableCamp;
 end
 
+-- dota-bot team brain (variant "cerebro", FunLib/team_brain.lua): help a caught ally only if the fight there looks
+-- winnable and the team is not regrouping (no one avenges alone), and hit the team's focus target when it is at hand.
+-- Without the variant it returns the same as before: the enemy hero, true.
+function X.BrainHelpTarget(ally, enemyHero)
+    if not TeamBrain.Enabled() then return enemyHero, true end
+    if not TeamBrain.ShouldHelpAlly(bot, ally) then return nil, false end
+    return TeamBrain.Focus(bot) or enemyHero, true
+end
+
 -- ==============================
 -- Help when core targeted (unchanged)
 -- ==============================
@@ -1264,7 +1274,7 @@ function X.ConsiderHelpWhenCoreIsTargeted()
             and (#nInRangeAlly + 1 >= #nInRangeEnemy) then
                 if (enemyHero:GetAttackTarget() == nClosestCore or J.IsChasingTarget(enemyHero, nClosestCore))
                 or nClosestCore:WasRecentlyDamagedByHero(enemyHero, 2.5) then
-                    return enemyHero, true
+                    return X.BrainHelpTarget(nClosestCore, enemyHero)
                 end
             end
         end

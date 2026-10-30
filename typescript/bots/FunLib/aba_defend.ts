@@ -8,6 +8,7 @@ if (!okLoc) Localization = { Get: (_: string) => "Defend here!" };
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 import Customize = require("bots/Customize/general");
+import * as TeamBrain from "bots/FunLib/team_brain";
 
 import { Barracks, BotActionDesire, BotMode, BotModeDesire, Lane, Team, Tower, Unit, UnitType, Vector } from "bots/ts_libs/dota";
 import { add } from "bots/ts_libs/utils/native-operators";
@@ -617,6 +618,13 @@ export function GetDefendDesire(bot: Unit, lane: Lane): BotModeDesire {
 export function GetDefendDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     if ((bot as any).laneToDefend == null) (bot as any).laneToDefend = lane;
     if ((bot as any).DefendLaneDesire == null) (bot as any).DefendLaneDesire = [0, 0, 0];
+
+    // dota-bot team brain (variant "cerebro"): the plan's defenders defend before any other rule (OHA turned defence
+    // off while 3 allies pushed, and only counted heroes, not creeps).
+    if (TeamBrain.Enabled()) {
+        const planned = TeamBrain.DefendDesire(bot, lane);
+        if (planned !== undefined) return planned as BotModeDesire;
+    }
 
     // Update caches
     const gameState = updateDefendGameStateCache();

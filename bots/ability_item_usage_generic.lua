@@ -566,7 +566,11 @@ local function BuybackUsageComplement()
 	local nFullRespawnTime = bot:GetRespawnTime()
 	local nRemainingRespawnTime = X.GetRemainingRespawnTime()
 
-	if ancient ~= nil and ancient:GetHealth() < 0.8 then
+	-- OHA compared the Ancient's absolute health with 0.8, true only once it is dead; the team brain (variant
+	-- "cerebro") uses the fraction it meant (docs/mapa.md).
+	local nAncientHealth = ancient ~= nil and ancient:GetHealth() or 1
+	if ancient ~= nil and J.TeamBrain().Enabled() then nAncientHealth = ancient:GetHealth() / math.max( 1, ancient:GetMaxHealth() ) end
+	if ancient ~= nil and nAncientHealth < 0.8 then
 		local nEnemyUnitsAroundAncient = J.GetEnemiesAroundLoc(ancient:GetLocation(), 1500)
 		local nAllyUnitsAroundAncient = J.GetAlliesNearLoc(ancient:GetLocation(), 1500)
 		if nEnemyUnitsAroundAncient > 1 and nAllyUnitsAroundAncient == 0 and nRemainingRespawnTime > 20 then
