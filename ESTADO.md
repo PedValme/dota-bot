@@ -2,18 +2,18 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- Plan de Pedro (DECISIONES 2026-10-29): 3 etapas medidas por separado y sin contaminación (empuje, `ThinkLess` 0,
+- **En pausa desde 2026-10-29 por decisión de Pedro** (DECISIONES): se paró la serie `turbo-empuje-ab` en su primera
+  partida, sin datos. Nada corre; temporales del benchmark borrados. Retomar solo si Pedro lo pide.
+- Plan que quedó (DECISIONES 2026-10-29): 3 etapas medidas por separado y sin contaminación (empuje, `ThinkLess` 0,
   capitán LLM), cada una en serie A/B intercalada; solo cuentan partidas `valida=si` de `bench/series.csv`. El
-  objetivo ahora es **Turbo**, imitado dentro del custom game (`--modo turbo`, bench/README.md).
+  objetivo era **Turbo**, imitado dentro del custom game (`--modo turbo`, bench/README.md).
 - Medido en modo normal (`empuje-ab`, 24 partidas válidas, sin courier): `base` 11/12, `empuje` 9/12; cierre desde
   +10.000 de oro 16,5 contra 19,8 min; `empuje` perdió 2 partidas tras +10.000, `base` ninguna. No ayuda en normal.
 - Encontrado el 2026-10-29: el custom game no daba courier (todas las series anteriores sin courier; ya corregido) y
   tu usuario ahora mira como espectador con visión elegible.
-- Siguiente acción: serie `turbo-empuje-ab`, 40 partidas `--modo turbo --variantes base,empuje`. Luego `ThinkLess` 0
-  contra la ganadora. Decidir con Pedro si se revierte el cambio de empuje.
-- Etapa 3: puente capitán en 127.0.0.1 (probar primero que el Lua llega a localhost), capitán de reglas y después
-  subagente pic por partida; antes, aprobación de cuota de Pedro (partidas × decisiones × costo).
-- Espera a Pedro: pantalla encendida durante las series; la prueba con un amigo en un lobby Local Host.
+- Si se retoma: serie `turbo-empuje-ab` (40 partidas `--modo turbo --variantes base,empuje`, unas 6-7 h), luego
+  `ThinkLess` 0 y la etapa 3 (puente en 127.0.0.1, capitán de reglas, pic; antes, aprobación de cuota). El cambio de
+  empuje (PR #11) sigue activo en el bot aunque en normal no ayudó.
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Primer cambio de juego propio (empuje
