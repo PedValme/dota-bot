@@ -212,6 +212,7 @@ end
 
 function Activate()
 	print("[dotabench] loaded")
+	SendToServerConsole("script_help2") -- TEMP: dump the VScript API to look for Turbo
 	GameRules:SetCustomGameTeamMaxPlayers(DOTA_TEAM_GOODGUYS, 5)
 	GameRules:SetCustomGameTeamMaxPlayers(DOTA_TEAM_BADGUYS, 5)
 	GameRules:SetCustomGameSetupAutoLaunchDelay(0)
