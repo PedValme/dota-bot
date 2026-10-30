@@ -39,7 +39,7 @@ end
 -- Dire or both teams' vision; out of every team they would only see the fog of war. The setup screen can still drop
 -- the human into a free slot before the bots arrive, and then Dota gives them a random hero that nobody plays (seen
 -- 2026-10-29), so it is checked again at every state change and any human hero is removed.
-local SPECTATORS = 1 -- DOTA_TEAM_SPECTATOR
+local SPECTATORS = DOTA_TEAM_NOTEAM -- TEMP: turbo test without spectator (was 1)
 local function IsHuman(pid)
 	return pid ~= nil and pid >= 0 and PlayerResource:IsValidPlayerID(pid) and not PlayerResource:IsFakeClient(pid)
 end
@@ -49,10 +49,13 @@ local function KeepHumanOut(pid, why)
 	if team == DOTA_TEAM_GOODGUYS or team == DOTA_TEAM_BADGUYS then
 		print(string.format("[dotabench] human player %d was on team %d (%s); moving out", pid, team, why))
 	end
-	PlayerResource:SetCustomTeamAssignment(pid, SPECTATORS)
+	-- Spectator only once the setup screen is over: assigning team 1 there keeps the custom game stuck in setup
+	-- (seen 2026-10-29).
+	local target = GameRules:State_Get() >= DOTA_GAMERULES_STATE_PRE_GAME and SPECTATORS or DOTA_TEAM_NOTEAM
+	PlayerResource:SetCustomTeamAssignment(pid, target)
 	local player = PlayerResource:GetPlayer(pid)
 	-- pcall: a failure here must not skip the bots or the speed-up in OnStateChange.
-	if player and team ~= SPECTATORS then pcall(player.SetTeam, player, SPECTATORS) end
+	if player and team ~= target then pcall(player.SetTeam, player, target) end
 end
 
 local function KeepHumansOut(why)
