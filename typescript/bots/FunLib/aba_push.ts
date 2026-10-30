@@ -294,10 +294,10 @@ export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     if (gameState.aliveAllyCount <= gameState.aliveEnemyCount - 2) {
         return BotModeDesire.None;
     }
-    // dota-bot: with a big net worth lead the team must close the game (measured 2026-10-29: OHA sat 20 minutes on
-    // +10k gold without breaking the base), so the "outnumbered" and "all enemies alive" caps below are relaxed.
-    // Benchmark A/B: the variant "empuje = false" keeps the caps from before (FunLib/bench_variant.lua).
-    const bigLead = Customize.BenchVariant.empuje !== false && gameState.teamNetworth - gameState.enemyNetworth >= 10000;
+    // dota-bot experiment (PR #11): with a 10k net worth lead, relax the "outnumbered" and "all enemies alive" caps
+    // below. Off by default since 2026-10-29 (Pedro): in normal mode it won 9/12 against 11/12 without it and closed
+    // slower. Only the benchmark variant "empuje = true" turns it on (FunLib/bench_variant.lua).
+    const bigLead = Customize.BenchVariant.empuje === true && gameState.teamNetworth - gameState.enemyNetworth >= 10000;
     // Don't push deep (past T2 toward enemy base) when alone or outnumbered
     const enemyFountain = gameState.team === Team.Radiant ? DireFountainTpPoint : RadiantFountainTpPoint;
     const laneFront = GetLaneFrontLocation(gameState.team, lane, 0);
