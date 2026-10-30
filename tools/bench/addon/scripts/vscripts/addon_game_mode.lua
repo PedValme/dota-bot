@@ -22,6 +22,36 @@ local function MatchConfig()
 	return DEFAULT
 end
 
+-- Imitated Turbo (Pedro, 2026-10-29: the benchmark target is Turbo, and the real mode cannot run in a custom game).
+-- Turbo couriers (1100 speed, which is also how dota-bot detects Turbo and switches to its Turbo logic), gold and
+-- experience x2 and faster respawn. Towers, runes and other Turbo details stay as in normal mode.
+local TURBO = { gold = 2, xp = 2, respawn = 0.75 }
+-- Only income is doubled: death loss, buyback, purchases, sells and ability costs stay as they are.
+local INCOME = {}
+for _, name in ipairs({ "GameTick", "Building", "HeroKill", "CreepKill", "NeutralKill", "RoshanKill", "CourierKill",
+	"BountyRune", "SharedGold", "AbilityGold", "WardKill" }) do
+	local reason = _G["DOTA_ModifyGold_" .. name]
+	if reason ~= nil then INCOME[reason] = true end
+end
+
+local function ApplyTurbo()
+	local mode = GameRules:GetGameModeEntity()
+	mode:SetUseTurboCouriers(true)
+	mode:SetRespawnTimeScale(TURBO.respawn)
+	mode:SetModifyGoldFilter(function(_, event)
+		if event.gold > 0 and INCOME[event.reason_const] then event.gold = math.floor(event.gold * TURBO.gold) end
+		return true
+	end, {})
+	mode:SetModifyExperienceFilter(function(_, event)
+		event.experience = math.floor(event.experience * TURBO.xp)
+		return true
+	end, {})
+	local n = 0
+	for _ in pairs(INCOME) do n = n + 1 end
+	print(string.format("[dotabench] turbo on gold=%s xp=%s respawn=%s couriers=turbo income_reasons=%d", TURBO.gold,
+		TURBO.xp, TURBO.respawn, n))
+end
+
 local botsAdded = false
 
 local function AddBots(cfg)
@@ -35,9 +65,11 @@ local function AddBots(cfg)
 	end
 end
 
--- Humans never get a team: they watch. The setup screen can still drop the human into a free slot before the bots
--- arrive, and then Dota gives them a random hero that nobody plays (seen 2026-10-29), so it is checked again at every
--- state change and any human hero is removed.
+-- Humans never play: they watch as spectators (team 1), which gives the broadcast view with a choice of Radiant,
+-- Dire or both teams' vision; out of every team they would only see the fog of war. The setup screen can still drop
+-- the human into a free slot before the bots arrive, and then Dota gives them a random hero that nobody plays (seen
+-- 2026-10-29), so it is checked again at every state change and any human hero is removed.
+local SPECTATORS = 1 -- DOTA_TEAM_SPECTATOR
 local function IsHuman(pid)
 	return pid ~= nil and pid >= 0 and PlayerResource:IsValidPlayerID(pid) and not PlayerResource:IsFakeClient(pid)
 end
@@ -47,10 +79,13 @@ local function KeepHumanOut(pid, why)
 	if team == DOTA_TEAM_GOODGUYS or team == DOTA_TEAM_BADGUYS then
 		print(string.format("[dotabench] human player %d was on team %d (%s); moving out", pid, team, why))
 	end
-	PlayerResource:SetCustomTeamAssignment(pid, DOTA_TEAM_NOTEAM)
+	-- Spectator only once the setup screen is over: assigning team 1 there keeps the custom game stuck in setup
+	-- (seen 2026-10-29).
+	local target = GameRules:State_Get() >= DOTA_GAMERULES_STATE_PRE_GAME and SPECTATORS or DOTA_TEAM_NOTEAM
+	PlayerResource:SetCustomTeamAssignment(pid, target)
 	local player = PlayerResource:GetPlayer(pid)
 	-- pcall: a failure here must not skip the bots or the speed-up in OnStateChange.
-	if player and team ~= DOTA_TEAM_NOTEAM then pcall(player.SetTeam, player, DOTA_TEAM_NOTEAM) end
+	if player and team ~= target then pcall(player.SetTeam, player, target) end
 end
 
 local function KeepHumansOut(why)
@@ -74,6 +109,9 @@ end
 
 -- Who really plays each slot, once per match: the heroes the bots end up with can differ from the ones asked for.
 local function PrintRoster()
+	for pid = 0, 23 do
+		if IsHuman(pid) then print(string.format("[dotabench] human player %d watches from team %d", pid, PlayerResource:GetTeam(pid))) end
+	end
 	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
 		for i = 1, PlayerResource:GetPlayerCountForTeam(team) do
 			local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
@@ -164,6 +202,20 @@ local function PrintTimeline(event)
 		AncientHealth(r), AncientHealth(d), NetWorth(r), NetWorth(d), casts[r], casts[d]))
 end
 
+-- Courier speeds at minute 1: Turbo couriers run at 1100, which is how dota-bot detects Turbo
+-- (FunLib/jmz_func.lua J.IsModeTurbo), so this shows whether its Turbo logic is on.
+local function PrintMode()
+	local speeds = {}
+	local units = FindUnitsInRadius(DOTA_TEAM_GOODGUYS, Vector(0, 0, 0), nil, FIND_UNITS_EVERYWHERE,
+		DOTA_UNIT_TARGET_TEAM_BOTH, DOTA_UNIT_TARGET_COURIER, DOTA_UNIT_TARGET_FLAG_INVULNERABLE + DOTA_UNIT_TARGET_FLAG_OUT_OF_WORLD,
+		FIND_ANY_ORDER, false)
+	for _, courier in ipairs(units) do
+		table.insert(speeds, tostring(math.floor(courier:GetIdealSpeed())))
+	end
+	print("[dotabench] mode couriers=" .. #speeds .. " speeds=" .. table.concat(speeds, "/")
+		.. " by_class=" .. #Entities:FindAllByClassname("npc_dota_courier"))
+end
+
 local lastMinute = -1
 local function TimelineThink()
 	local state = GameRules:State_Get()
@@ -172,6 +224,7 @@ local function TimelineThink()
 		if minute > lastMinute then
 			lastMinute = minute
 			PrintTimeline("minute")
+			if minute == 1 then PrintMode() end
 		end
 	elseif state >= DOTA_GAMERULES_STATE_POST_GAME then
 		PrintTimeline("end")
@@ -203,6 +256,9 @@ function Activate()
 	GameRules:SetPreGameTime(30)
 	GameRules:SetSameHeroSelectionEnabled(true)
 	GameRules:GetGameModeEntity():SetBotThinkingEnabled(true)
+	-- One courier per player, as in normal Dota; custom games give none unless this is on.
+	GameRules:GetGameModeEntity():SetFreeCourierModeEnabled(true)
+	if MatchConfig().turbo then ApplyTurbo() else print("[dotabench] turbo off") end
 	ListenToGameEvent("game_rules_state_change", OnStateChange, nil)
 	ListenToGameEvent("player_connect_full", OnPlayerConnect, nil)
 	ListenToGameEvent("npc_spawned", OnNpcSpawned, nil)

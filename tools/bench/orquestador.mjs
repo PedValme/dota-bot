@@ -45,7 +45,7 @@ const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", 
 const CSV = join(root, "bench", "series.csv");
 const COLUMNS = ["fecha", "etiqueta", "partida", "bloque", "variante", "valida", "motivo", "dificultad", "dotabot",
   "ganador", "resultado", "minutos", "kills_radiant", "kills_dire", "humano", "heroes", "ventaja_oro_max",
-  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre"];
+  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo"];
 
 // Versions of dota-bot a series can interleave (FunLib/bench_variant.lua reads them in the bots' VM).
 export const VARIANTS = {
@@ -77,8 +77,9 @@ export function schedule(i, variants) {
 // Whether a match can be counted, and why not. The variant is confirmed by the custom game reading the same file at
 // pre-game; the bots' VM cannot write to the log (neither print nor chat reach it, tried 2026-10-29), so that they
 // apply it was checked once with the "sonda" variant (bench/README.md) and each match logs casts per team.
-export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion }) {
+export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo }) {
   if (outcome !== "final") return "sin final";
+  if (modo !== loggedModo) return `modo ${loggedModo || "sin registro"} en el log`;
   if (roster.radiant !== 5 || roster.dire !== 5) return `reparto ${roster.radiant ?? 0}-${roster.dire ?? 0}`;
   if (roster.humano !== "fuera" && roster.humano !== "heroe-quitado") return `humano ${roster.humano || "?"}`;
   if (loggedVariant === null || loggedVariant === undefined) return "variante sin registro en el log";
@@ -119,9 +120,11 @@ export function drawHeroes(random = Math.random) {
 }
 
 // Lua read by the custom game (tools/bench/addon/scripts/vscripts/addon_game_mode.lua).
-export function matchConfigLua(heroes, difficulty, timescale) {
+// turbo: the custom game imitates Turbo (Dota's real Turbo cannot run in a custom game: forcing game mode 23 changes
+// nothing and the VScript API has no switch for it, both checked 2026-10-29).
+export function matchConfigLua(heroes, difficulty, timescale, turbo = false) {
   const list = heroes.map((h) => `"${h}"`).join(", ");
-  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, heroes = { ${list} } }\n`;
+  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, heroes = { ${list} } }\n`;
 }
 
 export function launchArgs() {
@@ -226,6 +229,12 @@ export function parseVariant(text) {
   return m ? m[1] ?? "" : null;
 }
 
+// The mode the custom game applied ("[dotabench] turbo on ..." or "turbo off"); "" if it logged neither.
+export function parseModo(text) {
+  const m = text.match(/\[dotabench\] turbo (on|off)/);
+  return m ? (m[1] === "on" ? "turbo" : "normal") : "";
+}
+
 // Dota's build, from <dota>/game/dota/steam.inf.
 export function parseVersion(inf) {
   return inf.match(/ClientVersion=(\d+)/)?.[1] ?? "";
@@ -253,6 +262,7 @@ function parseArgs(argv) {
     else if (k === "--velocidad") opt.velocidad = Number(v);
     else if (k === "--etiqueta") opt.etiqueta = v;
     else if (k === "--variantes") opt.variantes = String(v).split(",");
+    else if (k === "--modo") opt.modo = v;
     else if (k === "--dota") opt.dota = v;
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else throw new Error(`Opción desconocida: ${k}`);
@@ -262,6 +272,8 @@ function parseArgs(argv) {
   if (!Number.isInteger(opt.velocidad) || opt.velocidad < 1 || opt.velocidad > 8) throw new Error("--velocidad: 1 a 8");
   if (!/^[\w.-]{1,40}$/.test(opt.etiqueta)) throw new Error("--etiqueta: letras, números, . _ -");
   opt.variantes ??= [];
+  opt.modo ??= "normal";
+  if (!["normal", "turbo"].includes(opt.modo)) throw new Error("--modo: normal o turbo");
   for (const v of opt.variantes) if (!Object.hasOwn(VARIANTS, v)) throw new Error(`--variantes: ${Object.keys(VARIANTS).join(", ")}`);
   if (new Set(opt.variantes).size !== opt.variantes.length) throw new Error("--variantes: sin repetir");
   const block = 2 * Math.max(opt.variantes.length, 1);
@@ -377,7 +389,7 @@ async function main(argv) {
       removeVariantFile();
       if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
       if (i % (2 * Math.max(opt.variantes.length, 1)) === 0) heroes = drawHeroes();
-      writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad));
+      writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad, opt.modo === "turbo"));
       latest = null;
       lastPost = 0;
       const short = heroes.map((h) => h.replace("npc_dota_hero_", "")).join(" ");
@@ -421,6 +433,7 @@ async function main(argv) {
       let timeline = [];
       let roster = { humano: "", heroes: "", radiant: 0, dire: 0 };
       let loggedVariant = null;
+      let loggedModo = "";
       try {
         // A log older than this launch belongs to another match (Dota failed before rewriting it).
         if (statSync(consoleLog).mtimeMs >= started) {
@@ -428,10 +441,11 @@ async function main(argv) {
           timeline = parseTimeline(log);
           roster = parseRoster(log);
           loggedVariant = parseVariant(log);
+          loggedModo = parseModo(log);
         }
       } catch {}
       const version = dotaVersion();
-      const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion });
+      const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));
@@ -448,6 +462,7 @@ async function main(argv) {
         cpu_media: cpuSamples.length ? Math.round(cpuSamples.reduce((a, b) => a + b, 0) / cpuSamples.length) : "",
         cpu_max: cpuSamples.length ? Math.round(Math.max(...cpuSamples)) : "",
         mem_libre: memFree,
+        modo: opt.modo,
       };
       appendFileSync(CSV, csvRow(row) + "\n");
       results.push(row);

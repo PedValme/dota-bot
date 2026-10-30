@@ -1,3 +1,27 @@
-fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano,heroes,ventaja_oro_max,minuto_10k,torres_fin,dota_version,cpu_media,cpu_max,mem_libre
+fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano,heroes,ventaja_oro_max,minuto_10k,torres_fin,dota_version,cpu_media,cpu_max,mem_libre,modo
 2026-10-29T18:03,prueba-sonda,1,1,sonda,no,sin final,4,radiant,,dota-cerrado,10,0,9,fuera,drow_ranger lina sand_king skywrath_mage lich / lion bristleback kunkka jakiro sniper,158,,11-11,6969,23,27,59
 2026-10-29T18:17,prueba-sonda,2,1,empuje,si,,4,radiant,radiant,final,43,73,15,fuera,drow_ranger lina sand_king skywrath_mage lich / bounty_hunter necrolyte sven warlock dragon_knight,33671,21,6-1,6969,20,25,54
+2026-10-29T18:40,empuje-ab,1,1,base,si,,4,radiant,radiant,final,52,55,31,fuera,skeleton_king sniper tidehunter vengefulspirit crystal_maiden / axe earthshaker chaos_knight death_prophet bloodseeker,34459,42,4-1,6969,19,27,53
+2026-10-29T18:55,empuje-ab,2,1,empuje,si,,4,radiant,radiant,final,44,43,32,fuera,skeleton_king sniper tidehunter vengefulspirit crystal_maiden / zuus juggernaut lina windrunner pudge,17045,41,7-1,6969,19,26,53
+2026-10-29T19:14,empuje-ab,3,1,base,si,,4,dire,dire,final,56,25,35,fuera,skeleton_king sniper tidehunter vengefulspirit crystal_maiden / oracle jakiro drow_ranger dragon_knight windrunner,14374,52,1-5,6969,18,25,53
+2026-10-29T19:32,empuje-ab,4,1,empuje,si,,4,dire,dire,final,55,34,40,fuera,skeleton_king sniper tidehunter vengefulspirit crystal_maiden / luna lion drow_ranger tiny lina,16169,45,0-3,6969,19,25,52
+2026-10-29T19:48,empuje-ab,5,2,empuje,si,,4,dire,dire,final,49,28,56,fuera,drow_ranger sniper axe skywrath_mage warlock / bristleback bloodseeker viper zuus windrunner,28147,34,1-6,6969,19,26,53
+2026-10-29T20:08,empuje-ab,6,2,base,si,,4,dire,radiant,final,58,38,41,fuera,drow_ranger sniper axe skywrath_mage warlock / necrolyte pudge oracle chaos_knight tidehunter,5737,,4-1,6969,18,24,52
+2026-10-29T20:22,empuje-ab,7,2,empuje,si,,4,radiant,radiant,final,46,62,7,fuera,drow_ranger sniper axe skywrath_mage warlock / oracle windrunner lion bane juggernaut,44161,17,7-0,6969,19,24,52
+2026-10-29T20:38,empuje-ab,8,2,base,si,,4,radiant,radiant,final,47,48,25,fuera,drow_ranger sniper axe skywrath_mage warlock / death_prophet phantom_assassin bane viper jakiro,25385,32,5-1,6969,19,27,52
+2026-10-29T20:53,empuje-ab,9,3,base,si,,4,radiant,radiant,final,48,37,20,fuera,phantom_assassin death_prophet axe jakiro crystal_maiden / sven juggernaut luna earthshaker oracle,17097,40,7-3,6969,19,24,52
+2026-10-29T21:10,empuje-ab,10,3,empuje,si,,4,radiant,radiant,final,49,50,16,fuera,phantom_assassin death_prophet axe jakiro crystal_maiden / bloodseeker oracle windrunner razor witch_doctor,29730,22,7-3,6969,19,24,51
+2026-10-29T21:30,empuje-ab,11,3,base,si,,4,dire,dire,final,57,25,60,fuera,phantom_assassin death_prophet axe jakiro crystal_maiden / drow_ranger bristleback lina viper vengefulspirit,34331,39,2-4,6969,21,35,51
+2026-10-29T21:54,empuje-ab,12,3,empuje,si,,4,dire,radiant,final,60,36,66,fuera,phantom_assassin death_prophet axe jakiro crystal_maiden / kunkka tiny dragon_knight juggernaut razor,27155,47,5-0,6969,25,45,55
+2026-10-29T22:19,empuje-ab,13,4,empuje,si,,4,dire,dire,final,62,20,49,fuera,skeleton_king viper sand_king jakiro warlock / chaos_knight skywrath_mage death_prophet lion drow_ranger,31750,40,1-4,6969,22,52,53
+2026-10-29T22:45,empuje-ab,14,4,base,si,,4,dire,dire,final,63,27,39,fuera,skeleton_king viper sand_king jakiro warlock / bane vengefulspirit dazzle razor bristleback,22292,37,1-5,6969,22,28,52
+2026-10-29T23:03,empuje-ab,15,4,empuje,si,,4,radiant,radiant,final,45,49,19,fuera,skeleton_king viper sand_king jakiro warlock / dragon_knight tiny zuus lion sven,26682,32,7-1,6969,23,30,52
+2026-10-29T23:29,empuje-ab,16,4,base,si,,4,radiant,radiant,final,63,76,35,fuera,skeleton_king viper sand_king jakiro warlock / razor luna bounty_hunter nevermore kunkka,19558,53,0-1,6969,23,31,51
+2026-10-29T23:50,empuje-ab,17,5,base,si,,4,radiant,radiant,final,52,39,31,fuera,drow_ranger sniper tidehunter bane warlock / witch_doctor sven kunkka vengefulspirit dragon_knight,4548,,4-2,6969,25,30,53
+2026-10-30T00:10,empuje-ab,18,5,empuje,si,,4,radiant,radiant,final,49,57,22,fuera,drow_ranger sniper tidehunter bane warlock / sand_king bounty_hunter dragon_knight chaos_knight bloodseeker,21611,21,7-1,6969,25,49,52
+2026-10-30T00:34,empuje-ab,19,5,base,si,,4,dire,dire,final,58,18,52,fuera,drow_ranger sniper tidehunter bane warlock / jakiro lich nevermore skywrath_mage lina,31898,27,1-7,6969,22,28,51
+2026-10-30T00:55,empuje-ab,20,5,empuje,si,,4,dire,dire,final,56,29,49,fuera,drow_ranger sniper tidehunter bane warlock / phantom_assassin windrunner tiny vengefulspirit witch_doctor,19294,25,1-4,6969,22,30,50
+2026-10-30T01:16,empuje-ab,21,6,empuje,si,,4,dire,radiant,final,56,37,56,fuera,skeleton_king sniper dragon_knight bane oracle / tiny warlock omniknight phantom_assassin nevermore,15874,36,3-0,6969,21,27,50
+2026-10-30T01:38,empuje-ab,22,6,base,si,,4,dire,dire,final,54,20,56,fuera,skeleton_king sniper dragon_knight bane oracle / juggernaut kunkka bloodseeker bristleback lion,35793,34,2-4,6969,25,37,51
+2026-10-30T02:01,empuje-ab,23,6,empuje,si,,4,radiant,dire,final,57,44,45,fuera,skeleton_king sniper dragon_knight bane oracle / pudge kunkka razor earthshaker vengefulspirit,6513,,0-4,6969,23,38,50
+2026-10-30T02:19,empuje-ab,24,6,base,si,,4,radiant,radiant,final,47,56,29,fuera,skeleton_king sniper dragon_knight bane oracle / vengefulspirit bristleback lina lich phantom_assassin,20486,24,7-3,6969,24,29,50
