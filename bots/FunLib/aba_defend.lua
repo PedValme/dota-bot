@@ -203,6 +203,7 @@ end
 local ____exports = {}
 local getDefendState, updateDefendGameStateCache, updateDefendLocationStateCache, updateDefendUnitStateCache, _q, _keyLoc, _recentHeroCountNear, IsValidBuildingTarget, IsBaseThreatActive, WeightedEnemiesAroundLocation, GetThreatenedLane, GetClosestAllyPos, IsThereNoTeammateTravelBootsDefender, GetHighGroundEdgeWaitPoint, ConsiderPingedDefend, okLoc, Localization, PING_DELTA, MAX_DESIRE_CAP, BASE_THREAT_RADIUS, BASE_THREAT_HOLD, CACHE_ENEMY_AROUND_LOC_HZ, CACHE_LASTSEEN_WINDOW, nTeam, _threatLaneSticky, baseThreatUntil, fTraveBootsDefendTime, _cacheEnemyAroundLoc, DEFEND_CACHE_TTL, defendGameStateCache, defendLocationStateCache, defendUnitStateCache
 local jmz = require(GetScriptDirectory().."/FunLib/jmz_func")
+local TeamBrain = require(GetScriptDirectory().."/FunLib/team_brain")
 local ____dota = require(GetScriptDirectory().."/ts_libs/dota/index")
 local Barracks = ____dota.Barracks
 local BotActionDesire = ____dota.BotActionDesire
@@ -1221,6 +1222,12 @@ function ____exports.GetDefendDesire(bot, lane)
         return BotModeDesire.None
     end
     local res = ____exports.GetDefendDesireHelper(bot, lane)
+    if TeamBrain.Enabled() then
+        local planned = TeamBrain.DefendDesire(bot, lane)
+        if planned ~= nil then
+            res = planned
+        end
+    end
     bot.defendDesire = res
     return res
 end

@@ -2,19 +2,17 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Espera a Pedro:** aprobar el diseño del cerebro de equipo, [trabajo/cerebro-equipo.md](trabajo/cerebro-equipo.md)
-  (recomendado: completo, construido en orden y medido una sola vez). DECISIONES 2026-10-30: mejora grande con
-  argumentos sólidos y criterio de juego, no una corrida por cada detalle.
-- Base del diseño: [docs/mapa.md](docs/mapa.md) (25 partidas observadas), 119 partidas profesionales
-  (docs/investigacion/2026-10-30-datos-pro.md, `tools/datos/`), criterio de juego contra el código
-  (docs/investigacion/2026-10-30-criterio-de-juego.md). Comprobado en el juego que un módulo cargado desde
-  `team_desires.lua` comparte estado con los bots.
-- Con el sí: verificaciones de la API en una partida observada, arreglos de defensa, recompra y disables, el cerebro y
-  el criterio de pelea, como variante `cerebro`; serie única `base,cerebro` de 24 partidas al final.
+- **Cerebro de equipo v1 construido y medido** (variante `cerebro`, apagado por defecto; resultado arriba de
+  [trabajo/cerebro-equipo.md](trabajo/cerebro-equipo.md)). Serie `cerebro-ab`: cierra en 10 min frente a 19, pero gana
+  8/12 frente a 11/12 (Dire 2/6). Pierde al cerrar en high ground y cuando un split-pusher arrastra a los defensores.
+- **Espera a Pedro:** recomendado una v2 corta sobre esos dos fallos (cerrar solo con pelea favorable y retirarse si
+  falla; un héroe enemigo solo no arrastra a dos) y una sola serie más; o dejarlo apagado y pasar a builds.
+- Herramientas: `node tools/bench/resumir-serie.mjs <etiqueta>`, `tools/bench/analizar.mjs`, líneas `[bench] plan`
+  y `plan_tick` en `bench/observaciones/`.
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Sin cambios de juego activos por
-defecto; variantes del benchmark `empuje`, `grupo`, `grupo_farm` (apagadas sin archivo de variante).
+defecto; variantes del benchmark `empuje`, `grupo`, `grupo_farm` y `cerebro` (apagadas sin archivo de variante).
 
 ## Entregado
 - 2026-10-28/29 · Investigación, fork limpio, junctions, orquestador con GSI, custom game dotabench, series A/B con

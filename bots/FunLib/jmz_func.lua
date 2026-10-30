@@ -1380,15 +1380,56 @@ function J.GetSpecialUnits()
 	return SpecialUnits
 end
 
+-- dota-bot team brain (FunLib/team_brain.lua), required lazily: it is only used with the variant "cerebro".
+local hTeamBrain = nil
+function J.TeamBrain()
+	if hTeamBrain == nil then hTeamBrain = require( GetScriptDirectory()..'/FunLib/team_brain' ) end
+	return hTeamBrain
+end
+
+-- Seconds left of the longest disable on a visible unit, from its modifiers (enemy modifiers and their remaining
+-- time can be read, checked in game 2026-10-30); nil if no disable modifier is found.
+local tDisableWords = { 'stun', 'bash', 'hex', 'sheep', 'voodoo', 'nightmare', 'root', 'ensnare', 'entangle', 'frozen', 'sleep',
+	'fear', 'taunt', 'cyclone', 'eul', 'reverse_polarity', 'black_hole', 'chrono', 'ravage', 'duel', 'impale',
+	'fissure', 'grip', 'shackle', 'petrif', 'hypno' }
+function J.GetDisableRemaining( npcTarget )
+	local best = nil
+	for i = 0, npcTarget:NumModifiers() - 1
+	do
+		local sName = npcTarget:GetModifierName( i )
+		if sName ~= nil
+		then
+			for _, w in ipairs( tDisableWords )
+			do
+				if string.find( sName, w, 1, true )
+				then
+					local remain = npcTarget:GetModifierRemainingDuration( i )
+					if remain ~= nil and remain > 0 and ( best == nil or remain > best ) then best = remain end
+					break
+				end
+			end
+		end
+	end
+	return best
+end
+
 function J.IsDisabled( npcTarget )
 
 	if npcTarget:GetTeam() ~= GetTeam() and npcTarget:CanBeSeen()
 	then
-		return npcTarget:IsRooted()
+		local bDisabled = npcTarget:IsRooted()
 				or npcTarget:IsStunned()
 				or npcTarget:IsHexed()
 				or npcTarget:IsNightmared()
 				or J.IsTaunted( npcTarget )
+		-- dota-bot team brain (variant "cerebro"): chain disables instead of waiting for one to end. With 0.5 s or
+		-- less left, the target counts as free so the next ally's disable lands as this one ends, without overlap.
+		if bDisabled and J.TeamBrain().Enabled()
+		then
+			local remain = J.GetDisableRemaining( npcTarget )
+			if remain ~= nil and remain <= 0.5 then return false end
+		end
+		return bDisabled
 	else
 
 		if npcTarget:IsStunned() and J.GetRemainStunTime( npcTarget ) > 0.8
@@ -1452,6 +1493,10 @@ end
 function J.IsInTeamFight( bot, nRadius )
 
 	if nRadius == nil or nRadius > 1600 then nRadius = 1600 end
+
+	-- dota-bot team brain (variant "cerebro"): a fight the brain called counts, so initiator ultimates start it instead
+	-- of waiting for 2 allies already in ATTACK mode, which Valve drives (FunLib/team_brain.lua).
+	if J.TeamBrain().Enabled() and J.TeamBrain().InEngage( bot ) then return true end
 
 	local attackModeAllyList = J.GetNearbyHeroes(bot, nRadius, false, BOT_MODE_ATTACK )
 
@@ -3236,6 +3281,12 @@ function J.GetTeamFightLocation( bot )
 		then
 			local allyList = J.GetSpecialModeAllies( member, 1400, BOT_MODE_ATTACK )
 			targetLocation = J.GetCenterOfUnits( allyList )
+			-- dota-bot team brain (variant "cerebro"): a fight the brain called may start before anyone is in ATTACK
+			-- mode; the center of no units is (0, 0), the middle of the map, so use the brain's engage point instead.
+			if #allyList == 0 and J.TeamBrain().Enabled() and J.TeamBrain().plan.engage ~= nil
+			then
+				targetLocation = J.TeamBrain().plan.engage.loc
+			end
 			break
 		end
 	end

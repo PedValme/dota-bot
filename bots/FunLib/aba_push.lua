@@ -25,6 +25,7 @@ end
 local ____exports = {}
 local Customize, updateGameStateCache, updateLocationStateCache, updateUnitStateCache, presence_adjust, pingTimeDelta, StartToPushTime, BOT_MODE_DESIRE_EXTRA_LOW, hEnemyAncient, PUSH_CACHE_TTL, gameStateCache, locationStateCache, unitStateCache, BASE_ANC_RADIUS
 local jmz = require(GetScriptDirectory().."/FunLib/jmz_func")
+local TeamBrain = require(GetScriptDirectory().."/FunLib/team_brain")
 local ____dota = require(GetScriptDirectory().."/ts_libs/dota/index")
 local Barracks = ____dota.Barracks
 local BotMode = ____dota.BotMode
@@ -149,6 +150,12 @@ end
 function ____exports.GetPushDesireHelper(bot, lane)
     if bot.laneToPush == nil then
         bot.laneToPush = lane
+    end
+    if TeamBrain.Enabled() then
+        local planned = TeamBrain.PushDesire(bot, lane)
+        if planned ~= nil then
+            return planned
+        end
     end
     autoCleanupCache()
     local gameState = getGlobalGameState()

@@ -1,6 +1,7 @@
 import * as jmz from "bots/FunLib/jmz_func";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 import Customize = require("bots/Customize/general");
+import * as TeamBrain from "bots/FunLib/team_brain";
 import { Barracks, BotMode, BotModeDesire, DamageType, Lane, Team, Tower, Unit, UnitType, Vector } from "bots/ts_libs/dota";
 import { IsValidUnit, GetLocationToLocationDistance, RadiantFountainTpPoint, DireFountainTpPoint } from "./utils";
 import { getGlobalGameState, getGlobalLocationState, getCachedAlliesNearLoc, getCachedEnemiesNearLoc, autoCleanupCache, getCachedData } from "./global_cache";
@@ -286,6 +287,12 @@ export function GetPushDesire(bot: Unit, lane: Lane): BotModeDesire {
 export function GetPushDesireHelper(bot: Unit, lane: Lane): BotModeDesire {
     // Keep the intent: avoid pushing too early or when other team jobs override.
     if ((bot as any).laneToPush == null) (bot as any).laneToPush = lane;
+
+    // dota-bot team brain (variant "cerebro"): the team plan decides the push when it has something to say.
+    if (TeamBrain.Enabled()) {
+        const planned = TeamBrain.PushDesire(bot, lane);
+        if (planned !== undefined) return planned as BotModeDesire;
+    }
 
     // Update global caches
     autoCleanupCache();

@@ -5,6 +5,7 @@ if bot == nil or bot:IsInvulnerable() or not bot:IsHero() or not bot:IsAlive() o
 
 local J = require( GetScriptDirectory()..'/FunLib/jmz_func' )
 local Customize = require( GetScriptDirectory()..'/Customize/general' )
+local TeamBrain = require( GetScriptDirectory()..'/FunLib/team_brain' )
 
 local killTime = 0.0
 local shouldKillRoshan = false
@@ -22,6 +23,11 @@ local initDPSFlag = false
 local Roshan
 
 function GetDesire()
+	-- dota-bot team brain (variant "cerebro"): Roshan together when the plan calls it (FunLib/team_brain.lua).
+	if TeamBrain.Enabled() and bot:IsAlive() then
+		local planned = TeamBrain.RoshanDesire(bot)
+		if planned ~= nil then return planned end
+	end
 	local res = GetDesireHelper()
 	if res > 0.6 then J.ModeAnnounce(bot, 'say_roshan', 30) end
 	return res
