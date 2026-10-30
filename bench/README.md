@@ -6,11 +6,23 @@ lados, pero los bots de Valve eligen los suyos: no son espejo), misma dificultad
 cambiando de lado en cada partida y acelerado. El ganador lo dice el propio Dota por Game State Integration (GSI).
 
 ```
-node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --variantes base,empuje --etiqueta empuje-ab
+node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --modo turbo --variantes base,empuje --etiqueta turbo-empuje-ab
 ```
 
+- Turbo (`--modo turbo`, el objetivo de Pedro desde el 2026-10-29): imitado, porque el Turbo real no corre en un custom
+  game (forzar el modo 23 no cambia nada y la API no tiene esa opción; probado). El custom game pone couriers Turbo
+  (1100 de velocidad, que es como OHA detecta Turbo y activa su lógica), oro y experiencia ×2 ganados en partida y
+  reaparición al 75 %; torres, runas y demás quedan como en modo normal. Medido: 10 couriers a 1100 y, del minuto 0
+  al 5, entre 5.100 y 8.700 de oro por equipo (unos 2.700 en modo normal). Cada partida exige «turbo on/off» en el
+  log según `--modo` (columna `modo`).
+- Desde el 2026-10-29 cada jugador tiene courier (`SetFreeCourierModeEnabled`): antes, el custom game no daba
+  ninguno, así que **todas las series anteriores (la `empuje-ab` normal incluida) se jugaron sin courier** en los dos
+  lados.
+- Tu usuario mira como espectador (equipo 1, desde la previa del minuto 0): puedes elegir la visión de Radiant, Dire o
+  ambos. Asignarlo antes, en la pantalla de configuración, deja el custom game trabado (probado).
+
 - Comparar versiones del bot: `--variantes a,b` (las de `VARIANTS` en el orquestador: `base` sin el cambio de empuje
-  del PR #11, `empuje` con él, `thinkless0` con él y `ThinkLess` 0). Se intercalan en bloques: por cada sorteo de
+  del PR #11, `empuje` con él, `thinkless0` con él y `ThinkLess` 0, `sonda` solo para comprobar el mecanismo). Se intercalan en bloques: por cada sorteo de
   héroes, cada variante juega en los dos lados y el orden se invierte en cada bloque, así que héroes, lado, versión de
   Dota y carga del PC caen igual sobre todas. `--partidas` debe ser múltiplo de 2 × variantes. El orquestador escribe
   `bots/Customize/bench_variant.lua` en cada partida (lo leen los bots con `FunLib/bench_variant.lua`) y lo borra al
@@ -21,7 +33,7 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --va
   custom game confirma el archivo de variante y anota los hechizos por equipo (`rc`, `dc` en `lineas/`) como huella.
 - Validez (decisión de Pedro, DECISIONES 2026-10-29: no se acepta contaminación): cada partida va a `series.csv` con
   `valida` y `motivo`. Cuenta solo si terminó, hubo 5 bots por lado, tu usuario quedó fuera, el log confirma la
-  variante y Dota no cambió de versión (`dota_version`, de `steam.inf`). También se anotan la CPU de la máquina
+  variante y el modo, y Dota no cambió de versión (`dota_version`, de `steam.inf`). También se anotan la CPU de la máquina
   durante la partida (`cpu_media`, `cpu_max`, toda la máquina, Dota incluido) y la memoria libre al final.
 
 - Requisitos: Steam abierto, ningún Dota abierto, Dota 2 Workshop Tools (DLC gratuito) y `pwsh tools/instalar.ps1`
