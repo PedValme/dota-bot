@@ -71,8 +71,9 @@ end
 
 -- Override the print function
 local orig_print = print
+local benchObserve = dofile(GetScriptDirectory()..'/FunLib/bench_observe')
 function print(...)
-    if not Utils.DebugMode then return end
+    if not Utils.DebugMode and not benchObserve then return end
 
     local args = {...}
     for i, v in ipairs(args) do

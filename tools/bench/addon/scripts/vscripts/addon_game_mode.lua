@@ -1,8 +1,8 @@
 -- dota-bot benchmark custom game ("dotabench", local only, never published). Launched by tools/bench/orquestador.mjs
 -- with "+dota_launch_custom_game dotabench dota". It does what console arguments cannot do after the map loads:
--- keeps the human out of both teams, adds ten bots with the same five heroes on each side (bench_partida.lua, written
--- by the orchestrator per match), speeds the match up and logs a per-minute timeline of both teams. Who wins is read
--- by the orchestrator through GSI.
+-- keeps the human out of both teams, adds ten bots asking for the same five heroes on each side (bench_partida.lua,
+-- written by the orchestrator per match; only Radiant keeps them, Dire picks its own, seen 2026-10-30), speeds the
+-- match up and logs a per-minute timeline of both teams. Who wins is read by the orchestrator through GSI.
 
 local DEFAULT = {
 	difficulty = "unfair",
@@ -181,8 +181,8 @@ local function NetWorth(team)
 	return total
 end
 
--- Abilities and items cast per team since the start. The bots' own VM cannot write to the log (neither print nor chat
--- reach it), so this is the footprint of how they play: a variant that changes ThinkLess changes it.
+-- Abilities and items cast per team since the start: the footprint of how they play in every match (a variant that
+-- changes ThinkLess changes it). The bots' own print reaches the log only in observer mode (OHA silences it otherwise).
 local casts = { [DOTA_TEAM_GOODGUYS] = 0, [DOTA_TEAM_BADGUYS] = 0 }
 local function OnAbilityUsed(event)
 	local pid = event.PlayerID
@@ -241,6 +241,126 @@ local function OnPlayerConnect(event)
 	end
 end
 
+-- Observer mode (bench_partida.lua: observar = true; orchestrator --observar), to map how the bots really play. The
+-- server sees what the bots' VM cannot log: per hero every 30 game seconds (level, gold, last hits, K/D/A, position,
+-- items) and every purchase, skill point, cast, kill, rune, buyback, glyph and ward. Lines start with
+-- "[dotabench] obs" and the orchestrator copies them to bench/observaciones/. Off by default: plain matches log as before.
+local function Obs(fmt, ...)
+	print("[dotabench] obs t=" .. math.floor(GameRules:GetDOTATime(false, true)) .. " " .. string.format(fmt, ...))
+end
+
+local function HeroOf(pid)
+	if pid == nil or pid < 0 or not PlayerResource:IsValidPlayerID(pid) then return "?" end
+	return (PlayerResource:GetSelectedHeroName(pid) or "?"):gsub("npc_dota_hero_", "")
+end
+
+local function UnitName(index)
+	local unit = index and EntIndexToHScript(index)
+	if not unit then return "?", -1, -1 end
+	local pid = unit.GetPlayerOwnerID and unit:GetPlayerOwnerID() or -1
+	return unit:GetUnitName():gsub("npc_dota_hero_", ""), unit:GetTeamNumber(), pid
+end
+
+local function Items(hero)
+	local names = {}
+	for slot = 0, 16 do
+		local item = hero:GetItemInSlot(slot)
+		if item then table.insert(names, slot .. ":" .. item:GetAbilityName():gsub("^item_", "")) end
+	end
+	return table.concat(names, "|")
+end
+
+local function Snapshot()
+	for pid = 0, 23 do
+		if PlayerResource:IsValidPlayerID(pid) and PlayerResource:IsFakeClient(pid) then
+			local hero = PlayerResource:GetSelectedHeroEntity(pid)
+			if hero then
+				local pos = hero:GetAbsOrigin()
+				Obs("hero pid=%d team=%d %s lvl=%d gold=%d nw=%d lh=%d dn=%d k=%d d=%d a=%d alive=%d x=%d y=%d hp=%d mp=%d items=%s",
+					pid, hero:GetTeamNumber(), HeroOf(pid), hero:GetLevel(), PlayerResource:GetGold(pid),
+					PlayerResource:GetNetWorth(pid), PlayerResource:GetLastHits(pid), PlayerResource:GetDenies(pid),
+					PlayerResource:GetKills(pid), PlayerResource:GetDeaths(pid), PlayerResource:GetAssists(pid),
+					hero:IsAlive() and 1 or 0, pos.x, pos.y, hero:GetHealth(), hero:GetMana(), Items(hero))
+			end
+		end
+	end
+	-- Couriers: dota-bot's Turbo logic needs a living allied one at 1100, and it looks couriers up by team index.
+	for _, courier in ipairs(Entities:FindAllByClassname("npc_dota_courier")) do
+		local pos = courier:GetAbsOrigin()
+		Obs("courier team=%d pid=%d speed=%d alive=%d x=%d y=%d items=%s", courier:GetTeamNumber(),
+			courier:GetPlayerOwnerID(), math.floor(courier:GetIdealSpeed()), courier:IsAlive() and 1 or 0, pos.x, pos.y,
+			Items(courier))
+	end
+end
+
+local function Listen(event, handler)
+	ListenToGameEvent(event, function(e)
+		local ok, err = pcall(handler, e)
+		if not ok then print("[dotabench] obs error " .. event .. " " .. tostring(err)) end
+	end, nil)
+end
+
+local function StartObserver()
+	print("[dotabench] observer on")
+	Listen("dota_item_purchased", function(e)
+		Obs("buy pid=%s %s %s cost=%s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.itemname), tostring(e.itemcost))
+	end)
+	Listen("dota_player_learned_ability", function(e)
+		Obs("learn pid=%s %s %s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.abilityname))
+	end)
+	Listen("dota_player_used_ability", function(e)
+		Obs("cast pid=%s %s %s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.abilityname))
+	end)
+	Listen("entity_killed", function(e)
+		local victim, vteam, vpid = UnitName(e.entindex_killed)
+		local unit = EntIndexToHScript(e.entindex_killed)
+		local important = unit and (unit:IsRealHero() or unit:IsTower() or unit:IsBuilding() or unit:IsCourier()
+			or victim == "npc_dota_roshan")
+		if not important then return end
+		local killer, kteam, kpid = UnitName(e.entindex_attacker)
+		Obs("kill victim=%s vteam=%d vpid=%d killer=%s kteam=%d kpid=%d", victim, vteam, vpid, killer, kteam, kpid)
+	end)
+	Listen("dota_rune_activated_server", function(e)
+		Obs("rune pid=%s %s rune=%s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.rune))
+	end)
+	Listen("dota_buyback", function(e)
+		Obs("buyback pid=%s %s", tostring(e.player_id), HeroOf(e.player_id))
+	end)
+	Listen("dota_glyph_used", function(e)
+		Obs("glyph team=%s", tostring(e.teamnumber))
+	end)
+	Listen("npc_spawned", function(e)
+		local unit = EntIndexToHScript(e.entindex)
+		if not unit then return end
+		local name = unit:GetUnitName()
+		if name == "npc_dota_observer_wards" or name == "npc_dota_sentry_wards" then
+			-- At spawn the ward is still at 0,0: read its position a moment later.
+			GameRules:GetGameModeEntity():SetThink(function()
+				if IsValidEntity(unit) then
+					local pos = unit:GetAbsOrigin()
+					Obs("ward %s team=%d x=%d y=%d", name:gsub("npc_dota_", ""), unit:GetTeamNumber(), pos.x, pos.y)
+				end
+				return nil
+			end, "dotabench_ward_" .. tostring(e.entindex), 0.1)
+		end
+	end)
+	local nextSnapshot = 0
+	GameRules:GetGameModeEntity():SetThink(function()
+		local state = GameRules:State_Get()
+		-- pcall: a failing snapshot must not stop this timer for the rest of the match.
+		if state >= DOTA_GAMERULES_STATE_POST_GAME then
+			pcall(Snapshot)
+			return nil
+		end
+		if state >= DOTA_GAMERULES_STATE_PRE_GAME and GameRules:GetDOTATime(false, true) >= nextSnapshot then
+			nextSnapshot = nextSnapshot + 30
+			local ok, err = pcall(Snapshot)
+			if not ok then print("[dotabench] obs error snapshot " .. tostring(err)) end
+		end
+		return 1
+	end, "dotabench_observer", 1)
+end
+
 function Precache(context)
 end
 
@@ -259,6 +379,7 @@ function Activate()
 	-- One courier per player, as in normal Dota; custom games give none unless this is on.
 	GameRules:GetGameModeEntity():SetFreeCourierModeEnabled(true)
 	if MatchConfig().turbo then ApplyTurbo() else print("[dotabench] turbo off") end
+	if MatchConfig().observar then StartObserver() end
 	ListenToGameEvent("game_rules_state_change", OnStateChange, nil)
 	ListenToGameEvent("player_connect_full", OnPlayerConnect, nil)
 	ListenToGameEvent("npc_spawned", OnNpcSpawned, nil)

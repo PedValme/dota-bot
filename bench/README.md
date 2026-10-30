@@ -2,7 +2,7 @@
 
 Partidas de bots contra bots sin clics, en un custom game local (`tools/bench/addon`, «dotabench»): dota-bot en un
 equipo y los bots de Valve en el otro, cinco héroes sorteados por partida (uno por posición; se piden para los dos
-lados, pero los bots de Valve eligen los suyos: no son espejo), misma dificultad, tu usuario fuera de los equipos,
+lados, pero solo Radiant los recibe y Dire elige los suyos: no son espejo), misma dificultad, tu usuario fuera de los equipos,
 cambiando de lado en cada partida y acelerado. El ganador lo dice el propio Dota por Game State Integration (GSI).
 
 ```
@@ -28,9 +28,23 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   `bots/Customize/bench_variant.lua` en cada partida (lo leen los bots con `FunLib/bench_variant.lua`) y lo borra al
   terminar; sin ese archivo el bot juega su código actual.
 - Que los bots aplican la variante se comprobó en el juego el 2026-10-29 con la variante `sonda` (`ThinkLess` 1000):
-  mismos héroes en Radiant, al minuto 10 dota-bot lanzó 24 hechizos con sonda y 152 sin ella. Los bots no pueden
-  escribir en el log (ni `print` ni chat llegan con tu usuario fuera de los equipos), así que en cada partida el
+  mismos héroes en Radiant, al minuto 10 dota-bot lanzó 24 hechizos con sonda y 152 sin ella. En cada partida el
   custom game confirma el archivo de variante y anota los hechizos por equipo (`rc`, `dc` en `lineas/`) como huella.
+- Corrección del 2026-10-30: los bots **sí** pueden escribir en el log. Quien silenciaba su `print` era OHA
+  (`FunLib/aba_global_overrides.lua`, salvo `Utils.DebugMode`), no Valve; con el modo observador llega a
+  `console.log` con el prefijo `[VScript]`.
+- Modo observador (`--observar`, para mapear cómo juegan los bots; no cambia cómo juegan): el custom game registra cada
+  30 s de juego el estado de cada héroe (nivel, oro, patrimonio, últimos golpes, K/D/A, posición, vida, maná, objetos
+  por casilla) y de cada courier, y cada compra, punto de habilidad, hechizo, muerte de héroe, torre, courier o Roshan,
+  runa, recompra, glifo y ward. Además el orquestador escribe `bots/Customize/bench_observe.lua` (lo lee
+  `FunLib/bench_observe.lua`): con él, el `print` de los bots llega al log y cada bot de dota-bot anota su modo activo
+  y su deseo cada 2 s (`[bench] mode`). Todo eso, más las líneas del motor sobre los bots (errores de script, órdenes
+  inválidas, funciones lentas, edificios), queda por partida en `observaciones/<etiqueta>-<fecha>-<n>.log` (ignorado por
+  git: pesan varios MB). `node tools/bench/analizar.mjs observaciones/<archivo>.log` lo resume: zonas, agrupación,
+  farm, couriers, modos de dota-bot según su ventaja, empuje en grupo y errores.
+- Héroes (visto el 2026-10-30 en 7 de 7 partidas): Radiant recibe los cinco sorteados y **Dire elige los suyos**, la
+  controle quien la controle (cuando es dota-bot, con el draft de OHA). Las series A/B siguen equilibradas entre
+  variantes porque cada una juega los dos lados, pero los dos equipos no llevan los mismos héroes.
 - Validez (decisión de Pedro, DECISIONES 2026-10-29: no se acepta contaminación): cada partida va a `series.csv` con
   `valida` y `motivo`. Cuenta solo si terminó, hubo 5 bots por lado, tu usuario quedó fuera, el log confirma la
   variante y el modo, y Dota no cambió de versión (`dota_version`, de `steam.inf`). También se anotan la CPU de la máquina
@@ -40,7 +54,7 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   (enlaza `bots/` y el custom game; ya hecho en el PC de Pedro).
 - Qué hace y qué no toca: los límites están al inicio de [orquestador.mjs](../tools/bench/orquestador.mjs). Solo
   lanza y cierra su propio `dota2.exe`, escucha en `127.0.0.1`, y sus archivos temporales (la config de GSI,
-  `bots/Customize/bench_valve_team.lua`, `bench_variant.lua` y `tools/bench/addon/scripts/vscripts/bench_partida.lua`) se borran al
+  `bots/Customize/bench_valve_team.lua`, `bench_variant.lua`, `bench_observe.lua` y `tools/bench/addon/scripts/vscripts/bench_partida.lua`) se borran al
   terminar o al interrumpirlo con Ctrl+C.
 - Si el orquestador se cierra a la fuerza (Administrador de tareas), su Dota queda abierto y, en los primeros minutos
   de una partida, puede quedar `bots/Customize/bench_valve_team.lua`: mientras exista, un equipo juega con los bots de
