@@ -39,7 +39,7 @@ end
 -- Dire or both teams' vision; out of every team they would only see the fog of war. The setup screen can still drop
 -- the human into a free slot before the bots arrive, and then Dota gives them a random hero that nobody plays (seen
 -- 2026-10-29), so it is checked again at every state change and any human hero is removed.
-local SPECTATORS = DOTA_TEAM_NOTEAM -- TEMP: turbo test without spectator (was 1)
+local SPECTATORS = 1 -- DOTA_TEAM_SPECTATOR
 local function IsHuman(pid)
 	return pid ~= nil and pid >= 0 and PlayerResource:IsValidPlayerID(pid) and not PlayerResource:IsFakeClient(pid)
 end
@@ -122,27 +122,6 @@ local function OnStateChange()
 		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
 		SendToServerConsole("host_timescale " .. tostring(cfg.timescale or 1))
-		-- TEMP: look for a way to run Turbo in a custom game.
-		SendToServerConsole("script_help2")
-		for label, obj in pairs({ GameRules = GameRules, GameMode = GameRules:GetGameModeEntity() }) do
-			local seen = {}
-			local mt = getmetatable(obj)
-			while mt and not seen[mt] do
-				seen[mt] = true
-				local idx = rawget(mt, "__index")
-				if type(idx) == "table" then
-					for name in pairs(idx) do
-						local n = tostring(name)
-						if n:find("Turbo") or n:find("Respawn") or n:find("Gold") or n:find("XP") or n:find("Mode") or n:find("Courier") then
-							print("[dotabench] api " .. label .. "." .. n)
-						end
-					end
-					mt = getmetatable(idx)
-				else
-					mt = nil
-				end
-			end
-		end
 	end
 end
 
