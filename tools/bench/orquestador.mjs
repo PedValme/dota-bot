@@ -62,6 +62,9 @@ export const VARIANTS = {
   grupo_farm: { grupo: true, farm: true, thinkless: 1 },
   // Team brain (Pedro, 2026-10-30; trabajo/cerebro-equipo.md): team_desires.lua + FunLib/team_brain.lua.
   cerebro: { cerebro: true, thinkless: 1 },
+  // Team brain v2 and builds from data together (Pedro, 2026-10-30: «son dos cambios no tan grandes que podrian ir
+  // juntos»); the brain's v2 changes replace v1's, so "cerebro" now also plays v2.
+  cerebro_builds: { cerebro: true, builds: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };

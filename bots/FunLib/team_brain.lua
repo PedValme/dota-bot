@@ -197,7 +197,7 @@ local function BaseThreats()
 		-- Creeps alone threaten when they are many (a normal wave with its catapult at a T3 is not an emergency) or
 		-- past the T3.
 		if at ~= nil and (heroes >= 1 or creeps >= 7 or (inner and creeps >= 3)) then
-			threats[lane] = { heroes = heroes, creeps = creeps, loc = at }
+			threats[lane] = { heroes = heroes, creeps = creeps, loc = at, inner = inner }
 		end
 	end
 	return threats
@@ -337,21 +337,24 @@ function B.Update()
 
 	if now < 0 then SetState('LINEA', { reason = 'pregame' }, now) return end
 
-	-- 1) Defend the base first, whatever the lead. Enemy heroes there make the whole plan DEFENDER; creeps alone only
-	-- send the nearest one or two allies (p.creepDefense), and the rest of the team keeps its plan.
+	-- 1) Defend the base first, whatever the lead. Two or more enemy heroes, or any past the T3, make the whole plan
+	-- DEFENDER. A lone hero at a T3 (a split-pusher) or creeps alone only send the nearest one or two allies
+	-- (p.creepDefense) and the rest keep the plan: in v1 a lone split-pusher pulled two defenders out of every push
+	-- (series cerebro-ab, games lost on Dire).
 	local threats = BaseThreats()
 	local worstLane, worst = nil, nil
 	for lane, t in pairs(threats) do
 		if worst == nil or t.heroes > worst.heroes or (t.heroes == worst.heroes and t.creeps > worst.creeps) then worstLane, worst = lane, t end
 	end
 	p.creepDefense = nil
-	if worst ~= nil and worst.heroes >= 1 then
+	if worst ~= nil and (worst.heroes >= 2 or (worst.heroes >= 1 and worst.inner)) then
 		local k = worst.heroes >= 3 and 5 or worst.heroes + 1
 		SetState('DEFENDER', { lane = worstLane, defendLane = worstLane, rally = worst.loc,
 			defenders = NearestAllies(worst.loc, k), reason = string.format('heroes=%d creeps=%d k=%d', worst.heroes, worst.creeps, k) }, now)
 		return
 	elseif worst ~= nil then
-		p.creepDefense = { lane = worstLane, defenders = NearestAllies(worst.loc, worst.creeps >= 8 and 2 or 1) }
+		local k = ((worst.heroes >= 1 and worst.creeps >= 5) or worst.creeps >= 8) and 2 or 1
+		p.creepDefense = { lane = worstLane, defenders = NearestAllies(worst.loc, k) }
 	end
 
 	-- Hold the current state a little unless something above overrides it.
@@ -401,7 +404,18 @@ function B.Update()
 			SetState('ROSHAN', { reason = string.format('lead=%d', lead) }, now)
 			return
 		end
-		local close = hasAegis or lead >= LEAD_CLOSE
+		-- Into the enemy base only with the fight in favour, not just Aegis or a lead: in v1 the team went up the high
+		-- ground, lost the fight there and the base after it (series cerebro-ab). Needs at least four alive, no fewer
+		-- than them, and the fight around the group evaluated clearly ours.
+		local fightHere = B.EvaluateFight(center, now)
+		local close = (hasAegis or lead >= LEAD_CLOSE) and aliveA >= 4 and aliveA >= aliveE and fightHere >= 1.2
+		-- And back out in time: once the closing goes wrong (an ally down and the fight no longer ours), stop and farm
+		-- instead of feeding the rest of the team into the towers.
+		if p.state == 'CERRAR' and allyDeaths >= 1 and fightHere < 1.0 then
+			SetState('LINEA', { reason = string.format('retirada del high ground eval=%.2f', fightHere) }, now)
+			lineaHoldUntil = now + 25
+			return
+		end
 		local lane = p.lane
 		local laneAtT3 = false
 		if lane ~= nil then local _, tier = NextEnemyTower(lane); laneAtT3 = tier >= 3 and not close end
