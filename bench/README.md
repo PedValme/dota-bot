@@ -122,14 +122,12 @@ Mientras corre una serie, el trabajo en paralelo va en otro worktree, en su prop
 Sin comprobar (supuestos a la vista):
 - El sorteo de héroes sale de una lista recordada de los que saben jugar los bots de Valve, no de `BotImplemented`.
 - El Turbo imitado (couriers, oro y experiencia ×2, reaparición) no es el Turbo real: torres y runas son las normales.
-- La columna `heroes` de las series anteriores al control muestra los héroes de Dire antes del espejo.
-- La serie `justa` (2026-10-31) no vale: el espejo se aplicó, pero Dire perdía los objetos iniciales al cambiar de
-  héroe y empezaba hasta ~2.000 de patrimonio detrás (visto en `obs t=0`). Corregido con `refund`.
 - La velocidad ×4: si a esa escala los bots de Lua piensan menos veces por segundo de juego que los de Valve (C++),
   sesga siempre hacia el mismo lado. Comprobación barata pendiente: comparar la cadencia de `[bench] mode` a ×1 y ×4.
 - El ruido entre dos brazos iguales y la ventaja del lado: los mide la serie A contra A (nivel 0).
-- El héroe del puesto 1 de cada equipo aparece unos 20 s de juego después del inicio, en los dos lados por igual
-  (partidas de humo del 2026-10-31); su efecto es pequeño y simétrico, pero no se ha explicado.
+
+Los defectos conocidos sin resolver del banco están en ESTADO.md («Problemas conocidos»): mientras sigan abiertos, no
+se mide sobre ellos. Los sesgos de cada serie ya corrida, en [MEDICIONES.md](../MEDICIONES.md).
 
 ## Cómo leerlo
 - 10 partidas solo distinguen diferencias grandes (por ejemplo 8 de 10); un 6 de 10 puede ser suerte. Con 20 por

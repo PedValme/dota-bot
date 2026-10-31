@@ -191,8 +191,8 @@ local function PrintRoster()
 	end
 end
 
--- Once every bot has its hero and the mirror is done (slot 1's heroes spawn a few seconds after the horn, seen
--- 2026-10-31; at most 60 s): the hero each player really controls (its entity, not the selection, which said "ok"
+-- Once every bot has its hero and the mirror is done (at most 60 s; some heroes spawn after the horn, an open
+-- defect in ESTADO.md): the hero each player really controls (its entity, not the selection, which said "ok"
 -- once with no effect) and its net worth, so the orchestrator can check both sides start alike.
 local function PrintStart()
 	local waited = 0

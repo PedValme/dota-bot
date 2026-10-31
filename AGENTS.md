@@ -47,6 +47,7 @@ once it exists.
 | What is the product? | `PRODUCTO.md`, created with the first product rule | The agent, from the owner's decisions |
 | How do we work here? | This file | The owner |
 | A feature that spans sessions | `trabajo/<feature>.md`, deleted when it closes | The agent |
+| What was measured, with its validity and decision (read before measuring) | [MEDICIONES.md](MEDICIONES.md) | The agent, one entry per series, appended |
 | How the bot, the custom game and Dota really behave (seen in game, read in code, assumed) | [docs/mapa.md](docs/mapa.md) | The agent, from the night of 2026-10-29 |
 | How OHA's code is organized | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/BOT_API_REFERENCE.md](docs/BOT_API_REFERENCE.md) | Upstream |
 | How to update for a new Dota patch | [docs/PATCH_UPDATE_GUIDE.md](docs/PATCH_UPDATE_GUIDE.md) | Upstream |

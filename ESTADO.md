@@ -2,39 +2,55 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **2026-10-31, rama `claude/cerebro-v2-builds` (sin fusionar).** Causa de la «debilidad en Dire»: en el custom game
-  Dire jugaba con **héroes al azar** en todas las series anteriores. Resuelto: espejo con `ReplaceHeroWith` 0,5 s
-  después de aparecer (addon_game_mode.lua, por defecto; `--espejo no` lo apaga); comprobado con dota-bot y con Valve.
-  Las series anteriores por lado no valen. Geometría de la API: relativa a cada equipo (medido).
-- **Corriendo: serie `justa`** (12 partidas, `base,base_estado,cerebro_def`, los dos lados, espejo):
-  `node tools/bench/mecanismo.mjs justa` y `resumir-serie.mjs justa`. A la 5.ª: base 1/1, base_estado 0/2 y
-  cerebro_def 0/1 (las tres derrotas tras +10k). Una partida invalidada: Dota se cerró solo en el minuto 7.
-- Decisiones nuevas de Pedro (DECISIONES 2026-10-31): reglas por estado de partida y no por reloj (hecho como
-  variante `fase_estado`: fases por nivel medio calibrado con datos pro, `J.StateTime()`, farm y Roshan); punto dulce
-  del empuje en grupo; observadas: torres sin defender y ultis malgastadas (el observador ya registra `ult` y
-  defensores de torre). Siguiente: con la serie, decidir qué variante vale; filtro único de ultis y defensa de T1/T2.
-- Hecho en la rama: `--rival dotabot` (partidas largas, falta tope), `--lado`, `--espejo`, `mecanismo.mjs`, cerebro
-  v2, builds, `base_sinturbo` (`J.IsImitatedTurbo`), variantes de prueba de Dire.
+- **2026-10-31. Todo lo medido hasta hoy está contaminado** (MEDICIONES.md, sesgos S1-S5). Se está construyendo el
+  nivel 0 del protocolo nuevo (DECISIONES 2026-10-31: puerta de medición y avance en tres niveles).
+- Hecho en el banco:
+  - espejo con patrimonio completo, guardianes y humo devueltos, y borrado del héroe viejo;
+  - validez exige mismos héroes y patrimonio inicial por equipo y por héroe;
+  - commit por partida, tope de 60 min, parada con más del 20 % inválidas, junctions comprobadas;
+  - `rojas` en `.fabrica.json`.
+- Siguiente:
+  1. Repetir la partida de humo con el commit `5d8bfb5` o posterior y comprobar que Dota ya no se cierra solo.
+  2. Pasar el log al revisor adversarial.
+  3. Serie A contra A (`--variantes base,base_b`, 12 partidas), con la pregunta escrita antes en MEDICIONES.md.
+- **Espera a Pedro:** si una partida que llega al tope de 60 min cuenta como válida y como «no ganó» para dota-bot
+  (recomendado) o se descarta.
+- La rama `claude/cerebro-v2-builds` se parte en un PR por tarea (orden de la fábrica, 2026-10-31).
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Sin cambios de juego activos por
-defecto; variantes del benchmark `empuje`, `grupo`, `grupo_farm` y `cerebro` (apagadas sin archivo de variante).
+defecto. Variantes del benchmark: `empuje`, `grupo`, `cerebro`, `cerebro_builds`, `fase_estado` y otras, apagadas sin
+archivo de variante. Ninguna medida aún sin contaminación.
 
 ## Entregado
 - 2026-10-28/29 · Investigación, fork limpio, junctions, orquestador con GSI, custom game dotabench, series A/B con
   validez, Turbo imitado con courier y espectador (PR #1-#17).
-- 2026-10-30 · Mapa, modo observador y analizador (#18); variantes de remate y su serie `remate-ab` (#19): `grupo`
-  agrupa (4-5 bots empujando el 34 % frente al 9 %) pero dejó caer la base yendo +18.000; no se enciende.
+- 2026-10-30 · Mapa, modo observador y analizador (#18); variantes de remate (#19); diseño y cerebro v1 (#20, #21).
+- 2026-10-31 (rama, sin fusionar) · Cerebro v2, builds con datos, fases por estado de partida, espejo de héroes, rival
+  dota-bot, `mecanismo.mjs`, registro de ultis y torres, protocolo de medición, MEDICIONES.md.
 
 ## Siguientes pasos
-1. Cerebro de equipo (arriba), si Pedro aprueba.
-2. Probar con amigos en un lobby Local Host (draft de OHA, humanos, Turbo real): no probado.
-3. Después: builds con datos, capitán LLM sobre el cerebro.
+1. Nivel 0: humo, revisor adversarial y serie A contra A.
+2. Nivel 1, mecanismo: el filtro de ultis (que no se lancen sin enemigos cerca) y la defensa de T1/T2 «con cabeza».
+3. Nivel 2: el punto dulce del empuje en grupo, y elegir entre base, fases por estado y cerebro.
+4. Una prueba en el entorno real: lobby Local Host con amigos, Turbo real.
 
 ## Problemas conocidos
-- La defensa se apaga cuando 3 aliados empujan (`FunLib/aba_defend.lua:~915-937`); recompra por el Ancient rota
-  (`ability_item_usage_generic.lua:569`); más defectos en docs/mapa.md §8.
-- ~10 «error in error handling» por partida, sin origen; ~12 interruptores Turbo por `GetGameMode() == 23` apagados en
-  el custom game.
-- Saludos con promoción del Workshop; FretBots `set`/`nudge` usan `loadstring` (host); dependencias npm heredadas con
-  conflicto de `typescript` (sin compilar TS: los `.lua` generados se editan a mano junto a su `.ts`).
+Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
+- **Banco: Dota se cierra solo** (access violation) en 3 de 11 partidas con espejo; ninguna antes del espejo. Causa
+  probable: el héroe reemplazado seguía en el mapa. Corregido en `5d8bfb5` (se borra), **sin comprobar** aún.
+- **Banco: héroes que aparecen tarde.** El héroe del puesto 1 de cada equipo apareció unos 20 s de juego después del
+  inicio en una partida de humo, en los dos lados por igual. Sin explicar. La línea `start` espera a que estén todos.
+- **Banco, sin comprobar:**
+  - si a ×4 los bots de Lua piensan menos por segundo de juego que los de Valve;
+  - el sorteo de héroes sale de una lista recordada, no de `BotImplemented`;
+  - el Turbo imitado no es el Turbo real: torres y runas son las normales.
+- **Bot:**
+  - la defensa se apaga cuando 3 aliados empujan (`FunLib/aba_defend.lua:~915-937`);
+  - la recompra por el Ancient está rota (`ability_item_usage_generic.lua:569`);
+  - torres sin defender y ultis lanzadas a creeps o a la nada en la base propia (vistas por Pedro);
+  - más en docs/mapa.md §8.
+- ~10 «error in error handling» por partida, sin origen.
+- Saludos con promoción del Workshop.
+- FretBots `set`/`nudge` usan `loadstring` (host).
+- Dependencias npm heredadas con un conflicto de `typescript`.

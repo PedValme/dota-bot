@@ -2,6 +2,11 @@
   "check": "npm --prefix tools/check ci && node tools/check/check.mjs && node --test tools/bench/orquestador.test.mjs",
   "rama_viva": "main",
   "protegidas": ["main"],
+  "rojas": [
+    "^tools/bench/",
+    "^bots/FunLib/bench_",
+    "^tools/check/"
+  ],
   "protocolo": "fabrica/2",
   "categoria": "construccion",
   "integracion": "pr-agente",

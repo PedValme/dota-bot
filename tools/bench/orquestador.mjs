@@ -350,7 +350,7 @@ export function parseStart(text) {
     nwRadiant: nw(2), nwDire: nw(3), heroGap };
 }
 
-// Largest gaps in starting net worth that still count as the same start (passive gold while slot 1 spawns late):
+// Largest gaps in starting net worth that still count as the same start (passive gold while a late hero spawns):
 // per team and between the two copies of one hero.
 export const START_NW_GAP = 300;
 export const START_HERO_GAP = 100;
