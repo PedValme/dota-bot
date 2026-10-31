@@ -7,8 +7,9 @@
   estrategia y previa en el mismo segundo; tres intentos de espejo fallaron, documentado en addon_game_mode.lua); la
   geometría de la API es relativa a cada equipo (medido, `[bench] geo`). El cerebro gana rápido pero muere ~2,5 veces
   más que el base (Dire con héroes peores: 3/10). `cerebro_def` (defensa de los cinco) arregló las defensas por un
-  héroe; `prudente` no ayudó. Serie `dire-aislar` corriendo: `cerebro_sinbuilds`, `cerebro_sinpelea`, `builds`, para
-  aislar de dónde salen las muertes (`node tools/bench/mecanismo.mjs dire-fix dire-aislar`).
+  héroe; `prudente` no ayudó. Los bloques de 2 partidas por variante en Dire son ruido (héroes al azar en cada
+  partida; `dire-aislar` no aisló nada). Corriendo: `dire-ab`, 20 partidas en Dire `base,cerebro_def` intercaladas
+  (`node tools/bench/mecanismo.mjs dire-ab`, `resumir-serie.mjs dire-ab`): contesta si `cerebro_def` iguala al base.
 - Hecho en la rama: `--rival dotabot` (cada equipo su variante; partidas largas, falta un tope), `--lado`,
   `tools/bench/mecanismo.mjs`, lógica Turbo de OHA activa también en el banco (`J.IsModeTurbo()`), cerebro v2 y builds.
 - Herramientas: `resumir-serie.mjs`, `mecanismo.mjs`, `analizar.mjs`; líneas `[bench] plan`, `plan_tick`, `geo`.
