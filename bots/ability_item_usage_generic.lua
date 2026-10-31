@@ -396,7 +396,7 @@ function X.SetTalkMessage()
 	local nCurrentGold = bot:GetGold()
 	local nCurrentKills = GetHeroKills( nBotID )
 	local nCurrentDeaths = GetHeroDeaths( nBotID )
-	local nRate = (GetGameMode() == GAMEMODE_TURBO or J.IsModeTurbo()) and 2.0 or 1.0
+	local nRate = (GetGameMode() == GAMEMODE_TURBO or J.IsImitatedTurbo()) and 2.0 or 1.0
 
 	--回复玩家的对话
 	if nBotID == J.Role.GetReplyMemberID()
@@ -815,7 +815,7 @@ end
 
 
 function X.IsCourierTargetedByUnit( courier )
-	if GetGameMode() == GAMEMODE_TURBO or J.IsModeTurbo() then return false end
+	if GetGameMode() == GAMEMODE_TURBO or J.IsImitatedTurbo() then return false end
 	
 	local botLV = bot:GetLevel()
 

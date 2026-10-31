@@ -121,7 +121,7 @@ function updateDefendGameStateCache(): CachedDefendGameState {
     const gameMode = GetGameMode();
 
     // Adjust time for turbo mode
-    const adjustedTime = gameMode === 23 || jmz.IsModeTurbo() ? currentTime * 1.65 : currentTime;
+    const adjustedTime = gameMode === 23 || jmz.IsImitatedTurbo() ? currentTime * 1.65 : currentTime;
 
     defendGameStateCache = {
         lastUpdate: now,

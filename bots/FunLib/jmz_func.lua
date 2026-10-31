@@ -4612,6 +4612,18 @@ function J.GetClosestUnit(units)
 	return target;
 end
 
+-- Turbo detected by its couriers, for the switches OHA wrote as GetGameMode() == 23 (they never ran in the benchmark's
+-- imitated Turbo until 2026-10-31). The benchmark variant "sin_turbo_oha" turns them off again, to measure them: with
+-- them on, dota-bot lost 6 of 6 as Dire where it used to win 9 of 10. In real Turbo GetGameMode() == 23 rules anyway.
+local bImitatedTurboOff = nil
+function J.IsImitatedTurbo()
+	if bImitatedTurboOff == nil then
+		local ok, Customize = pcall( require, GetScriptDirectory()..'/Customize/general' )
+		bImitatedTurboOff = ok and type( Customize.BenchVariant ) == 'table' and Customize.BenchVariant.sin_turbo_oha == true
+	end
+	return not bImitatedTurboOff and J.IsModeTurbo()
+end
+
 function J.IsModeTurbo()
 	for _, u in pairs(GetUnitList(UNIT_LIST_ALLIES))
 	do

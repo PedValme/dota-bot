@@ -46,6 +46,10 @@ declare function GetPosition(bot: Unit | null): number;
 
 declare function IsInLaningPhase(): boolean;
 
+declare function IsModeTurbo(): boolean;
+
+declare function IsImitatedTurbo(): boolean;
+
 declare function IsDoingRoshan(bot: Unit): boolean;
 
 declare function IsDoingTormentor(bot: Unit): boolean;

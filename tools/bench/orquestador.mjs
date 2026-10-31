@@ -74,6 +74,9 @@ export const VARIANTS = {
   cerebro_sinbuilds: { cerebro: true, defensa_total: true, thinkless: 1 },
   cerebro_sinpelea: { cerebro: true, builds: true, defensa_total: true, sin_pelea: true, thinkless: 1 },
   builds: { builds: true, thinkless: 1 },
+  // OHA's own Turbo logic (the GetGameMode() == 23 switches) off again in the imitated Turbo (2026-10-31: with it on,
+  // dota-bot lost 6 of 6 as Dire).
+  base_sinturbo: { sin_turbo_oha: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
