@@ -126,12 +126,16 @@ export function schedule(i, variants) {
 // pre-game; that the bots apply it was checked once with the "sonda" variant (bench/README.md) and each match logs
 // casts per team. (The bots' print does reach the log, but only in observer mode: OHA silences it otherwise.)
 export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo,
-  espejo = "" }) {
+  espejo = "", start }) {
   if (outcome !== "final") return "sin final";
   if (modo !== loggedModo) return `modo ${loggedModo || "sin registro"} en el log`;
   if (roster.radiant !== 5 || roster.dire !== 5) return `reparto ${roster.radiant ?? 0}-${roster.dire ?? 0}`;
-  // Same five heroes on both sides (DECISIONES 2026-10-29: no contamination); only "--espejo no" accepts otherwise.
-  if (espejo !== "no" && roster.mismos !== true) return "héroes distintos por lado";
+  // Same five heroes and the same starting net worth on both sides, read at the horn from the heroes really
+  // controlled (DECISIONES 2026-10-29: no contamination). "--espejo no" is for debugging only: never valid.
+  if (espejo === "no") return "espejo apagado";
+  if (!start || start.radiant !== 5 || start.dire !== 5) return "sin registro de inicio";
+  if (roster.mismos !== true || start.mismos !== true) return "héroes distintos por lado";
+  if (Math.abs(start.nwRadiant - start.nwDire) > START_NW_GAP) return `patrimonio inicial ${start.nwRadiant}-${start.nwDire}`;
   if (roster.humano !== "fuera" && roster.humano !== "heroe-quitado") return `humano ${roster.humano || "?"}`;
   if (loggedVariant === null || loggedVariant === undefined) return "variante sin registro en el log";
   if ((variant || "") !== loggedVariant) return `variante ${loggedVariant || "ninguna"} en el log`;
@@ -293,6 +297,23 @@ export function parseRoster(text) {
     mismos: teams[2].length > 0 && set(2) === set(3),
   };
 }
+
+// At the horn ("[dotabench] start team=2 pid=1 hero=npc_dota_hero_luna nw=601"): the heroes really controlled, by
+// their entity, and each team's starting net worth. mismos: the same five heroes per side.
+export function parseStart(text) {
+  const teams = { 2: [], 3: [] };
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/\[dotabench\] start team=(\d) pid=\d+ hero=(\S+) nw=(-?\d+)/);
+    if (m) teams[m[1]]?.push({ hero: m[2].replace("npc_dota_hero_", ""), nw: Number(m[3]) });
+  }
+  const set = (t) => teams[t].map((p) => p.hero).sort().join(" ");
+  const nw = (t) => teams[t].reduce((a, p) => a + p.nw, 0);
+  return { radiant: teams[2].length, dire: teams[3].length, mismos: teams[2].length > 0 && set(2) === set(3),
+    nwRadiant: nw(2), nwDire: nw(3) };
+}
+
+// Largest gap in starting net worth between the teams that still counts as the same start (purchase timing).
+export const START_NW_GAP = 300;
 
 // The variant file the custom game found at the start ("[dotabench] variant name=base ..." or "variant none").
 export function parseVariant(text) {
@@ -528,6 +549,7 @@ async function main(argv) {
       const fecha = new Date().toISOString().slice(0, 16);
       let timeline = [];
       let roster = { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false };
+      let start = null;
       let loggedVariant = null;
       let loggedModo = "";
       try {
@@ -536,6 +558,7 @@ async function main(argv) {
           const log = readFileSync(consoleLog, "utf8");
           timeline = parseTimeline(log);
           roster = parseRoster(log);
+          start = parseStart(log);
           loggedVariant = parseVariant(log);
           loggedModo = parseModo(log);
           if (opt.observar) {
@@ -546,7 +569,7 @@ async function main(argv) {
       } catch {}
       const version = dotaVersion();
       const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo,
-        espejo: opt.espejo ?? "" });
+        espejo: opt.espejo ?? "", start });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));

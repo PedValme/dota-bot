@@ -112,9 +112,19 @@ local function MirrorOnSpawn(unit, pid)
 			if hero == nil or unit:GetUnitName() == hero then return end
 			mirrored[pid] = true
 			GameRules:GetGameModeEntity():SetThink(function()
-				local ok, err = pcall(function() PlayerResource:ReplaceHeroWith(pid, hero, PlayerResource:GetGold(pid), 0) end)
+				-- The random hero may already have bought its starting items, and they vanish with it: their cost goes
+				-- back as gold (before 2026-10-31 it did not, and Dire started up to ~2.000 net worth behind).
+				local refund = 0
+				if IsValidEntity(unit) then
+					for i = 0, 16 do
+						local item = unit:GetItemInSlot(i)
+						if item and item:GetAbilityName() ~= "item_tpscroll" then refund = refund + item:GetCost() end
+					end
+				end
+				local gold = PlayerResource:GetGold(pid) + refund
+				local ok, err = pcall(function() PlayerResource:ReplaceHeroWith(pid, hero, gold, 0) end)
 				print(string.format("[dotabench] mirror slot=%d pid=%d %s -> %s ok=%s %s now=%s", slot, pid, unit:GetUnitName(),
-					hero, tostring(ok), tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))))
+					hero, tostring(ok), tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))) .. " refund=" .. refund)
 				return nil
 			end, "dotabench_mirror_" .. pid, 0.5)
 			return
@@ -153,6 +163,38 @@ local function PrintRoster()
 	end
 end
 
+-- Once every bot has its hero and the mirror is done (slot 1's heroes spawn a few seconds after the horn, seen
+-- 2026-10-31; at most 60 s): the hero each player really controls (its entity, not the selection, which said "ok"
+-- once with no effect) and its net worth, so the orchestrator can check both sides start alike.
+local function PrintStart()
+	local waited = 0
+	GameRules:GetGameModeEntity():SetThink(function()
+		local players, ready = {}, true
+		for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
+			for i = 1, PlayerResource:GetPlayerCountForTeam(team) do
+				local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
+				if pid >= 0 and not IsHuman(pid) then
+					local hero = PlayerResource:GetSelectedHeroEntity(pid)
+					local slot = MatchConfig().heroes[i]
+					local pending = team == DOTA_TEAM_BADGUYS and MatchConfig().espejo ~= "no" and hero ~= nil
+						and slot ~= nil and hero:GetUnitName() ~= slot
+					if hero == nil or pending then ready = false end
+					table.insert(players, { team = team, pid = pid, hero = hero })
+				end
+			end
+		end
+		if not ready and waited < 60 then
+			waited = waited + 1
+			return 1
+		end
+		for _, p in ipairs(players) do
+			print(string.format("[dotabench] start team=%d pid=%d hero=%s nw=%d waited=%d", p.team, p.pid,
+				p.hero and p.hero:GetUnitName() or "none", PlayerResource:GetNetWorth(p.pid), waited))
+		end
+		return nil
+	end, "dotabench_start", 0)
+end
+
 -- The A/B variant file the orchestrator left for dota-bot this match (bots/Customize/bench_variant.lua, the same
 -- file the bots read), so the orchestrator can check the match played the variant it was meant to.
 local function PrintVariant()
@@ -181,6 +223,8 @@ local function OnStateChange()
 		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
 		SendToServerConsole("host_timescale " .. tostring(cfg.timescale or 1))
+	elseif state == DOTA_GAMERULES_STATE_GAME_IN_PROGRESS then
+		PrintStart()
 	end
 end
 

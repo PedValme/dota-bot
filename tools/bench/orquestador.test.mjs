@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
-  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, variantLua,
+  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, variantLua,
   VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
@@ -44,13 +44,19 @@ test("the variant file is plain Lua data with the variant's fields", () => {
 });
 
 test("a match counts only if it ended, 5v5 bots, human out, the right variant and the same Dota", () => {
+  const start = { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005 };
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true }, variant: "base",
-    loggedVariant: "base", version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal" };
+    loggedVariant: "base", version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal", start };
   assert.match(validity({ ...ok, loggedModo: undefined }), /modo/);
   assert.equal(validity(ok), "");
   assert.match(validity({ ...ok, roster: { ...ok.roster, mismos: false } }), /héroes distintos/);
   assert.match(validity({ ...ok, roster: { ...ok.roster, mismos: undefined } }), /héroes distintos/);
-  assert.equal(validity({ ...ok, roster: { ...ok.roster, mismos: false }, espejo: "no" }), "");
+  assert.match(validity({ ...ok, start: { ...start, mismos: false } }), /héroes distintos/);
+  assert.match(validity({ ...ok, start: undefined }), /inicio/);
+  assert.match(validity({ ...ok, start: { ...start, dire: 4 } }), /inicio/);
+  assert.match(validity({ ...ok, start: { ...start, nwDire: 1030 } }), /patrimonio inicial 3005-1030/);
+  assert.equal(validity({ ...ok, start: { ...start, nwDire: 2800 } }), "");
+  assert.match(validity({ ...ok, espejo: "no" }), /espejo apagado/);
   assert.equal(validity({ ...ok, roster: { ...ok.roster, humano: "heroe-quitado" } }), "");
   assert.match(validity({ ...ok, outcome: "timeout" }), /final/);
   assert.match(validity({ ...ok, roster: { ...ok.roster, radiant: 6 } }), /reparto 6-5/);
@@ -127,7 +133,7 @@ test("the mode the custom game applied is read from the log and must match the s
   assert.equal(parseModo("[VScript] [dotabench] turbo off"), "normal");
   assert.equal(parseModo("nothing"), "");
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true }, variant: "", loggedVariant: "",
-    version: "1", firstVersion: "1" };
+    version: "1", firstVersion: "1", start: { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005 } };
   assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), "");
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "normal" }), /modo/);
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "" }), /modo/);
@@ -189,6 +195,14 @@ test("the roster tells the real heroes, the team sizes and whether the human pla
   assert.equal(parseRoster(removed).humano, "heroe-quitado");
   assert.equal(parseRoster([clean, roster(2, 0, 0, "phantom_assassin")].join("\n")).humano, "en-equipo");
   assert.deepEqual(parseRoster("no roster here"), { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false });
+});
+
+test("the start line tells the heroes really controlled and each team's starting net worth", () => {
+  const line = (team, pid, hero, nw) => `[VScript] [dotabench] start team=${team} pid=${pid} hero=npc_dota_hero_${hero} nw=${nw}`;
+  const log = [line(2, 1, "luna", 601), line(2, 2, "razor", 600), line(3, 6, "razor", 11), line(3, 7, "luna", 511)].join("\r\n");
+  assert.deepEqual(parseStart(log), { radiant: 2, dire: 2, mismos: true, nwRadiant: 1201, nwDire: 522 });
+  assert.equal(parseStart([line(2, 1, "luna", 601), line(3, 6, "viper", 601)].join("\n")).mismos, false);
+  assert.equal(parseStart("nothing").mismos, false);
 });
 
 test("the mirror replaces Dire's random heroes; only the same five per side count as mismos", () => {

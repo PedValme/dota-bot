@@ -22,7 +22,10 @@ once it exists.
   - Capitán LLM con pic: perfil openai con Sol de orquestador, un subagente por partida (DECISIONES.md, 2026-10-29).
   - Lo que se trae de `upstream` se revisa como código de terceros antes de fusionarlo (DECISIONES.md, 2026-10-28).
   - El orquestador del benchmark solo toca Steam y Dota y lo que el benchmark necesita (DECISIONES.md, 2026-10-28).
-  - Sin contaminación: solo cuentan partidas `valida=si` (DECISIONES.md, 2026-10-29). Las 3 etapas quedaron
+  - Sin contaminación: solo cuentan partidas `valida=si`, y `valida=si` no basta. Toda asimetría conocida entre los
+    lados es contaminación aunque el comprobador no la mire: se arregla o se convierte en comprobación antes de medir,
+    nunca se anota como «así es el banco» (DECISIONES.md, 2026-10-29 y 2026-10-31; Dire jugó con héroes al azar
+    durante horas porque estaba anotado como un hecho). Las 3 etapas quedaron
     reemplazadas por una mejora grande con argumentos sólidos (cerebro de equipo con datos y criterio de juego), medida
     una sola vez al final, no una corrida por cada detalle (DECISIONES.md, 2026-10-30; diseño en `trabajo/cerebro-equipo.md`).
   - El objetivo es Turbo, medido imitado en el custom game con `--modo turbo` (DECISIONES.md, 2026-10-29).
