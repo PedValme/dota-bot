@@ -18,8 +18,8 @@
   esos héroes. Causa de fondo, medida: el motor nunca da el mismo héroe a los dos equipos (0 de 112 partidas).
 - **Funciona `--espejo cruzado`** (2 humos, `b3138c2` y siguiente): dos sorteos sin héroes en común, dota-bot siempre
   el primero en los dos lados; ningún héroe cambiado, sin crashes.
-- **Espera a Pedro:** aceptar «mismo enfrentamiento en los dos lados» en vez de «mismos héroes» (recomendado); con su
-  sí, validez por grupo pedido, modo cruzado por defecto, quitar espejo y creación de héroes, revisión y PR.
+- Pedro aceptó «mismo enfrentamiento en los dos lados» (DECISIONES 2026-10-31): validez por grupo sorteado, modo
+  cruzado por defecto, espejo y creación de héroes quitados. Falta: revisión, humo y PR.
 - Después: revisor adversarial del humo y serie A contra A (`--variantes base,base_b`, 12 partidas), con la pregunta
   escrita antes en MEDICIONES.md.
 - La rama `claude/cerebro-v2-builds` se parte en un PR por tarea (orden de la fábrica, 2026-10-31).
@@ -44,15 +44,11 @@ archivo de variante. Ninguna medida aún sin contaminación.
 
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
-- **Banco: Dota se cierra solo** (access violation) en 3 de 12 partidas con espejo; antes del espejo, 1 en 126.
-  Causa probable: el héroe reemplazado seguía en el mapa. Corregido en `5d8bfb5` (se borra), **sin comprobar** aún,
-  como tampoco que los couriers de Dire sobreviven a ese borrado (ahora es un control de validez).
-- **Banco: héroes que aparecen tarde**, sobre todo el del puesto 1 de Radiant (de t=-3 a t=+40), y no en Dire salvo
-  por el espejo. Pierden tiempo de línea y, hasta el arreglo de S6, los jugaba dota-bot aunque fueran de Valve.
-  Hipótesis: el humano ocupa un hueco de Radiant cuando se añaden los bots. Prueba en curso: añadir los bots 1 s
-  después de sacarlo. Ahora la validez rechaza cualquier héroe aparecido tras el inicio.
-- **Banco: S6 corregido sin comprobar en partida** (rama `claude/banco-s6`): el archivo de equipo dura toda la
-  partida y la validez rechaza héroes de Valve jugados por dota-bot.
+- **Banco: Dota se cierra solo** al cambiar o crear héroes de Dire (5 de 16 partidas con espejo, 1 de 2 creando).
+  Se dejó de hacer: cada equipo pide su propio sorteo. Sin comprobar aún en una serie que no vuelva a pasar (2 de 2
+  partidas de humo sin cierres).
+- **Banco: el primer bot añadido aparece de 15 a 50 s tarde.** Con 90 s de fase previa llega antes del inicio, y la
+  validez rechaza cualquier héroe aparecido después. Causa sin explicar.
 - **Banco: velocidad real variable** (×1,6 a ×3,4 con `--velocidad 4`), sin saber si afecta distinto a cada lado.
 - **Banco, sin comprobar:**
   - si a ×4 los bots de Lua piensan menos por segundo de juego que los de Valve;

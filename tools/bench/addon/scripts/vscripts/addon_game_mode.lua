@@ -54,13 +54,12 @@ end
 
 local botsAdded = {}
 
--- Only Radiant gets the asked heroes here: hero selection, strategy and pre-game happen in the same second, so no
--- draft script runs and the engine gives Dire's bots random heroes, only if they join at once (added a second
--- later they got none, 2026-10-31). MirrorOnSpawn gives them the drawn ones.
+-- Each team asks for its own drawn heroes, none shared (heroes, heroes_dire): the engine gives them if both teams
+-- join in the same instant. Without heroes_dire ("--espejo no", debugging) Dire asks for Radiant's and gets random
+-- ones instead. Measured 2026-10-31: a team added a second later got no heroes at all.
 local function AddBots(cfg, team)
 	if botsAdded[team] then return end
 	botsAdded[team] = true
-	-- heroes_dire ("--espejo cruzado"): Dire asks for its own draw, none shared with Radiant's.
 	local list = (team == DOTA_TEAM_BADGUYS and cfg.heroes_dire) or cfg.heroes
 	for slot, hero in ipairs(list) do
 		local ok = Tutorial:AddBot(hero, LANES[team][slot], cfg.difficulty, team == DOTA_TEAM_GOODGUYS)
@@ -97,74 +96,14 @@ local function KeepHumansOut(why)
 	end
 end
 
--- Mirror heroes (Pedro, 2026-10-31: «no creo que no exista forma de homologar ambos lados»). Half a second after a
--- Dire bot's hero spawns, ReplaceHeroWith swaps it for its slot's drawn hero, keeping its gold; the bot's scripts
--- restart with the new hero (seen: its mode lines, purchases and spells are the new hero's, no script errors). Before
--- this, every benchmark match gave Dire random heroes against Radiant's drawn ones. Tried and dropped: picking in
--- dota-bot's draft (it never runs here), SetSelectedHero during selection and ReplaceHeroWith at pre-game (the hero
--- did not exist yet: "ok", no effect). bench_partida.lua: espejo = "no" turns it off.
-local mirrored = {}
-local function MirrorOnSpawn(unit, pid)
-	local cfg = MatchConfig()
-	if cfg.espejo == "no" or cfg.heroes_dire or mirrored[pid] or unit:GetTeamNumber() ~= DOTA_TEAM_BADGUYS then return end
-	for slot = 1, PlayerResource:GetPlayerCountForTeam(DOTA_TEAM_BADGUYS) do
-		if PlayerResource:GetNthPlayerIDOnTeam(DOTA_TEAM_BADGUYS, slot) == pid then
-			local hero = cfg.heroes[slot]
-			if hero == nil or unit:GetUnitName() == hero then return end
-			mirrored[pid] = true
-			GameRules:GetGameModeEntity():SetThink(function()
-				-- The random hero may already have bought its starting items, and they vanish with it: their cost goes
-				-- back as gold (before 2026-10-31 it did not, and Dire started up to ~2.000 net worth behind).
-				-- The gold given is the player's net worth (gold plus items at their buy value, a whole stack of tangos
-				-- included; the free TP does not count), and items with a team stock (wards, smoke) go back to it: wards
-				-- cost 0 and Dire used to start without them (review 2026-10-31).
-				local refund, restocked = 0, {}
-				if IsValidEntity(unit) then
-					for i = 0, 16 do
-						local item = unit:GetItemInSlot(i)
-						local name = item and item:GetAbilityName()
-						if name and name ~= "item_tpscroll" then
-							refund = refund + item:GetCost()
-							local stock = ({ item_ward_observer = true, item_ward_sentry = true, item_smoke_of_deceit = true,
-								item_ward_dispenser = true })[name]
-							if stock then
-								local base = name == "item_ward_dispenser" and { "item_ward_observer", "item_ward_sentry" } or { name }
-								for _, b in ipairs(base) do
-									local n = math.max(1, (name == "item_ward_dispenser") and 1 or item:GetCurrentCharges())
-									local okStock = pcall(function() GameRules:IncreaseItemStock(DOTA_TEAM_BADGUYS, b, n, -1) end)
-									table.insert(restocked, b .. "x" .. n .. (okStock and "" or "!"))
-								end
-							end
-						end
-					end
-				end
-				local gold = math.max(PlayerResource:GetNetWorth(pid), PlayerResource:GetGold(pid) + refund)
-				local ok, err = pcall(function() PlayerResource:ReplaceHeroWith(pid, hero, gold, 0) end)
-				print(string.format("[dotabench] mirror slot=%d pid=%d %s -> %s ok=%s %s now=%s", slot, pid, unit:GetUnitName(),
-					hero, tostring(ok), tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))) .. " refund=" .. refund .. " gold=" .. gold
-					.. " restock=" .. (#restocked > 0 and table.concat(restocked, ",") or "-"))
-				-- ReplaceHeroWith does not remove the old hero: it stayed in the world (seen acting at 0:13 and 0:17 after
-				-- the swap), and Dota closed itself with an access violation in 3 of 12 mirrored matches (1 in 126 before
-				-- the mirror). It is removed once the new hero is the player's.
-				GameRules:GetGameModeEntity():SetThink(function()
-					local removed = false
-					if IsValidEntity(unit) and unit ~= PlayerResource:GetSelectedHeroEntity(pid) then
-						removed = pcall(function() UTIL_Remove(unit) end)
-					end
-					print(string.format("[dotabench] mirror_old pid=%d removed=%s", pid, tostring(removed)))
-					return nil
-				end, "dotabench_mirror_old_" .. pid, 0.1)
-				return nil
-			end, "dotabench_mirror_" .. pid, 0.5)
-			return
-		end
-	end
-end
+-- No hero is ever swapped or created (DECISIONES 2026-10-31). Tried and dropped that day: swapping Dire's random
+-- heroes with ReplaceHeroWith (Dota closed itself in 5 of 16 matches, with or without removing the old hero) and
+-- creating them with CreateHeroForPlayer (Dota closed too, and the engine did not count them as the players' heroes).
+-- The engine never gives one hero to both teams (0 of 112 matches), so each team asks for its own draw.
 
 -- First spawn of each hero entity, with the game time (negative before the horn): one hero per side used to spawn
 -- late, Radiant's slot 1 most of all (open defect, ESTADO.md), and the orchestrator checks it.
--- Keyed by the unit handle, not the entity index: removed heroes (the human's, the mirror's old ones) free their
--- index for a later hero.
+-- Keyed by the unit handle, not the entity index: a removed hero (the human's) frees its index for a later hero.
 local spawned = {}
 local function OnNpcSpawned(event)
 	local unit = EntIndexToHScript(event.entindex)
@@ -175,7 +114,6 @@ local function OnNpcSpawned(event)
 		print(string.format("[dotabench] spawn pid=%d team=%d hero=%s t=%.1f", pid or -1, unit:GetTeamNumber(),
 			unit:GetUnitName(), GameRules:GetDOTATime(false, true)))
 	end
-	if pid ~= nil and pid >= 0 and PlayerResource:IsFakeClient(pid) then MirrorOnSpawn(unit, pid) end
 	if not IsHuman(pid) then return end
 	print(string.format("[dotabench] human hero removed pid=%d team=%d %s", pid, unit:GetTeamNumber(), unit:GetUnitName()))
 	KeepHumanOut(pid, "hero spawned")
@@ -202,9 +140,8 @@ local function PrintRoster()
 	end
 end
 
--- Once every bot has its hero and the mirror is done (at most 60 s; some heroes spawn after the horn, an open
--- defect in ESTADO.md): the hero each player really controls (its entity, not the selection, which said "ok"
--- once with no effect) and its net worth, so the orchestrator can check both sides start alike.
+-- Once every bot has its hero (at most 60 s after the horn): the hero each player really controls (its entity, not
+-- the selection) and its net worth, so the orchestrator can check each team plays its draw and both start alike.
 local function PrintStart()
 	local waited = 0
 	GameRules:GetGameModeEntity():SetThink(function()
@@ -214,11 +151,7 @@ local function PrintStart()
 				local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
 				if pid >= 0 and not IsHuman(pid) then
 					local hero = PlayerResource:GetSelectedHeroEntity(pid)
-					local cfg = MatchConfig()
-					local slot = ((team == DOTA_TEAM_BADGUYS and cfg.heroes_dire) or cfg.heroes)[i]
-					local pending = team == DOTA_TEAM_BADGUYS and MatchConfig().espejo ~= "no" and hero ~= nil
-						and slot ~= nil and hero:GetUnitName() ~= slot
-					if hero == nil or pending then ready = false end
+					if hero == nil then ready = false end
 					table.insert(players, { team = team, pid = pid, hero = hero })
 				end
 			end
@@ -251,76 +184,17 @@ local function PrintVariant()
 	print("[dotabench] variant name=" .. tostring(variant.name) .. " " .. table.concat(fields, " "))
 end
 
-local direScheduled = false
-
-local function GiveDireHero(slot, pid, hero, how)
-	local player = PlayerResource:GetPlayer(pid)
-	local ok, err = pcall(function()
-		if how == "select" then
-			player:SetSelectedHero(hero)
-		else
-			-- CreateHeroForPlayer makes it the player's hero; it is placed at Dire's fountain like a normal spawn.
-			local unit = CreateHeroForPlayer(hero, player)
-			local fountain = Entities:FindByClassname(nil, "ent_dota_fountain")
-			while fountain and fountain:GetTeamNumber() ~= DOTA_TEAM_BADGUYS do
-				fountain = Entities:FindByClassname(fountain, "ent_dota_fountain")
-			end
-			if fountain then FindClearSpaceForUnit(unit, fountain:GetAbsOrigin(), true) end
-		end
-	end)
-	print(string.format("[dotabench] give slot=%d pid=%d how=%s ok=%s %s now=%s", slot, pid, how, tostring(ok),
-		tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))))
-end
-
--- Each Dire bot without a hero gets its slot's drawn hero: "select" picks it during hero selection; "create", three
--- seconds into pre-game, creates it for any that still has no hero entity.
-local function GiveDireHeroes(cfg, how)
-	local function each(fn)
-		for slot = 1, PlayerResource:GetPlayerCountForTeam(DOTA_TEAM_BADGUYS) do
-			local pid = PlayerResource:GetNthPlayerIDOnTeam(DOTA_TEAM_BADGUYS, slot)
-			if pid >= 0 and cfg.heroes[slot] and PlayerResource:IsFakeClient(pid) then fn(slot, pid, cfg.heroes[slot]) end
-		end
-	end
-	if how == "select" then
-		each(function(slot, pid, hero)
-			local name = PlayerResource:GetSelectedHeroName(pid)
-			if name == nil or name == "" then GiveDireHero(slot, pid, hero, "select") end
-		end)
-		return
-	end
-	GameRules:GetGameModeEntity():SetThink(function()
-		each(function(slot, pid, hero)
-			if PlayerResource:GetSelectedHeroEntity(pid) == nil then GiveDireHero(slot, pid, hero, "create") end
-		end)
-		return nil
-	end, "dotabench_give_dire", 3)
-end
-
 local function OnStateChange()
 	local cfg = MatchConfig()
 	local state = GameRules:State_Get()
 	KeepHumansOut("state " .. tostring(state))
 	if state == DOTA_GAMERULES_STATE_HERO_SELECTION or state == DOTA_GAMERULES_STATE_STRATEGY_TIME then
-		-- Measured 2026-10-31: of two teams added in the same instant only the first gets the asked heroes (the second
-		-- gets random ones, and swapping them with ReplaceHeroWith crashed Dota in 5 of 16 matches); a team added a
-		-- second later gets none. So Radiant goes first and Dire a second later, hero-less, and GiveDireHeroes gives
-		-- each Dire bot its slot's drawn hero. The mirror stays as a fallback if Dire still gets random ones.
+		-- Both teams in the same instant, each with its own draw (AddBots).
 		AddBots(cfg, DOTA_TEAM_GOODGUYS)
-		if cfg.heroes_dire then
-			-- Each team its own heroes: both join at once and keep what the engine gives them, nothing is swapped.
-			AddBots(cfg, DOTA_TEAM_BADGUYS)
-		elseif not direScheduled then
-			direScheduled = true
-			GameRules:GetGameModeEntity():SetThink(function()
-				AddBots(cfg, DOTA_TEAM_BADGUYS)
-				GiveDireHeroes(cfg, "select")
-				return nil
-			end, "dotabench_add_dire", 1)
-		end
+		AddBots(cfg, DOTA_TEAM_BADGUYS)
 	elseif state == DOTA_GAMERULES_STATE_PRE_GAME then
 		AddBots(cfg, DOTA_TEAM_GOODGUYS)
 		AddBots(cfg, DOTA_TEAM_BADGUYS)
-		if not cfg.heroes_dire then GiveDireHeroes(cfg, "create") end
 		PrintRoster()
 		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
@@ -389,8 +263,7 @@ local function PrintMode()
 	end
 	print("[dotabench] mode couriers=" .. #speeds .. " speeds=" .. table.concat(speeds, "/")
 		.. " by_class=" .. #Entities:FindAllByClassname("npc_dota_courier"))
-	-- Per team, alive, for the orchestrator's validity: nobody had couriers before 2026-10-29, and the mirror removes
-	-- the hero each Dire courier first belonged to.
+	-- Per team, alive, for the orchestrator's validity: nobody had couriers before 2026-10-29.
 	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
 		local alive = {}
 		for _, courier in ipairs(Entities:FindAllByClassname("npc_dota_courier")) do

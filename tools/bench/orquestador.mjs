@@ -147,7 +147,7 @@ export function schedule(i, variants) {
 // pre-game; that the bots apply it was checked once with the "sonda" variant (bench/README.md) and each match logs
 // casts per team. (The bots' print does reach the log, but only in observer mode: OHA silences it otherwise.)
 export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo,
-  espejo = "", start, codigo, firstCodigo, couriers, intrusos, tardios }) {
+  espejo = "", start, codigo, firstCodigo, couriers, intrusos, tardios, esperado }) {
   // A match stopped at the cap counts, as a match dota-bot did not win (Pedro, 2026-10-31): dropping it would drop
   // exactly the matches an arm cannot close, a different number per arm.
   if (outcome !== "final" && outcome !== "tope") return "sin final";
@@ -155,12 +155,14 @@ export function validity({ outcome, roster, variant, loggedVariant, version, fir
   if (codigo !== firstCodigo) return `el código cambió en la serie (${firstCodigo} -> ${codigo})`;
   if (modo !== loggedModo) return `modo ${loggedModo || "sin registro"} en el log`;
   if (roster.radiant !== 5 || roster.dire !== 5) return `reparto ${roster.radiant ?? 0}-${roster.dire ?? 0}`;
-  // Same five heroes and the same starting net worth on both sides, read at the horn from the heroes really
-  // controlled (DECISIONES 2026-10-29: no contamination). "--espejo no" is for debugging only: never valid.
+  // Each team plays exactly its drawn group, read from the heroes really controlled once all have spawned: the same
+  // match-up on both sides, not the same heroes, which the engine never gives (DECISIONES 2026-10-31). "--espejo no"
+  // (Dire random) is for debugging only: never valid.
   if (espejo === "no") return "espejo apagado";
   if (!start || start.radiant !== 5 || start.dire !== 5) return "sin registro de inicio";
-  if (roster.mismos !== true || start.mismos !== true) return "héroes distintos por lado";
-  if (roster.viejos !== 0) return `héroe reemplazado sin borrar (${roster.viejos ?? "?"})`;
+  if (!esperado || !sameSet(start.heroesRadiant, esperado.radiant) || !sameSet(start.heroesDire, esperado.dire)) {
+    return "héroes distintos de los sorteados";
+  }
   // Valve's team really played by Valve (S6): without dota-bot's load lines it cannot be checked, so it is not valid.
   if (!Array.isArray(intrusos)) return "sin registro de carga: no se comprueba quién juega cada héroe";
   if (intrusos.length) return `dota-bot jugó en el equipo de Valve (pid ${intrusos.join(",")})`;
@@ -174,7 +176,6 @@ export function validity({ outcome, roster, variant, loggedVariant, version, fir
     return `couriers lentos ${couriers.slowRadiant}-${couriers.slowDire}`;
   }
   if (Math.abs(start.nwRadiant - start.nwDire) > START_NW_GAP) return `patrimonio inicial ${start.nwRadiant}-${start.nwDire}`;
-  if ((start.heroGap ?? Infinity) > START_HERO_GAP) return `patrimonio inicial de un héroe (diferencia ${start.heroGap})`;
   if (roster.humano !== "fuera" && roster.humano !== "heroe-quitado") return `humano ${roster.humano || "?"}`;
   if (loggedVariant === null || loggedVariant === undefined) return "variante sin registro en el log";
   if ((variant || "") !== loggedVariant) return `variante ${loggedVariant || "ninguna"} en el log`;
@@ -316,65 +317,46 @@ export function summarizeTimeline(rows, dotabot) {
 
 // The custom game logs who really plays ("[dotabench] roster team=2 pid=1 bot=1 hero=npc_dota_hero_luna") and
 // whether the human got a hero it had to remove. humano: "fuera" (clean), "heroe-quitado" (removed, the match still
-// counts) or "en-equipo" (a human slot played the match: discard it). heroes: the real ones, Radiant / Dire, after
-// the mirror ("[dotabench] mirror ... pid=6 ... ok=true  now=npc_dota_hero_x" replaces that player's hero).
-// mismos: both teams play the same five heroes. viejos: swapped heroes whose old unit was not removed
-// ("[dotabench] mirror_old pid=6 removed=true"); left in the world they crashed Dota (2026-10-31).
+// counts) or "en-equipo" (a human slot played the match: discard it). heroes: as selected, Radiant / Dire (the
+// heroes really controlled are checked from the start lines).
 export function parseRoster(text) {
   const teams = { 2: [], 3: [] };
-  const mirrored = {};
-  const oldGone = new Set();
-  const given = {};
   let humanInTeam = false;
   let removed = false;
   for (const line of text.split(/\r?\n/)) {
     if (line.includes("[dotabench] human hero removed")) removed = true;
-    const mm = line.match(/\[dotabench\] mirror .*pid=(\d+) .*ok=true\s+now=(\S+)/);
-    if (mm) mirrored[mm[1]] = mm[2].replace("npc_dota_hero_", "");
-    const mo = line.match(/\[dotabench\] mirror_old pid=(\d+) removed=true/);
-    if (mo) oldGone.add(mo[1]);
-    // A Dire bot given its hero ("[dotabench] give slot=1 pid=6 how=create ok=true  now=npc_dota_hero_x"): no old
-    // hero is left behind.
-    const mg = line.match(/\[dotabench\] give .*pid=(\d+) .*ok=true\s+now=(\S+)/);
-    if (mg && mg[2] !== "nil") given[mg[1]] = mg[2].replace("npc_dota_hero_", "");
-    // hero= can be empty: a Dire bot has no hero yet when the roster is printed (it is given one in pre-game).
+    // hero= can be empty: a bot with no hero yet.
     const m = line.match(/\[dotabench\] roster team=(\d) pid=(\d+) bot=(\d) hero=(\S*)/);
     if (!m) continue;
     if (m[3] === "0") humanInTeam = true;
-    teams[m[1]]?.push({ pid: m[2], hero: m[4].replace("npc_dota_hero_", "") });
+    teams[m[1]]?.push(m[4].replace("npc_dota_hero_", ""));
   }
-  if (!teams[2].length && !teams[3].length) return { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false };
-  const names = (t) => teams[t].map((p) => mirrored[p.pid] ?? given[p.pid] ?? p.hero);
-  const set = (t) => names(t).slice().sort().join(" ");
+  if (!teams[2].length && !teams[3].length) return { humano: "", heroes: "", radiant: 0, dire: 0 };
   return {
     humano: humanInTeam ? "en-equipo" : removed ? "heroe-quitado" : "fuera",
-    heroes: `${names(2).join(" ")} / ${names(3).join(" ")}`,
+    heroes: `${teams[2].join(" ")} / ${teams[3].join(" ")}`,
     radiant: teams[2].length,
     dire: teams[3].length,
-    mismos: teams[2].length > 0 && set(2) === set(3),
-    viejos: Object.keys(mirrored).filter((pid) => !oldGone.has(pid)).length,
   };
 }
 
-// At the horn ("[dotabench] start team=2 pid=1 hero=npc_dota_hero_luna nw=601"): the heroes really controlled, by
-// their entity, and each team's starting net worth. mismos: the same five heroes per side.
+// Once every hero has spawned ("[dotabench] start team=2 pid=1 hero=npc_dota_hero_luna nw=601"): the heroes really
+// controlled, by their entity, and each team's starting net worth.
 export function parseStart(text) {
   const teams = { 2: [], 3: [] };
   for (const line of text.split(/\r?\n/)) {
     const m = line.match(/\[dotabench\] start team=(\d) pid=\d+ hero=(\S+) nw=(-?\d+)/);
     if (m) teams[m[1]]?.push({ hero: m[2].replace("npc_dota_hero_", ""), nw: Number(m[3]) });
   }
-  const set = (t) => teams[t].map((p) => p.hero).sort().join(" ");
   const nw = (t) => teams[t].reduce((a, p) => a + p.nw, 0);
-  const none = [...teams[2], ...teams[3]].some((p) => p.hero === "none");
-  // The largest gap between the two copies of one hero: a team total can hide one hero short of its first item.
-  let heroGap = 0;
-  for (const p of teams[2]) {
-    const twin = teams[3].find((q) => q.hero === p.hero);
-    if (twin) heroGap = Math.max(heroGap, Math.abs(p.nw - twin.nw));
-  }
-  return { radiant: teams[2].length, dire: teams[3].length, mismos: !none && teams[2].length > 0 && set(2) === set(3),
-    nwRadiant: nw(2), nwDire: nw(3), heroGap };
+  return { radiant: teams[2].length, dire: teams[3].length, heroesRadiant: teams[2].map((p) => p.hero),
+    heroesDire: teams[3].map((p) => p.hero), nwRadiant: nw(2), nwDire: nw(3) };
+}
+
+// The same heroes, in any order ("npc_dota_hero_" prefixes ignored); "none" never matches.
+export function sameSet(a, b) {
+  const norm = (l) => (l ?? []).map((h) => String(h).replace("npc_dota_hero_", "")).sort().join(" ");
+  return Array.isArray(a) && Array.isArray(b) && a.length > 0 && !a.includes("none") && norm(a) === norm(b);
 }
 
 // Bot heroes that appeared after the horn ("[dotabench] spawn pid=1 team=2 hero=... t=3.2"; a swapped hero counts
@@ -427,10 +409,8 @@ export function parseCouriers(text) {
   return out;
 }
 
-// Largest gaps in starting net worth that still count as the same start (passive gold while a late hero spawns):
-// per team and between the two copies of one hero.
+// Largest gap in starting net worth between the teams that still counts as the same start (purchase timing).
 export const START_NW_GAP = 300;
-export const START_HERO_GAP = 100;
 
 // The variant file the custom game found at the start ("[dotabench] variant name=base ..." or "variant none").
 export function parseVariant(text) {
@@ -476,7 +456,7 @@ function parseArgs(argv) {
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else if (k === "--observar") { opt.observar = true; i -= 1; } // a flag: takes no value
     else if (k === "--lado") opt.lado = v; // debugging one side: dota-bot always plays it (no side balance)
-    else if (k === "--espejo") opt.espejo = v; // "no": Dire keeps the random heroes the engine gives it
+    else if (k === "--espejo") opt.espejo = v; // "no", debugging only: Dire keeps the random heroes the engine gives it
     else if (k === "--rival") opt.rival = v; // "valve" (default) or "dotabot": both teams dota-bot, one variant each
     else throw new Error(`Opción desconocida: ${k}`);
   }
@@ -649,14 +629,17 @@ async function main(argv) {
       }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
       if (i % opt.block === 0) { heroes = drawHeroes(); rivals = drawHeroes(Math.random, heroes); }
-      // "--espejo cruzado": dota-bot always gets the block's first draw and its rival the second, whatever the side.
-      const cruzado = opt.espejo === "cruzado";
+      // The same match-up on both sides (DECISIONES 2026-10-31): dota-bot always gets the block's first draw and its
+      // rival the second, none shared, whatever the side. "--espejo no" leaves Dire to the engine (debugging only).
+      const cruzado = opt.espejo !== "no";
       const radiantList = cruzado && dotabot !== "radiant" ? rivals : heroes;
       const direList = cruzado ? (dotabot === "radiant" ? rivals : heroes) : null;
+      const esperado = { radiant: radiantList, dire: direList ?? [] };
       writeFileSync(MATCH_FILE, matchConfigLua(radiantList, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), opt.espejo ?? "", direList));
       latest = null;
       lastPost = 0;
-      const short = heroes.map((h) => h.replace("npc_dota_hero_", "")).join(" ");
+      const names = (l) => l.map((h) => h.replace("npc_dota_hero_", "")).join(" ");
+      const short = `${names(heroes)} contra ${names(rivals)}`;
       console.log(rival
         ? `Partida ${i + 1}/${opt.partidas}: ${planned.radiant} en radiant contra ${planned.dire} en dire; héroes ${short}.`
         : `Partida ${i + 1}/${opt.partidas}${variant ? ` (variante ${variant})` : ""}: dota-bot en ${dotabot}, Valve en ${valveTeam === RADIANT ? "radiant" : "dire"}; héroes ${short}.`);
@@ -698,7 +681,7 @@ async function main(argv) {
       // The custom game's per-minute timeline, from this launch's console.log (-condebug rewrites it each launch).
       const fecha = new Date().toISOString().slice(0, 16);
       let timeline = [];
-      let roster = { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false };
+      let roster = { humano: "", heroes: "", radiant: 0, dire: 0 };
       let start = null;
       let couriers = null;
       let intrusos = null;
@@ -729,7 +712,7 @@ async function main(argv) {
       const codigoDespues = await currentCode();
       const codigo = codigoAntes === codigoDespues ? codigoDespues : `${codigoDespues.replace("+cambios", "")}+cambios`;
       const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo,
-        espejo: opt.espejo ?? "", start, codigo, firstCodigo, couriers, intrusos, tardios });
+        espejo: opt.espejo ?? "", start, codigo, firstCodigo, couriers, intrusos, tardios, esperado });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));

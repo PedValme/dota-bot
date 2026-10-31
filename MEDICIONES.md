@@ -111,3 +111,18 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
     jugado por dota-bot y ningún héroe aparecido tras el inicio.
   - Prueba: añadir los bots un segundo después de sacar al humano.
   - Siguiente paso: repetir el humo con dota-bot en cada lado.
+
+### 2026-10-31 · `humo` del reparto de héroes (13 partidas, commits `2b3de55` a `b3138c2` y siguiente)
+- Pregunta: ¿cómo consiguen los dos equipos los héroes pedidos, sin que se cierre Dota?
+- Resultado, medido:
+  - si los dos equipos entran a la vez, el primero recibe sus héroes y el segundo, unos al azar que nunca coinciden
+    con los del primero (0 de 112 partidas): el motor no repite héroe entre equipos;
+  - con 30 s de selección pasa lo mismo, y un equipo que entra 1 s después no recibe ninguno;
+  - el primer bot añadido aparece de 15 a 50 s después que los demás; con 90 s de fase previa llegan todos antes del
+    inicio;
+  - cambiar los héroes de Dire (`ReplaceHeroWith`) cerró Dota en 5 de 16 partidas, y crearlos (`CreateHeroForPlayer`)
+    también lo cerró, además de que el motor no los cuenta como héroes de sus jugadores;
+  - con dos sorteos sin héroes en común, cada equipo recibió el suyo y no hubo cierres (2 de 2).
+- Validez: puerta del nivel 0, no comparación.
+- Decisión: mismo enfrentamiento en los dos lados en lugar de mismos héroes (DECISIONES 2026-10-31); se quitan el
+  espejo y la creación de héroes.

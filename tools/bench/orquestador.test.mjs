@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
-  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, parseCouriers, valveIntruders, lateSpawns, codeState, tooManyInvalid, variantLua,
+  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, parseCouriers, valveIntruders, lateSpawns, codeState, tooManyInvalid, variantLua,
   VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
@@ -44,11 +44,20 @@ test("the variant file is plain Lua data with the variant's fields", () => {
 });
 
 test("a match counts only if it ended, 5v5 bots, human out, the right variant and the same Dota", () => {
-  const start = { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005, heroGap: 20 };
-  const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true, viejos: 0 }, variant: "base",
+  const R = ["luna", "lina", "axe", "lion", "lich"];
+  const D = ["sven", "zuus", "tidehunter", "bane", "oracle"];
+  const start = { radiant: 5, dire: 5, heroesRadiant: R, heroesDire: D, nwRadiant: 3005, nwDire: 3005 };
+  const esperado = { radiant: R.map((h) => "npc_dota_hero_" + h), dire: D.map((h) => "npc_dota_hero_" + h) };
+  const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera" }, variant: "base",
     loggedVariant: "base", version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal", start,
     codigo: "abc123", firstCodigo: "abc123", couriers: { radiant: 5, dire: 5, slowRadiant: 290, slowDire: 290 },
-    intrusos: [], tardios: [] };
+    intrusos: [], tardios: [], esperado };
+  // Each team must play exactly its drawn group (DECISIONES 2026-10-31), in any order.
+  assert.equal(validity({ ...ok, start: { ...start, heroesDire: [...D].reverse() } }), "");
+  assert.match(validity({ ...ok, start: { ...start, heroesDire: R } }), /distintos de los sorteados/);
+  assert.match(validity({ ...ok, start: { ...start, heroesRadiant: ["luna", "lina", "axe", "lion", "none"] } }),
+    /distintos de los sorteados/);
+  assert.match(validity({ ...ok, esperado: undefined }), /distintos de los sorteados/);
   assert.match(validity({ ...ok, intrusos: ["7"] }), /dota-bot jugó en el equipo de Valve \(pid 7\)/);
   assert.match(validity({ ...ok, intrusos: null }), /sin registro de carga/);
   assert.match(validity({ ...ok, tardios: ["1@3.2"] }), /aparecido tras el inicio \(1@3.2\)/);
@@ -65,18 +74,11 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
   assert.match(validity({ ...ok, codigo: "def456" }), /cambió en la serie/);
   assert.match(validity({ ...ok, loggedModo: undefined }), /modo/);
   assert.equal(validity(ok), "");
-  assert.match(validity({ ...ok, roster: { ...ok.roster, mismos: false } }), /héroes distintos/);
-  assert.match(validity({ ...ok, roster: { ...ok.roster, mismos: undefined } }), /héroes distintos/);
-  assert.match(validity({ ...ok, start: { ...start, mismos: false } }), /héroes distintos/);
   assert.match(validity({ ...ok, start: undefined }), /inicio/);
   assert.match(validity({ ...ok, start: { ...start, dire: 4 } }), /inicio/);
   assert.match(validity({ ...ok, start: { ...start, nwDire: 1030 } }), /patrimonio inicial 3005-1030/);
-  assert.match(validity({ ...ok, start: { ...start, heroGap: 145 } }), /de un héroe \(diferencia 145\)/);
-  assert.match(validity({ ...ok, start: { ...start, heroGap: undefined } }), /de un héroe/);
   assert.equal(validity({ ...ok, start: { ...start, nwDire: 2800 } }), "");
   assert.match(validity({ ...ok, espejo: "no" }), /espejo apagado/);
-  assert.match(validity({ ...ok, roster: { ...ok.roster, viejos: 1 } }), /sin borrar \(1\)/);
-  assert.match(validity({ ...ok, roster: { ...ok.roster, viejos: undefined } }), /sin borrar/);
   assert.equal(validity({ ...ok, roster: { ...ok.roster, humano: "heroe-quitado" } }), "");
   assert.match(validity({ ...ok, outcome: "timeout" }), /final/);
   assert.match(validity({ ...ok, roster: { ...ok.roster, radiant: 6 } }), /reparto 6-5/);
@@ -155,10 +157,13 @@ test("the mode the custom game applied is read from the log and must match the s
   assert.equal(parseModo("[VScript] [dotabench] turbo on gold=2 xp=2 respawn=0.75 couriers=turbo"), "turbo");
   assert.equal(parseModo("[VScript] [dotabench] turbo off"), "normal");
   assert.equal(parseModo("nothing"), "");
-  const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true, viejos: 0 }, variant: "", loggedVariant: "",
-    version: "1", firstVersion: "1", start: { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005, heroGap: 0 },
+  const R = ["luna", "lina", "axe", "lion", "lich"];
+  const D = ["sven", "zuus", "tidehunter", "bane", "oracle"];
+  const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera" }, variant: "", loggedVariant: "",
+    version: "1", firstVersion: "1",
+    start: { radiant: 5, dire: 5, heroesRadiant: R, heroesDire: D, nwRadiant: 3005, nwDire: 3005 },
     codigo: "a", firstCodigo: "a", couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 },
-    intrusos: [], tardios: [] };
+    intrusos: [], tardios: [], esperado: { radiant: R, dire: D } };
   assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), "");
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "normal" }), /modo/);
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "" }), /modo/);
@@ -215,11 +220,13 @@ const roster = (team, pid, bot, hero) =>
 
 test("the roster tells the real heroes, the team sizes and whether the human played a slot", () => {
   const clean = [roster(2, 1, 1, "luna"), roster(2, 2, 1, "razor"), roster(3, 6, 1, "viper")].join("\r\n");
-  assert.deepEqual(parseRoster(clean), { humano: "fuera", heroes: "luna razor / viper", radiant: 2, dire: 1, mismos: false, viejos: 0 });
+  assert.deepEqual(parseRoster(clean), { humano: "fuera", heroes: "luna razor / viper", radiant: 2, dire: 1 });
+  // A bot with no hero yet still counts in its team.
+  assert.equal(parseRoster([clean, "[VScript] [dotabench] roster team=3 pid=7 bot=1 hero= name="].join("\n")).dire, 2);
   const removed = ["[VScript] [dotabench] human hero removed pid=0 team=2 npc_dota_hero_phantom_assassin", clean].join("\n");
   assert.equal(parseRoster(removed).humano, "heroe-quitado");
   assert.equal(parseRoster([clean, roster(2, 0, 0, "phantom_assassin")].join("\n")).humano, "en-equipo");
-  assert.deepEqual(parseRoster("no roster here"), { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false });
+  assert.deepEqual(parseRoster("no roster here"), { humano: "", heroes: "", radiant: 0, dire: 0 });
 });
 
 test("each match records its commit, marked when bots/ had uncommitted changes; too many invalid stops a series", () => {
@@ -259,35 +266,29 @@ test("couriers alive per team at minute 1, with the slowest speed per side", () 
 test("the start line tells the heroes really controlled and each team's starting net worth", () => {
   const line = (team, pid, hero, nw) => `[VScript] [dotabench] start team=${team} pid=${pid} hero=npc_dota_hero_${hero} nw=${nw}`;
   const log = [line(2, 1, "luna", 601), line(2, 2, "razor", 600), line(3, 6, "razor", 11), line(3, 7, "luna", 511)].join("\r\n");
-  assert.deepEqual(parseStart(log), { radiant: 2, dire: 2, mismos: true, nwRadiant: 1201, nwDire: 522, heroGap: 589 });
-  assert.equal(parseStart([line(2, 1, "luna", 601), line(3, 6, "none", 0)].join("\n")).mismos, false);
-  assert.equal(parseStart([line(2, 1, "none", 0), line(3, 6, "none", 0)].join("\n")).mismos, false);
-  assert.equal(parseStart([line(2, 1, "luna", 601), line(3, 6, "viper", 601)].join("\n")).mismos, false);
-  assert.equal(parseStart("nothing").mismos, false);
+  assert.deepEqual(parseStart(log), { radiant: 2, dire: 2, heroesRadiant: ["luna", "razor"], heroesDire: ["razor", "luna"],
+    nwRadiant: 1201, nwDire: 522 });
+  assert.deepEqual(parseStart("nothing").heroesRadiant, []);
+  // Group comparison: any order, prefixes ignored, "none" never matches.
+  assert.equal(sameSet(["luna", "razor"], ["npc_dota_hero_razor", "npc_dota_hero_luna"]), true);
+  assert.equal(sameSet(["luna", "none"], ["luna", "none"]), false);
+  assert.equal(sameSet(["luna", "razor"], ["luna", "viper"]), false);
+  assert.equal(sameSet([], []), false);
 });
 
-test("the mirror replaces Dire's random heroes; only the same five per side count as mismos", () => {
-  const mirror = (pid, from, to, ok = "true") =>
-    `[VScript] [dotabench] mirror slot=1 pid=${pid} npc_dota_hero_${from} -> npc_dota_hero_${to} ok=${ok}  now=npc_dota_hero_${to} refund=145 gold=601 restock=-`;
-  const base = [roster(2, 1, 1, "luna"), roster(2, 2, 1, "razor"), roster(3, 6, 1, "viper"), roster(3, 7, 1, "lina")];
-  const gone = (pid) => `[VScript] [dotabench] mirror_old pid=${pid} removed=true`;
-  const both = [...base, mirror(6, "viper", "razor"), mirror(7, "lina", "luna"), gone(6), gone(7)].join("\n");
-  assert.deepEqual(parseRoster(both), { humano: "fuera", heroes: "luna razor / razor luna", radiant: 2, dire: 2, mismos: true,
-    viejos: 0 });
-  const stayed = [...base, mirror(6, "viper", "razor"), mirror(7, "lina", "luna"), gone(6),
-    "[VScript] [dotabench] mirror_old pid=7 removed=false"].join("\n");
-  assert.equal(parseRoster(stayed).viejos, 1);
-  // A hero-less Dire bot given its hero leaves no old hero behind.
-  const give = (pid, to, ok = "true") =>
-    `[VScript] [dotabench] give slot=1 pid=${pid} how=create ok=${ok}  now=npc_dota_hero_${to}`;
-  const emptyDire = [roster(2, 1, 1, "luna"), roster(2, 2, 1, "razor"),
-    "[VScript] [dotabench] roster team=3 pid=6 bot=1 hero= name=", "[VScript] [dotabench] roster team=3 pid=7 bot=1 hero= name="];
-  const givenBoth = parseRoster([...emptyDire, give(6, "razor"), give(7, "luna")].join("\n"));
-  assert.equal(givenBoth.mismos, true);
-  assert.equal(givenBoth.viejos, 0);
-  assert.equal(parseRoster([...emptyDire, give(6, "razor"), give(7, "luna", "false")].join("\n")).mismos, false);
-  const half = [...base, mirror(6, "viper", "razor")].join("\n");
-  assert.equal(parseRoster(half).mismos, false);
-  const failed = [...base, mirror(6, "viper", "razor"), mirror(7, "lina", "luna", "false")].join("\n");
-  assert.equal(parseRoster(failed).mismos, false);
+test("the second draw shares no hero with the first", () => {
+  let seed = 1;
+  const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  for (let k = 0; k < 50; k++) {
+    const a = drawHeroes(random);
+    const b = drawHeroes(random, a);
+    assert.equal(a.filter((h) => b.includes(h)).length, 0);
+    assert.equal(b.length, 5);
+  }
+});
+
+test("the match file gives Dire its own draw when there is one", () => {
+  const lua = matchConfigLua(["npc_dota_hero_luna"], 4, 4, true, false, "", ["npc_dota_hero_sven"]);
+  assert.match(lua, /heroes_dire = \{ "npc_dota_hero_sven" \}, heroes = \{ "npc_dota_hero_luna" \}/);
+  assert.doesNotMatch(matchConfigLua(["npc_dota_hero_luna"], 4, 4), /heroes_dire/);
 });
