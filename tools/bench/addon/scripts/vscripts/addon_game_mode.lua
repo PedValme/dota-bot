@@ -59,20 +59,12 @@ local function AddBots(cfg)
 	botsAdded = true
 	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
 		for slot, hero in ipairs(cfg.heroes) do
-			local ok
-			if team == DOTA_TEAM_BADGUYS and cfg.espejo == "entity" then
-				-- Mirror test (2026-10-31): a bot added with its hero and team given directly.
-				ok = pcall(function() GameRules:AddBotPlayerWithEntityScript(hero, "dire" .. slot, DOTA_TEAM_BADGUYS, "", false) end)
-			else
-				ok = Tutorial:AddBot(hero, LANES[team][slot], cfg.difficulty, team == DOTA_TEAM_GOODGUYS)
-			end
+			local ok = Tutorial:AddBot(hero, LANES[team][slot], cfg.difficulty, team == DOTA_TEAM_GOODGUYS)
 			print(string.format("[dotabench] AddBot team=%d slot=%d %s -> %s", team, slot, hero, tostring(ok)))
 		end
 	end
-	-- Only Radiant gets the asked heroes: hero selection, strategy and pre-game happen in the same second here, so no
-	-- draft script runs and the engine gives Dire's bots random heroes. Tried and dropped on 2026-10-31: picking them
-	-- in dota-bot's draft (it never runs), SetSelectedHero during selection and ReplaceHeroWith at pre-game (both "ok",
-	-- no effect). A/B series stay fair because every variant plays both sides.
+	-- Only Radiant gets the asked heroes here: hero selection, strategy and pre-game happen in the same second, so no
+	-- draft script runs and the engine gives Dire's bots random heroes. MirrorOnSpawn gives them the drawn ones.
 end
 
 -- Humans never play: they watch as spectators (team 1), which gives the broadcast view with a choice of Radiant,
@@ -104,12 +96,16 @@ local function KeepHumansOut(why)
 	end
 end
 
--- Mirror test "replace" (2026-10-31): once a Dire bot's hero really exists, swap it for its slot's hero (at pre-game
--- ReplaceHeroWith said ok and changed nothing, maybe because the hero did not exist yet).
+-- Mirror heroes (Pedro, 2026-10-31: «no creo que no exista forma de homologar ambos lados»). Half a second after a
+-- Dire bot's hero spawns, ReplaceHeroWith swaps it for its slot's drawn hero, keeping its gold; the bot's scripts
+-- restart with the new hero (seen: its mode lines, purchases and spells are the new hero's, no script errors). Before
+-- this, every benchmark match gave Dire random heroes against Radiant's drawn ones. Tried and dropped: picking in
+-- dota-bot's draft (it never runs here), SetSelectedHero during selection and ReplaceHeroWith at pre-game (the hero
+-- did not exist yet: "ok", no effect). bench_partida.lua: espejo = "no" turns it off.
 local mirrored = {}
 local function MirrorOnSpawn(unit, pid)
 	local cfg = MatchConfig()
-	if cfg.espejo ~= "replace" or mirrored[pid] or unit:GetTeamNumber() ~= DOTA_TEAM_BADGUYS then return end
+	if cfg.espejo == "no" or mirrored[pid] or unit:GetTeamNumber() ~= DOTA_TEAM_BADGUYS then return end
 	for slot = 1, PlayerResource:GetPlayerCountForTeam(DOTA_TEAM_BADGUYS) do
 		if PlayerResource:GetNthPlayerIDOnTeam(DOTA_TEAM_BADGUYS, slot) == pid then
 			local hero = cfg.heroes[slot]

@@ -2,7 +2,7 @@
 
 Partidas de bots contra bots sin clics, en un custom game local (`tools/bench/addon`, «dotabench»): dota-bot en un
 equipo y los bots de Valve en el otro, cinco héroes sorteados por partida (uno por posición; se piden para los dos
-lados, pero solo Radiant los recibe y Dire elige los suyos: no son espejo), misma dificultad, tu usuario fuera de los equipos,
+lados: espejo desde el 2026-10-31, ver «Héroes»), misma dificultad, tu usuario fuera de los equipos,
 cambiando de lado en cada partida y acelerado. El ganador lo dice el propio Dota por Game State Integration (GSI).
 
 ```
@@ -42,9 +42,11 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   inválidas, funciones lentas, edificios), queda por partida en `observaciones/<etiqueta>-<fecha>-<n>.log` (ignorado por
   git: pesan varios MB). `node tools/bench/analizar.mjs observaciones/<archivo>.log` lo resume: zonas, agrupación,
   farm, couriers, modos de dota-bot según su ventaja, empuje en grupo y errores.
-- Héroes (visto el 2026-10-30 en 7 de 7 partidas): Radiant recibe los cinco sorteados y **Dire elige los suyos**, la
-  controle quien la controle (cuando es dota-bot, con el draft de OHA). Las series A/B siguen equilibradas entre
-  variantes porque cada una juega los dos lados, pero los dos equipos no llevan los mismos héroes.
+- Héroes: espejo en los dos equipos desde el 2026-10-31. En este custom game la selección, la estrategia y la previa
+  pasan en el mismo segundo: `AddBot` da a Radiant los sorteados y el motor da a Dire **héroes al azar**. Así fueron
+  todas las partidas anteriores a esa fecha, y por eso rendía peor quien jugaba en Dire. Ahora el custom game cambia
+  cada héroe de Dire por el sorteado de su posición medio segundo después de aparecer (`ReplaceHeroWith`; los scripts
+  del bot se reinician con el héroe nuevo, comprobado) y lo anota como `[dotabench] mirror`. `--espejo no` lo apaga.
 - Validez (decisión de Pedro, DECISIONES 2026-10-29: no se acepta contaminación): cada partida va a `series.csv` con
   `valida` y `motivo`. Cuenta solo si terminó, hubo 5 bots por lado, tu usuario quedó fuera, el log confirma la
   variante y el modo, y Dota no cambió de versión (`dota_version`, de `steam.inf`). También se anotan la CPU de la máquina

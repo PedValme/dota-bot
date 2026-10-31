@@ -171,7 +171,7 @@ export function drawHeroes(random = Math.random) {
 // nothing and the VScript API has no switch for it, both checked 2026-10-29).
 export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false, espejo = "") {
   const list = heroes.map((h) => `"${h}"`).join(", ");
-  // espejo: experimental ways to give Dire the drawn heroes too (addon_game_mode.lua), "entity" or "replace".
+  // espejo = "no" turns off giving Dire the drawn heroes too (on by default since 2026-10-31, addon_game_mode.lua).
   const mirror = espejo ? `espejo = "${espejo}", ` : "";
   return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, ${mirror}heroes = { ${list} } }\n`;
 }
@@ -325,7 +325,7 @@ function parseArgs(argv) {
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else if (k === "--observar") { opt.observar = true; i -= 1; } // a flag: takes no value
     else if (k === "--lado") opt.lado = v; // debugging one side: dota-bot always plays it (no side balance)
-    else if (k === "--espejo") opt.espejo = v; // experimental: "entity" or "replace" (addon_game_mode.lua)
+    else if (k === "--espejo") opt.espejo = v; // "no": Dire keeps the random heroes the engine gives it
     else if (k === "--rival") opt.rival = v; // "valve" (default) or "dotabot": both teams dota-bot, one variant each
     else throw new Error(`Opción desconocida: ${k}`);
   }
