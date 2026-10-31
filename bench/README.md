@@ -105,7 +105,7 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 | Mismo patrimonio inicial (±300 por equipo, ±100 por héroe) | `start ... nw=`; el espejo da el patrimonio del héroe quitado (`gold=`) y devuelve guardianes y humo al stock (`restock=`) | `patrimonio inicial R-D`, `patrimonio inicial de un héroe` |
 | Ningún héroe reemplazado queda en el mapa | `[dotabench] mirror_old removed=true` por cada cambio | `héroe reemplazado sin borrar` |
 | 5 couriers vivos por lado en el minuto 1, Turbo (1100) en `--modo turbo` | `[dotabench] couriers team= n= speeds=` | `couriers R-D`, `couriers lentos` |
-| El equipo de Valve lo juega Valve | con `--observar` (obligatorio), ningún `[bench] mode` de un pid de ese equipo; el archivo de equipo dura toda la partida | `dota-bot jugó en el equipo de Valve`, `sin observador` |
+| El equipo de Valve lo juega Valve | ningún `[bench] load` (una línea por bot de dota-bot, siempre) ni `[bench] mode` de un pid de ese equipo; el archivo de equipo dura toda la partida | `dota-bot jugó en el equipo de Valve`, `sin registro de carga` |
 | Todos los héroes aparecen antes del inicio | `[dotabench] spawn ... t=` (último de cada pid ≤ 0) | `héroe aparecido tras el inicio`, `sin registro de aparición` |
 | Espejo encendido | `--espejo no` es solo para depurar | `espejo apagado` |
 | Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |

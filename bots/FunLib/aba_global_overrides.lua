@@ -69,8 +69,10 @@ function GetTeamPlayers(nTeam, bypass)
 	return nIDs
 end
 
--- Override the print function
-local orig_print = print
+-- Override the print function. The engine's print stays reachable as BenchRawPrint for the benchmark's one line per
+-- bot (FunLib/bench_side.lua), which must reach the log with or without observer mode.
+if BenchRawPrint == nil then BenchRawPrint = print end
+local orig_print = BenchRawPrint
 local benchObserve = dofile(GetScriptDirectory()..'/FunLib/bench_observe')
 function print(...)
     if not Utils.DebugMode and not benchObserve then return end

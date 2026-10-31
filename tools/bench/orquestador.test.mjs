@@ -50,7 +50,7 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
     codigo: "abc123", firstCodigo: "abc123", couriers: { radiant: 5, dire: 5, slowRadiant: 290, slowDire: 290 },
     intrusos: [], tardios: [] };
   assert.match(validity({ ...ok, intrusos: ["7"] }), /dota-bot jugó en el equipo de Valve \(pid 7\)/);
-  assert.match(validity({ ...ok, intrusos: null }), /sin observador/);
+  assert.match(validity({ ...ok, intrusos: null }), /sin registro de carga/);
   assert.match(validity({ ...ok, tardios: ["1@3.2"] }), /aparecido tras el inicio \(1@3.2\)/);
   assert.match(validity({ ...ok, tardios: null }), /aparición/);
   assert.match(validity({ ...ok, couriers: undefined }), /couriers 0-0/);
@@ -236,6 +236,9 @@ test("dota-bot's lines from a player of Valve's team and heroes that spawned aft
   const log = [mode(7), roster(2, 1), roster(3, 6), roster(3, 7), mode(1), mode(6)].join("\r\n");
   assert.deepEqual(valveIntruders(log, 3), ["6", "7"]);
   assert.deepEqual(valveIntruders(log, 2), ["1"]);
+  const load = (pid, team) => `[VScript] [bench] load pid=${pid} team=${team} npc_dota_hero_luna`;
+  assert.deepEqual(valveIntruders([roster(2, 1), roster(3, 6), load(1, 2), load(6, 3)].join("\n"), 2), ["1"]);
+  assert.deepEqual(valveIntruders([roster(2, 1), roster(3, 6), load(6, 3)].join("\n"), 2), []);
   const spawn = (pid, t) => `[VScript] [dotabench] spawn pid=${pid} team=3 hero=npc_dota_hero_luna t=${t}`;
   const spawns = [roster(2, 0, 0), roster(3, 6), roster(3, 7), spawn(0, 5), spawn(6, -14.5), spawn(7, -0.6), spawn(7, 0.4),
     spawn(6, -14)].join("\n");

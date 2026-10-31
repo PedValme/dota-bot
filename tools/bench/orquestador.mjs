@@ -159,8 +159,8 @@ export function validity({ outcome, roster, variant, loggedVariant, version, fir
   if (!start || start.radiant !== 5 || start.dire !== 5) return "sin registro de inicio";
   if (roster.mismos !== true || start.mismos !== true) return "héroes distintos por lado";
   if (roster.viejos !== 0) return `héroe reemplazado sin borrar (${roster.viejos ?? "?"})`;
-  // Valve's team really played by Valve (S6): without observer mode it cannot be checked, so it is not valid.
-  if (!Array.isArray(intrusos)) return "sin observador: no se comprueba quién juega cada héroe";
+  // Valve's team really played by Valve (S6): without dota-bot's load lines it cannot be checked, so it is not valid.
+  if (!Array.isArray(intrusos)) return "sin registro de carga: no se comprueba quién juega cada héroe";
   if (intrusos.length) return `dota-bot jugó en el equipo de Valve (pid ${intrusos.join(",")})`;
   if (!Array.isArray(tardios)) return "sin registro de aparición de héroes";
   if (tardios.length) return `héroe aparecido tras el inicio (${tardios.join(",")})`;
@@ -380,7 +380,8 @@ export function lateSpawns(text) {
 }
 
 // Players of Valve's team (2 Radiant, 3 Dire) whose hero dota-bot's scripts played: only dota-bot writes
-// "[bench] mode t=... pid=N" (observer mode). Valve's team is told by roster lines.
+// "[bench] load pid=N team=T" (once per bot, always) and "[bench] mode t=... pid=N" (observer mode). Valve's team
+// is told by roster lines.
 export function valveIntruders(text, valveTeam) {
   const lines = text.split(/\r?\n/);
   const valvePids = new Set();
@@ -390,7 +391,7 @@ export function valveIntruders(text, valveTeam) {
     if (r && Number(r[1]) === valveTeam) valvePids.add(r[2]);
   }
   for (const line of lines) {
-    const m = line.match(/\[bench\] mode t=\S+ pid=(\d+)/);
+    const m = line.match(/\[bench\] (?:mode t=\S+|load) pid=(\d+)/);
     if (m && valvePids.has(m[1])) intruders.add(m[1]);
   }
   return [...intruders].sort((a, b) => a - b);
@@ -692,8 +693,8 @@ async function main(argv) {
           roster = parseRoster(log);
           start = parseStart(log);
           couriers = parseCouriers(log);
-          // Only observer mode lets dota-bot's lines reach the log; without it there is nothing to check.
-          intrusos = rival ? [] : opt.observar ? valveIntruders(log, valveTeam) : null;
+          // Without dota-bot's load lines (older bots/) there is nothing to check who played each hero.
+          intrusos = rival ? [] : /\[bench\] load pid=/.test(log) ? valveIntruders(log, valveTeam) : null;
           tardios = /\[dotabench\] spawn /.test(log) ? lateSpawns(log) : null;
           loggedVariant = parseVariant(log);
           loggedModo = parseModo(log);

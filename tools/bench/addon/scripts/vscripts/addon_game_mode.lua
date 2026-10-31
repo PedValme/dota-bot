@@ -52,19 +52,19 @@ local function ApplyTurbo()
 		TURBO.xp, TURBO.respawn, n))
 end
 
-local botsAdded = false
+local botsAdded = {}
+local radiantScheduled = false
 
-local function AddBots(cfg)
-	if botsAdded then return end
-	botsAdded = true
-	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
-		for slot, hero in ipairs(cfg.heroes) do
-			local ok = Tutorial:AddBot(hero, LANES[team][slot], cfg.difficulty, team == DOTA_TEAM_GOODGUYS)
-			print(string.format("[dotabench] AddBot team=%d slot=%d %s -> %s", team, slot, hero, tostring(ok)))
-		end
+-- Only Radiant gets the asked heroes here: hero selection, strategy and pre-game happen in the same second, so no
+-- draft script runs and the engine gives Dire's bots random heroes, only if they join at once (added a second
+-- later they got none, 2026-10-31). MirrorOnSpawn gives them the drawn ones.
+local function AddBots(cfg, team)
+	if botsAdded[team] then return end
+	botsAdded[team] = true
+	for slot, hero in ipairs(cfg.heroes) do
+		local ok = Tutorial:AddBot(hero, LANES[team][slot], cfg.difficulty, team == DOTA_TEAM_GOODGUYS)
+		print(string.format("[dotabench] AddBot team=%d slot=%d %s -> %s", team, slot, hero, tostring(ok)))
 	end
-	-- Only Radiant gets the asked heroes here: hero selection, strategy and pre-game happen in the same second, so no
-	-- draft script runs and the engine gives Dire's bots random heroes. MirrorOnSpawn gives them the drawn ones.
 end
 
 -- Humans never play: they watch as spectators (team 1), which gives the broadcast view with a choice of Radiant,
@@ -162,13 +162,15 @@ end
 
 -- First spawn of each hero entity, with the game time (negative before the horn): one hero per side used to spawn
 -- late, Radiant's slot 1 most of all (open defect, ESTADO.md), and the orchestrator checks it.
+-- Keyed by the unit handle, not the entity index: removed heroes (the human's, the mirror's old ones) free their
+-- index for a later hero.
 local spawned = {}
 local function OnNpcSpawned(event)
 	local unit = EntIndexToHScript(event.entindex)
 	if not unit or not unit.IsRealHero or not unit:IsRealHero() then return end
 	local pid = unit:GetPlayerOwnerID()
-	if not spawned[event.entindex] then
-		spawned[event.entindex] = true
+	if not spawned[unit] then
+		spawned[unit] = true
 		print(string.format("[dotabench] spawn pid=%d team=%d hero=%s t=%.1f", pid or -1, unit:GetTeamNumber(),
 			unit:GetUnitName(), GameRules:GetDOTATime(false, true)))
 	end
@@ -252,15 +254,20 @@ local function OnStateChange()
 	local state = GameRules:State_Get()
 	KeepHumansOut("state " .. tostring(state))
 	if state == DOTA_GAMERULES_STATE_HERO_SELECTION or state == DOTA_GAMERULES_STATE_STRATEGY_TIME then
-		-- One second after the human is moved out of Radiant (KeepHumansOut above), not in the same instant: with the
-		-- human still in a Radiant slot, Radiant's first bot spawned after the horn (2026-10-31). Pre-game still adds
-		-- them if this has not run yet.
-		GameRules:GetGameModeEntity():SetThink(function()
-			AddBots(cfg)
-			return nil
-		end, "dotabench_addbots", 1)
+		-- Dire at once (it needs the engine's random heroes). Radiant one second after the human is moved out of it
+		-- (KeepHumansOut above): with the human still in a Radiant slot, Radiant's first bot spawned after the horn,
+		-- and with the delay it spawned on time (2026-10-31). Pre-game still adds whichever has not been added.
+		AddBots(cfg, DOTA_TEAM_BADGUYS)
+		if not radiantScheduled then
+			radiantScheduled = true
+			GameRules:GetGameModeEntity():SetThink(function()
+				AddBots(cfg, DOTA_TEAM_GOODGUYS)
+				return nil
+			end, "dotabench_addbots", 1)
+		end
 	elseif state == DOTA_GAMERULES_STATE_PRE_GAME then
-		AddBots(cfg)
+		AddBots(cfg, DOTA_TEAM_BADGUYS)
+		AddBots(cfg, DOTA_TEAM_GOODGUYS)
 		PrintRoster()
 		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
