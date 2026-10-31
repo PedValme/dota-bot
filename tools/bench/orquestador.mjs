@@ -223,14 +223,20 @@ export function drawHeroes(random = Math.random, avoid = []) {
 // Lua read by the custom game (tools/bench/addon/scripts/vscripts/addon_game_mode.lua).
 // turbo: the custom game imitates Turbo (Dota's real Turbo cannot run in a custom game: forcing game mode 23 changes
 // nothing and the VScript API has no switch for it, both checked 2026-10-29).
-export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false, espejo = "", heroesDire = null) {
+export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false, heroesDire = null) {
   const list = heroes.map((h) => `"${h}"`).join(", ");
-  // espejo = "no" turns off giving Dire the drawn heroes too (on by default since 2026-10-31, addon_game_mode.lua).
-  const mirror = espejo ? `espejo = "${espejo}", ` : "";
-  // heroes_dire: Dire's own drawn heroes, none shared with Radiant's ("--espejo cruzado"): the engine never gives the
-  // same hero to both teams (0 of 112 matches did), so each team asks for its own and nothing is swapped.
+  // heroes_dire: Dire's own drawn heroes, none shared with Radiant's: the engine never gives the same hero to both
+  // teams (0 of 112 matches did), so each team asks for its own and nothing is swapped. Without it ("--espejo no",
+  // debugging) Dire asks for Radiant's and gets random ones.
   const dire = heroesDire ? `heroes_dire = { ${heroesDire.map((h) => `"${h}"`).join(", ")} }, ` : "";
-  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, ${mirror}${dire}heroes = { ${list} } }\n`;
+  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, ${dire}heroes = { ${list} } }\n`;
+}
+
+// Which drawn group each side asks for (DECISIONES 2026-10-31): dota-bot (or variant a, against dota-bot) always gets
+// the block's first draw and its rival the second, whatever the side. espejo "no": Dire left to the engine.
+export function sideGroups(dotabot, heroes, rivals, espejo = "") {
+  if (espejo === "no") return { radiant: heroes, dire: null };
+  return dotabot === "radiant" ? { radiant: heroes, dire: rivals } : { radiant: rivals, dire: heroes };
 }
 
 // With --observar: the custom game's lines and the engine's lines about the bots (script errors, slow bot functions,
@@ -359,8 +365,8 @@ export function sameSet(a, b) {
   return Array.isArray(a) && Array.isArray(b) && a.length > 0 && !a.includes("none") && norm(a) === norm(b);
 }
 
-// Bot heroes that appeared after the horn ("[dotabench] spawn pid=1 team=2 hero=... t=3.2"; a swapped hero counts
-// by its last spawn): they lose lane time, and Radiant's slot 1 used to do it in most matches. Returns "pid@t".
+// Bot heroes that appeared after the horn ("[dotabench] spawn pid=1 team=2 hero=... t=3.2"; a pid counts by its last
+// spawn): they lose lane time, and the first bot added used to do it in most matches. Returns "pid@t".
 export function lateSpawns(text) {
   const lines = text.split(/\r?\n/);
   const bots = new Set();
@@ -629,13 +635,9 @@ async function main(argv) {
       }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
       if (i % opt.block === 0) { heroes = drawHeroes(); rivals = drawHeroes(Math.random, heroes); }
-      // The same match-up on both sides (DECISIONES 2026-10-31): dota-bot always gets the block's first draw and its
-      // rival the second, none shared, whatever the side. "--espejo no" leaves Dire to the engine (debugging only).
-      const cruzado = opt.espejo !== "no";
-      const radiantList = cruzado && dotabot !== "radiant" ? rivals : heroes;
-      const direList = cruzado ? (dotabot === "radiant" ? rivals : heroes) : null;
-      const esperado = { radiant: radiantList, dire: direList ?? [] };
-      writeFileSync(MATCH_FILE, matchConfigLua(radiantList, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), opt.espejo ?? "", direList));
+      const groups = sideGroups(dotabot, heroes, rivals, opt.espejo ?? "");
+      const esperado = { radiant: groups.radiant, dire: groups.dire ?? [] };
+      writeFileSync(MATCH_FILE, matchConfigLua(groups.radiant, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), groups.dire));
       latest = null;
       lastPost = 0;
       const names = (l) => l.map((h) => h.replace("npc_dota_hero_", "")).join(" ");
@@ -659,8 +661,8 @@ async function main(argv) {
         if (launchError) throw new Error(`No pude lanzar Dota: ${launchError.message}`);
         if (!childAlive) { outcome = "dota-cerrado"; break; }
         if (!lastPost && Date.now() - started > 8 * 60_000) { outcome = "sin-gsi"; break; }
-        // The team file stays until the match ends: a hero swapped by the mirror or spawned after the horn loads its
-        // scripts then, and without the file dota-bot played it on Valve's team (S6, 2026-10-31; it used to be
+        // The team file stays until the match ends: a hero that loads its scripts late (spawned after the horn, or
+        // swapped by the old mirror) ran dota-bot's on Valve's team without it (S6, 2026-10-31; it used to be
         // removed at the horn). A hard kill leaves it behind until the next run (bench/README.md).
         if (isFinished(latest)) { outcome = "final"; break; }
         if ((latest?.clock ?? 0) >= GAME_CAP_MIN * 60) { outcome = "tope"; break; }
@@ -746,7 +748,8 @@ async function main(argv) {
     if (opt.rival === "dotabot") {
       // Rows are written from the first variant's side: its wins are the matches it won against the second.
       const [s] = summarize(results, [opt.variantes[0]]);
-      console.log(`${opt.variantes[0]} ganó ${s.ganadas} de ${s.validas} partidas válidas contra ${opt.variantes[1]} (jugó ${s.jugadas}). Detalle en bench/series.csv.`);
+      // A capped match has no winner: neither variant won it, so it shows apart (not as a win for the second).
+      console.log(`${opt.variantes[0]} ganó ${s.ganadas} de ${s.validas} partidas válidas contra ${opt.variantes[1]} (jugó ${s.jugadas}; ${s.topes} llegaron al tope de ${GAME_CAP_MIN} min sin ganador). Detalle en bench/series.csv.`);
     } else for (const s of summarize(results, opt.variantes)) {
       console.log(`${s.variante ? `Variante ${s.variante}: ` : ""}dota-bot ganó ${s.ganadas} de ${s.validas} partidas válidas de bloques completos (jugó ${s.jugadas}; ${s.topes} llegaron al tope de ${GAME_CAP_MIN} min). Detalle en bench/series.csv.`);
     }

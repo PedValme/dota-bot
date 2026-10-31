@@ -2,27 +2,19 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **2026-10-31. Todo lo medido hasta hoy está contaminado** (MEDICIONES.md, sesgos S1-S5). Se está construyendo el
-  nivel 0 del protocolo nuevo (DECISIONES 2026-10-31: puerta de medición y avance en tres niveles).
-- Hecho en el banco:
-  - espejo con patrimonio completo, guardianes y humo devueltos, y borrado del héroe viejo;
-  - validez exige mismos héroes y patrimonio inicial por equipo y por héroe;
-  - commit por partida, tope de 60 min, parada con más del 20 % inválidas, junctions comprobadas;
-  - `rojas` en `.fabrica.json`.
-- Rama `claude/banco-s6` (sin PR): S6 corregido, línea de carga por bot, fase previa de 90 s (todos los héroes antes
-  del inicio), tope de 60 min válido. Falta la revisión de sus últimos commits antes del PR.
-- **Bloqueo: el espejo (`ReplaceHeroWith`) cierra Dota** en 5 de 16 partidas (1 de 126 sin él). Medido: el primer
-  equipo añadido recibe sus héroes, el segundo al azar (30 s de selección no cambia nada) y uno añadido 1 s tarde
-  ninguno.
-- Opción 1 (Dire sin héroe y `CreateHeroForPlayer`) probada y descartada: Dota se cerró igual y el motor no reconoce
-  esos héroes. Causa de fondo, medida: el motor nunca da el mismo héroe a los dos equipos (0 de 112 partidas).
-- **Funciona `--espejo cruzado`** (2 humos, `b3138c2` y siguiente): dos sorteos sin héroes en común, dota-bot siempre
-  el primero en los dos lados; ningún héroe cambiado, sin crashes.
-- Pedro aceptó «mismo enfrentamiento en los dos lados» (DECISIONES 2026-10-31): validez por grupo sorteado, modo
-  cruzado por defecto, espejo y creación de héroes quitados. Falta: revisión, humo y PR.
-- Después: revisor adversarial del humo y serie A contra A (`--variantes base,base_b`, 12 partidas), con la pregunta
-  escrita antes en MEDICIONES.md.
-- La rama `claude/cerebro-v2-builds` se parte en un PR por tarea (orden de la fábrica, 2026-10-31).
+- **2026-10-31. Todo lo medido hasta hoy está contaminado** (MEDICIONES.md, sesgos S1-S6). Se construye el nivel 0
+  del protocolo nuevo (DECISIONES 2026-10-31: puerta de medición y avance en tres niveles).
+- En `main` (#22): commit por partida, tope de 60 min, parada con más del 20 % inválidas, junctions comprobadas,
+  couriers, `rojas` en `.fabrica.json`, MEDICIONES.md.
+- Rama `claude/banco-s6` (revisada, falta humo y PR):
+  - S6 corregido: el archivo de equipo dura toda la partida y una línea de carga por bot lo comprueba;
+  - fase previa de 90 s: todos los héroes antes del inicio;
+  - una partida que llega al tope es válida, sin ganador;
+  - **mismo enfrentamiento en los dos lados** (decisión de Pedro): dos sorteos sin héroes en común, dota-bot siempre
+    el primero, y la validez exige a cada equipo su grupo. El espejo y la creación de héroes, que cerraban Dota, se
+    quitaron.
+- Siguiente: dos partidas de humo válidas, PR y fusión; la pregunta en MEDICIONES.md y la serie A contra A
+  (`--variantes base,base_b`, 12 partidas).
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Sin cambios de juego activos por

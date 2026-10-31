@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
-  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, parseCouriers, valveIntruders, lateSpawns, codeState, tooManyInvalid, variantLua,
+  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, sideGroups, parseCouriers, valveIntruders, lateSpawns, codeState, tooManyInvalid, variantLua,
   VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
@@ -288,7 +288,14 @@ test("the second draw shares no hero with the first", () => {
 });
 
 test("the match file gives Dire its own draw when there is one", () => {
-  const lua = matchConfigLua(["npc_dota_hero_luna"], 4, 4, true, false, "", ["npc_dota_hero_sven"]);
+  const lua = matchConfigLua(["npc_dota_hero_luna"], 4, 4, true, false, ["npc_dota_hero_sven"]);
   assert.match(lua, /heroes_dire = \{ "npc_dota_hero_sven" \}, heroes = \{ "npc_dota_hero_luna" \}/);
   assert.doesNotMatch(matchConfigLua(["npc_dota_hero_luna"], 4, 4), /heroes_dire/);
+});
+
+test("dota-bot always gets the first draw, on either side; espejo no leaves Dire to the engine", () => {
+  const A = ["a1"], B = ["b1"];
+  assert.deepEqual(sideGroups("radiant", A, B), { radiant: A, dire: B });
+  assert.deepEqual(sideGroups("dire", A, B), { radiant: B, dire: A });
+  assert.deepEqual(sideGroups("dire", A, B, "no"), { radiant: A, dire: null });
 });
