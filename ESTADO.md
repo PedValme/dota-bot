@@ -14,8 +14,12 @@
 - **Bloqueo: el espejo (`ReplaceHeroWith`) cierra Dota** en 5 de 16 partidas (1 de 126 sin él). Medido: el primer
   equipo añadido recibe sus héroes, el segundo al azar (30 s de selección no cambia nada) y uno añadido 1 s tarde
   ninguno.
-- **Espera a Pedro:** opción 1 recomendada (Dire 1 s tarde y `CreateHeroForPlayer` con el héroe sorteado, una
-  partida de humo); 2, sin espejo con la asimetría aceptada; 3, espejo con crashes inválidos.
+- Opción 1 (Dire sin héroe y `CreateHeroForPlayer`) probada y descartada: Dota se cerró igual y el motor no reconoce
+  esos héroes. Causa de fondo, medida: el motor nunca da el mismo héroe a los dos equipos (0 de 112 partidas).
+- **Funciona `--espejo cruzado`** (2 humos, `b3138c2` y siguiente): dos sorteos sin héroes en común, dota-bot siempre
+  el primero en los dos lados; ningún héroe cambiado, sin crashes.
+- **Espera a Pedro:** aceptar «mismo enfrentamiento en los dos lados» en vez de «mismos héroes» (recomendado); con su
+  sí, validez por grupo pedido, modo cruzado por defecto, quitar espejo y creación de héroes, revisión y PR.
 - Después: revisor adversarial del humo y serie A contra A (`--variantes base,base_b`, 12 partidas), con la pregunta
   escrita antes en MEDICIONES.md.
 - La rama `claude/cerebro-v2-builds` se parte en un PR por tarea (orden de la fábrica, 2026-10-31).
