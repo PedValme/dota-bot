@@ -522,7 +522,10 @@ function Activate()
 	GameRules:SetCustomGameTeamMaxPlayers(DOTA_TEAM_BADGUYS, 5)
 	GameRules:SetCustomGameSetupAutoLaunchDelay(0)
 	GameRules:LockCustomGameSetupTeamAssignment(true)
-	GameRules:SetHeroSelectionTime(5)
+	-- Trial 2026-10-31: with 5 s only the first team added got the asked heroes (the second got random ones, which the
+	-- mirror swaps with ReplaceHeroWith, and Dota crashed in 5 of 15 mirrored matches). Longer, in case the second
+	-- team's picks need the time.
+	GameRules:SetHeroSelectionTime(30)
 	GameRules:SetStrategyTime(0)
 	GameRules:SetShowcaseTime(0)
 	-- 90 s, as in normal Dota (it was 30): the first bot added spawns 15-50 s after the rest, and with 30 s it often
