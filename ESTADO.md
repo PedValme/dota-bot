@@ -2,20 +2,19 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **2026-10-31. Todo lo medido hasta hoy está contaminado** (MEDICIONES.md, sesgos S1-S5). Se está construyendo el
-  nivel 0 del protocolo nuevo (DECISIONES 2026-10-31: puerta de medición y avance en tres niveles).
-- Hecho en el banco:
-  - espejo con patrimonio completo, guardianes y humo devueltos, y borrado del héroe viejo;
-  - validez exige mismos héroes y patrimonio inicial por equipo y por héroe;
-  - commit por partida, tope de 60 min, parada con más del 20 % inválidas, junctions comprobadas;
-  - `rojas` en `.fabrica.json`.
-- Siguiente:
-  1. Repetir la partida de humo con el commit `5d8bfb5` o posterior y comprobar que Dota ya no se cierra solo.
-  2. Pasar el log al revisor adversarial.
-  3. Serie A contra A (`--variantes base,base_b`, 12 partidas), con la pregunta escrita antes en MEDICIONES.md.
-- **Espera a Pedro:** si una partida que llega al tope de 60 min cuenta como válida y como «no ganó» para dota-bot
-  (recomendado) o se descarta.
-- La rama `claude/cerebro-v2-builds` se parte en un PR por tarea (orden de la fábrica, 2026-10-31).
+- **2026-10-31. Todo lo medido hasta hoy está contaminado** (MEDICIONES.md, sesgos S1-S6). Se construye el nivel 0
+  del protocolo nuevo (DECISIONES 2026-10-31: puerta de medición y avance en tres niveles).
+- En `main` (#22): commit por partida, tope de 60 min, parada con más del 20 % inválidas, junctions comprobadas,
+  couriers, `rojas` en `.fabrica.json`, MEDICIONES.md.
+- Rama `claude/banco-s6` (revisada, falta humo y PR):
+  - S6 corregido: el archivo de equipo dura toda la partida y una línea de carga por bot lo comprueba;
+  - fase previa de 90 s: todos los héroes antes del inicio;
+  - una partida que llega al tope es válida, sin ganador;
+  - **mismo enfrentamiento en los dos lados** (decisión de Pedro): dos sorteos sin héroes en común, dota-bot siempre
+    el primero, y la validez exige a cada equipo su grupo. El espejo y la creación de héroes, que cerraban Dota, se
+    quitaron.
+- Siguiente: dos partidas de humo válidas, PR y fusión; la pregunta en MEDICIONES.md y la serie A contra A
+  (`--variantes base,base_b`, 12 partidas).
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Sin cambios de juego activos por
@@ -37,11 +36,12 @@ archivo de variante. Ninguna medida aún sin contaminación.
 
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
-- **Banco: Dota se cierra solo** (access violation) en 3 de 12 partidas con espejo; antes del espejo, 1 en 126.
-  Causa probable: el héroe reemplazado seguía en el mapa. Corregido en `5d8bfb5` (se borra), **sin comprobar** aún,
-  como tampoco que los couriers de Dire sobreviven a ese borrado (ahora es un control de validez).
-- **Banco: héroes que aparecen tarde.** El héroe del puesto 1 de cada equipo apareció unos 20 s de juego después del
-  inicio en una partida de humo, en los dos lados por igual. Sin explicar. La línea `start` espera a que estén todos.
+- **Banco: Dota se cierra solo** al cambiar o crear héroes de Dire (5 de 16 partidas con espejo, 1 de 2 creando).
+  Se dejó de hacer: cada equipo pide su propio sorteo. Sin comprobar aún en una serie que no vuelva a pasar (2 de 2
+  partidas de humo sin cierres).
+- **Banco: el primer bot añadido aparece de 15 a 50 s tarde.** Con 90 s de fase previa llega antes del inicio, y la
+  validez rechaza cualquier héroe aparecido después. Causa sin explicar.
+- **Banco: velocidad real variable** (×1,6 a ×3,4 con `--velocidad 4`), sin saber si afecta distinto a cada lado.
 - **Banco, sin comprobar:**
   - si a ×4 los bots de Lua piensan menos por segundo de juego que los de Valve;
   - el sorteo de héroes sale de una lista recordada, no de `BotImplemented`;

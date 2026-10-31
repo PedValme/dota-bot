@@ -6,4 +6,22 @@
 -- so that, for the Valve team, it defines nothing and the game falls back to its own bots. dofile (not require) so
 -- the answer is never cached across teams.
 local ok, team = pcall(dofile, GetScriptDirectory()..'/Customize/bench_valve_team')
-return ok and team ~= nil and team == GetTeam()
+local valve = ok and team ~= nil and team == GetTeam()
+-- Each bot this script plays says so once per match ("[bench] load pid=6 team=3", one console line, also outside the
+-- benchmark): the orchestrator rejects a match where one belongs to Valve's team (S6 in MEDICIONES.md), which is
+-- exactly when the team file was missing. The engine's print, not OHA's silenced one.
+-- All of it under pcall: at map load (hero_selection, team_desires) there is no real bot, and a failure here must
+-- never stop dota-bot's scripts in a normal game.
+if not valve then
+	pcall(function()
+		local bot = GetBot()
+		if bot == nil then return end
+		BenchLoaded = BenchLoaded or {}
+		local pid = bot:GetPlayerID()
+		if not BenchLoaded[pid] then
+			BenchLoaded[pid] = true;
+			(BenchRawPrint or print)(string.format("[bench] load pid=%d team=%d %s", pid, GetTeam(), bot:GetUnitName()))
+		end
+	end)
+end
+return valve

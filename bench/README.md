@@ -1,8 +1,8 @@
 # Benchmark: ¿juega mejor dota-bot que los bots de Valve?
 
 Partidas de bots contra bots sin clics, en un custom game local (`tools/bench/addon`, «dotabench»): dota-bot en un
-equipo y los bots de Valve en el otro, cinco héroes sorteados por partida (uno por posición; se piden para los dos
-lados: espejo desde el 2026-10-31, ver «Héroes»), misma dificultad, tu usuario fuera de los equipos,
+equipo y los bots de Valve en el otro, dos grupos de cinco héroes sorteados por bloque sin ninguno en común
+(dota-bot juega siempre el primero, desde los dos lados; ver «Héroes»), misma dificultad, tu usuario fuera de los equipos,
 cambiando de lado en cada partida y acelerado. El ganador lo dice el propio Dota por Game State Integration (GSI).
 
 ```
@@ -42,11 +42,12 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   inválidas, funciones lentas, edificios), queda por partida en `observaciones/<etiqueta>-<fecha>-<n>.log` (ignorado por
   git: pesan varios MB). `node tools/bench/analizar.mjs observaciones/<archivo>.log` lo resume: zonas, agrupación,
   farm, couriers, modos de dota-bot según su ventaja, empuje en grupo y errores.
-- Héroes: espejo en los dos equipos desde el 2026-10-31. En este custom game la selección, la estrategia y la previa
-  pasan en el mismo segundo: `AddBot` da a Radiant los sorteados y el motor da a Dire **héroes al azar**. Así fueron
-  todas las partidas anteriores a esa fecha, y por eso rendía peor quien jugaba en Dire. Ahora el custom game cambia
-  cada héroe de Dire por el sorteado de su posición medio segundo después de aparecer (`ReplaceHeroWith`; los scripts
-  del bot se reinician con el héroe nuevo, comprobado) y lo anota como `[dotabench] mirror`. `--espejo no` lo apaga.
+- Héroes: mismo enfrentamiento en los dos lados desde el 2026-10-31 (DECISIONES). El motor nunca da el mismo héroe a
+  los dos equipos (0 de 112 partidas): antes, Dire pedía los de Radiant y recibía **héroes al azar** (S4 de
+  MEDICIONES.md). Ahora cada bloque sortea dos grupos sin héroes en común; dota-bot juega siempre el primero y su
+  rival el segundo, en Radiant y en Dire, y los dos equipos entran a la vez, cada uno con el suyo. No se cambia ni se
+  crea ningún héroe: probado ese día, `ReplaceHeroWith` y `CreateHeroForPlayer` cerraban Dota. `--espejo no` (Dire al
+  azar) queda solo para depurar.
 - Validez (decisión de Pedro, DECISIONES 2026-10-29: no se acepta contaminación): cada partida va a `series.csv` con
   `valida` y `motivo`. Cuenta solo si terminó, hubo 5 bots por lado, tu usuario quedó fuera, el log confirma la
   variante y el modo, y Dota no cambió de versión (`dota_version`, de `steam.inf`). También se anotan la CPU de la máquina
@@ -58,8 +59,8 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   lanza y cierra su propio `dota2.exe`, escucha en `127.0.0.1`, y sus archivos temporales (la config de GSI,
   `bots/Customize/bench_valve_team.lua`, `bench_variant.lua`, `bench_observe.lua` y `tools/bench/addon/scripts/vscripts/bench_partida.lua`) se borran al
   terminar o al interrumpirlo con Ctrl+C.
-- Si el orquestador se cierra a la fuerza (Administrador de tareas), su Dota queda abierto y, en los primeros minutos
-  de una partida, puede quedar `bots/Customize/bench_valve_team.lua`: mientras exista, un equipo juega con los bots de
+- Si el orquestador se cierra a la fuerza (Administrador de tareas), su Dota queda abierto y puede quedar
+  `bots/Customize/bench_valve_team.lua` (dura toda la partida desde el 2026-10-31, por S6 de MEDICIONES.md): mientras exista, un equipo juega con los bots de
   Valve en cualquier partida local. La siguiente corrida lo borra; también se puede borrar a mano.
 - Línea de tiempo: el custom game escribe cada minuto torres, cuarteles, vida del Ancient, kills y oro de los dos
   equipos (el oro, solo de los bots); el orquestador la guarda en `lineas/<etiqueta>-<fecha>-<n>.csv` y resume la
@@ -88,7 +89,7 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
 | 2. Resultado | Que un paquete de cambios gana más | Calculado antes según la diferencia buscada y el ruido del nivel 0 | Pregunta y métrica principal por escrito antes; análisis fijo, sin cortar por lado o héroe después |
 
 En todos: cada partida anota su commit (`codigo`; con `+cambios` no vale y si cambia a mitad de serie tampoco), tope de
-60 min de juego (`tope`, no válida, se cuenta aparte), la serie se para sola con más del 20 % de partidas no válidas
+60 min de juego (`tope`: válida y «no ganó» para dota-bot, y el resumen la cuenta aparte; DECISIONES 2026-10-31), la serie se para sola con más del 20 % de partidas no válidas
 (desde la quinta), y de vez en cuando una prueba en el entorno real (lobby Local Host, Turbo real).
 
 ## Protocolo de medición
@@ -101,15 +102,16 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 |---|---|---|
 | La partida terminó | GSI da ganador | `sin final` |
 | 5 bots por lado, humano fuera | `[dotabench] roster` | `reparto`, `humano` |
-| Mismos cinco héroes en los dos lados | `roster` + `mirror ok=true` y, cuando están los 10, `[dotabench] start` (héroe de la entidad) | `héroes distintos por lado`, `sin registro de inicio` |
-| Mismo patrimonio inicial (±300 por equipo, ±100 por héroe) | `start ... nw=`; el espejo da el patrimonio del héroe quitado (`gold=`) y devuelve guardianes y humo al stock (`restock=`) | `patrimonio inicial R-D`, `patrimonio inicial de un héroe` |
-| Ningún héroe reemplazado queda en el mapa | `[dotabench] mirror_old removed=true` por cada cambio | `héroe reemplazado sin borrar` |
+| Cada equipo juega exactamente su grupo sorteado | cuando están los 10, `[dotabench] start` (héroe de la entidad) frente al sorteo | `héroes distintos de los sorteados`, `sin registro de inicio` |
+| Mismo patrimonio inicial (±300 por equipo) | `start ... nw=` | `patrimonio inicial R-D` |
 | 5 couriers vivos por lado en el minuto 1, Turbo (1100) en `--modo turbo` | `[dotabench] couriers team= n= speeds=` | `couriers R-D`, `couriers lentos` |
-| Espejo encendido | `--espejo no` es solo para depurar | `espejo apagado` |
+| El equipo de Valve lo juega Valve | ningún `[bench] load` (una línea por bot de dota-bot, siempre) ni `[bench] mode` de un pid de ese equipo; el archivo de equipo dura toda la partida | `dota-bot jugó en el equipo de Valve`, `sin registro de carga` |
+| Todos los héroes aparecen antes del inicio | `[dotabench] spawn ... t=` (último de cada pid ≤ 0) | `héroe aparecido tras el inicio`, `sin registro de aparición` |
+| Sorteo por equipo | `--espejo no` (Dire al azar) es solo para depurar | `espejo apagado` |
 | Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |
 | Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |
-| Mismo código, con commit, en toda la serie | `git rev-parse` y `git status` de `bots/` y del custom game antes y después de cada partida | `código sin commit`, `el código cambió en la serie` |
-| La partida termina en tiempo razonable | reloj de GSI | `tope de 60 min` |
+| Mismo código, con commit, en toda la serie | árbol de git de `bots/` y `tools/bench/` y `git status` antes y después de cada partida (`codigo` = commit@árboles; un commit solo de documentos no la invalida) | `código sin commit`, `el código cambió en la serie` |
+| La partida termina en tiempo razonable | reloj de GSI: a los 60 min se corta (`resultado=tope`, válida, sin ganador) | no la invalida |
 | Lado, héroes y orden repartidos igual entre variantes | calendario por bloques (pruebas) | solo cuentan bloques completos |
 | Máquina libre | CPU y memoria por partida en `series.csv` | se anota; con carga alta, no se corre |
 
@@ -124,8 +126,11 @@ Mientras corre una serie, el trabajo en paralelo va en otro worktree, en su prop
 Sin comprobar (supuestos a la vista):
 - El sorteo de héroes sale de una lista recordada de los que saben jugar los bots de Valve, no de `BotImplemented`.
 - El Turbo imitado (couriers, oro y experiencia ×2, reaparición) no es el Turbo real: torres y runas son las normales.
-- La velocidad ×4: si a esa escala los bots de Lua piensan menos veces por segundo de juego que los de Valve (C++),
-  sesga siempre hacia el mismo lado. Comprobación barata pendiente: comparar la cadencia de `[bench] mode` a ×1 y ×4.
+- La velocidad: `--velocidad 4` da en la práctica ×1,6 a ×3,4 de tiempo de juego por tiempo real, según cuántos
+  héroes juega dota-bot (su Lua frena el servidor: cientos de avisos «took 2-4 ms»). Falta saber si a esa carga los
+  bots de Lua piensan menos veces por segundo de juego que los de Valve. La cadencia de `[bench] mode` no sirve para
+  medirlo (se escribe cada 2 s de juego pase lo que pase); hace falta un contador de llamadas a Think.
+- Los bots de Valve usan builds desfasadas en algunos héroes (p. ej. Tiny, talento inválido): juegan peor con ellos.
 - El ruido entre dos brazos iguales y la ventaja del lado: los mide la serie A contra A (nivel 0).
 
 Los defectos conocidos sin resolver del banco están en ESTADO.md («Problemas conocidos»): mientras sigan abiertos, no

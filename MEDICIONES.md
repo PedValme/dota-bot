@@ -18,6 +18,10 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - **S5, el espejo con fallos (`justa`):** Dire perdía los objetos iniciales, los guardianes y el humo; el héroe viejo
   seguía en el mapa; y Dota se cerró solo 3 veces en 12 partidas con espejo (antes del espejo, 1 vez en 126:
   `prueba-sonda`, 2026-10-29, causa desconocida).
+- **S6, dota-bot jugando héroes del equipo de Valve:** el orquestador borraba el archivo de equipo al empezar la
+  partida; un héroe que aparecía o se cambiaba después cargaba los scripts de dota-bot. Afecta a muchas partidas de
+  todas las series: casi siempre el pid 1 de Radiant, que aparecía tarde, y desde el espejo también héroes de Dire
+  (en `justa-3`, los cinco de Valve). Lo encontró el revisor adversarial del humo del 2026-10-31.
 - **Filas contaminadas en `series.csv`:** muchas filas de series con estos sesgos dicen `valida=si`, porque la
   validez de entonces no los miraba. Esa columna solo vale desde el banco del 2026-10-31.
 - **R, sin registro:** ninguna serie anterior anotó el commit; el estado de la máquina solo quedó por partida
@@ -91,3 +95,54 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Validez: puerta del nivel 0, no comparación.
 - Decisión: borrar el héroe viejo (commit `5d8bfb5`); repetir el humo y comprobar que Dota ya no se cierra antes de la
   serie A contra A.
+
+### 2026-10-31 · `humo` con el banco fusionado (1 partida, commit `448f626`)
+- Pregunta: puerta del nivel 0 antes de la serie A contra A.
+- Máquina: CPU 38 %, memoria libre 50 %.
+- Resultado:
+  - terminó (35 min), sin crash;
+  - espejo, borrado del héroe viejo, patrimonio inicial (2.977 frente a 3.026) y couriers (5 y 5 a 1.100), correctos.
+- Validez, según el revisor adversarial:
+  - **S6:** el Necrophos de Dire, que debía jugar Valve, lo jugó dota-bot;
+  - el héroe del puesto 1 de Radiant apareció en t=+3;
+  - la velocidad real fue ×2,28, no ×4, y varía con la carga de Lua.
+- Decisión: no lanzar la serie A contra A.
+  - Arreglos: el archivo de equipo se queda hasta el final, y la validez exige el observador, ningún héroe de Valve
+    jugado por dota-bot y ningún héroe aparecido tras el inicio.
+  - Prueba: añadir los bots un segundo después de sacar al humano.
+  - Siguiente paso: repetir el humo con dota-bot en cada lado.
+
+### 2026-10-31 · `humo` del reparto de héroes (13 partidas, commits `2b3de55` a `b3138c2` y siguiente)
+- Pregunta: ¿cómo consiguen los dos equipos los héroes pedidos, sin que se cierre Dota?
+- Resultado, medido:
+  - si los dos equipos entran a la vez, el primero recibe sus héroes y el segundo, unos al azar que nunca coinciden
+    con los del primero (0 de 112 partidas): el motor no repite héroe entre equipos;
+  - con 30 s de selección pasa lo mismo, y un equipo que entra 1 s después no recibe ninguno;
+  - el primer bot añadido aparece de 15 a 50 s después que los demás; con 90 s de fase previa llegan todos antes del
+    inicio;
+  - cambiar los héroes de Dire (`ReplaceHeroWith`) cerró Dota en 5 de 16 partidas, y crearlos (`CreateHeroForPlayer`)
+    también lo cerró, además de que el motor no los cuenta como héroes de sus jugadores;
+  - con dos sorteos sin héroes en común, cada equipo recibió el suyo y no hubo cierres (2 de 2).
+- Validez: puerta del nivel 0, no comparación.
+- Decisión: mismo enfrentamiento en los dos lados en lugar de mismos héroes (DECISIONES 2026-10-31); se quitan el
+  espejo y la creación de héroes.
+
+### 2026-10-31 · `humo` del banco final (2 partidas, rama `claude/banco-s6`, PR #24)
+- Pregunta: puerta del nivel 0; ¿pasan todos los controles con dota-bot en cada lado?
+- Resultado: 2 de 2 válidas (43 y 29 min, sin cierres); cada equipo con su grupo, todos los héroes antes del inicio,
+  ningún héroe de Valve jugado por dota-bot, couriers Turbo y patrimonio inicial parejo. Antes, dos partidas
+  invalidadas por el propio control de código al tocar el orquestador y hacer un commit durante la serie (corregido:
+  se comparan los árboles de `bots/` y `tools/bench/`).
+- Decisión: pasar a la serie A contra A.
+
+### 2026-10-31 · `aa` (serie A contra A, nivel 0) — pregunta escrita antes de lanzarla
+- Pregunta: con dos versiones idénticas, ¿cuánto se separan por azar (el ruido) y cuánto gana el lado del mapa por sí
+  solo? Sin eso, ninguna diferencia entre variantes se puede leer.
+- Qué cambió desde la anterior: nada en el bot; primera serie con el banco completo (PR #24).
+- Configuración: `--variantes base,base_b --partidas 12 --modo turbo`, sin observador, Valve en Injusto, ×4. Bloques de
+  4 (cada variante en los dos lados, mismo enfrentamiento), 3 bloques.
+- Métricas, fijadas antes: victorias por brazo; victorias de dota-bot en Radiant frente a Dire; minutos de partida y
+  minuto de +10.000 hasta el final, con su dispersión por brazo; partidas inválidas y topes.
+- Qué se espera: brazos parecidos. Una diferencia grande entre brazos idénticos mide el ruido que tendrá cualquier
+  comparación de 12 partidas.
+- Sin comprobar que puede pesar: la velocidad real variable (×1,6 a ×3,4); la lista de héroes del sorteo, recordada.
