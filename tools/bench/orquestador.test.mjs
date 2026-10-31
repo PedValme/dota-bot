@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
-  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, parseCouriers, codeState, tooManyInvalid, variantLua,
+  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, parseCouriers, valveIntruders, lateSpawns, codeState, tooManyInvalid, variantLua,
   VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
@@ -47,7 +47,12 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
   const start = { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005, heroGap: 20 };
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true, viejos: 0 }, variant: "base",
     loggedVariant: "base", version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal", start,
-    codigo: "abc123", firstCodigo: "abc123", couriers: { radiant: 5, dire: 5, slowRadiant: 290, slowDire: 290 } };
+    codigo: "abc123", firstCodigo: "abc123", couriers: { radiant: 5, dire: 5, slowRadiant: 290, slowDire: 290 },
+    intrusos: [], tardios: [] };
+  assert.match(validity({ ...ok, intrusos: ["7"] }), /dota-bot jugó en el equipo de Valve \(pid 7\)/);
+  assert.match(validity({ ...ok, intrusos: null }), /sin observador/);
+  assert.match(validity({ ...ok, tardios: ["1@3.2"] }), /aparecido tras el inicio \(1@3.2\)/);
+  assert.match(validity({ ...ok, tardios: null }), /aparición/);
   assert.match(validity({ ...ok, couriers: undefined }), /couriers 0-0/);
   assert.match(validity({ ...ok, couriers: { ...ok.couriers, dire: 3 } }), /couriers 5-3/);
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), /couriers lentos 290-290/);
@@ -148,7 +153,8 @@ test("the mode the custom game applied is read from the log and must match the s
   assert.equal(parseModo("nothing"), "");
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true, viejos: 0 }, variant: "", loggedVariant: "",
     version: "1", firstVersion: "1", start: { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005, heroGap: 0 },
-    codigo: "a", firstCodigo: "a", couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 } };
+    codigo: "a", firstCodigo: "a", couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 },
+    intrusos: [], tardios: [] };
   assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), "");
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "normal" }), /modo/);
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "" }), /modo/);
@@ -222,6 +228,18 @@ test("each match records its commit, marked when bots/ had uncommitted changes; 
   assert.equal(tooManyInvalid(rows(2, 10)), false);
   assert.equal(tooManyInvalid(rows(3, 10)), true);
   assert.deepEqual(VARIANTS.base_b, VARIANTS.base);
+});
+
+test("dota-bot's lines from a player of Valve's team and heroes that spawned after the horn are caught", () => {
+  const roster = (team, pid, bot = 1) => `[VScript] [dotabench] roster team=${team} pid=${pid} bot=${bot} hero=npc_dota_hero_luna name=`;
+  const mode = (pid) => `[VScript] [bench] mode t=12 pid=${pid} luna FARM 0.30 alive=1`;
+  const log = [mode(7), roster(2, 1), roster(3, 6), roster(3, 7), mode(1), mode(6)].join("\r\n");
+  assert.deepEqual(valveIntruders(log, 3), ["6", "7"]);
+  assert.deepEqual(valveIntruders(log, 2), ["1"]);
+  const spawn = (pid, t) => `[VScript] [dotabench] spawn pid=${pid} team=3 hero=npc_dota_hero_luna t=${t}`;
+  const spawns = [roster(2, 0, 0), roster(3, 6), roster(3, 7), spawn(0, 5), spawn(6, -14.5), spawn(7, -0.6), spawn(7, 0.4),
+    spawn(6, -14)].join("\n");
+  assert.deepEqual(lateSpawns(spawns), ["7@0.4"]);
 });
 
 test("couriers alive per team at minute 1, with the slowest speed per side", () => {

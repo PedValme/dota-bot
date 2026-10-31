@@ -160,10 +160,18 @@ local function MirrorOnSpawn(unit, pid)
 	end
 end
 
+-- First spawn of each hero entity, with the game time (negative before the horn): one hero per side used to spawn
+-- late, Radiant's slot 1 most of all (open defect, ESTADO.md), and the orchestrator checks it.
+local spawned = {}
 local function OnNpcSpawned(event)
 	local unit = EntIndexToHScript(event.entindex)
 	if not unit or not unit.IsRealHero or not unit:IsRealHero() then return end
 	local pid = unit:GetPlayerOwnerID()
+	if not spawned[event.entindex] then
+		spawned[event.entindex] = true
+		print(string.format("[dotabench] spawn pid=%d team=%d hero=%s t=%.1f", pid or -1, unit:GetTeamNumber(),
+			unit:GetUnitName(), GameRules:GetDOTATime(false, true)))
+	end
 	if pid ~= nil and pid >= 0 and PlayerResource:IsFakeClient(pid) then MirrorOnSpawn(unit, pid) end
 	if not IsHuman(pid) then return end
 	print(string.format("[dotabench] human hero removed pid=%d team=%d %s", pid, unit:GetTeamNumber(), unit:GetUnitName()))
@@ -244,7 +252,13 @@ local function OnStateChange()
 	local state = GameRules:State_Get()
 	KeepHumansOut("state " .. tostring(state))
 	if state == DOTA_GAMERULES_STATE_HERO_SELECTION or state == DOTA_GAMERULES_STATE_STRATEGY_TIME then
-		AddBots(cfg)
+		-- One second after the human is moved out of Radiant (KeepHumansOut above), not in the same instant: with the
+		-- human still in a Radiant slot, Radiant's first bot spawned after the horn (2026-10-31). Pre-game still adds
+		-- them if this has not run yet.
+		GameRules:GetGameModeEntity():SetThink(function()
+			AddBots(cfg)
+			return nil
+		end, "dotabench_addbots", 1)
 	elseif state == DOTA_GAMERULES_STATE_PRE_GAME then
 		AddBots(cfg)
 		PrintRoster()

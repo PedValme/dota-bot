@@ -18,6 +18,10 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - **S5, el espejo con fallos (`justa`):** Dire perdía los objetos iniciales, los guardianes y el humo; el héroe viejo
   seguía en el mapa; y Dota se cerró solo 3 veces en 12 partidas con espejo (antes del espejo, 1 vez en 126:
   `prueba-sonda`, 2026-10-29, causa desconocida).
+- **S6, dota-bot jugando héroes del equipo de Valve:** el orquestador borraba el archivo de equipo al empezar la
+  partida; un héroe que aparecía o se cambiaba después cargaba los scripts de dota-bot. Afecta a muchas partidas de
+  todas las series: casi siempre el pid 1 de Radiant, que aparecía tarde, y desde el espejo también héroes de Dire
+  (en `justa-3`, los cinco de Valve). Lo encontró el revisor adversarial del humo del 2026-10-31.
 - **Filas contaminadas en `series.csv`:** muchas filas de series con estos sesgos dicen `valida=si`, porque la
   validez de entonces no los miraba. Esa columna solo vale desde el banco del 2026-10-31.
 - **R, sin registro:** ninguna serie anterior anotó el commit; el estado de la máquina solo quedó por partida
@@ -91,3 +95,19 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Validez: puerta del nivel 0, no comparación.
 - Decisión: borrar el héroe viejo (commit `5d8bfb5`); repetir el humo y comprobar que Dota ya no se cierra antes de la
   serie A contra A.
+
+### 2026-10-31 · `humo` con el banco fusionado (1 partida, commit `448f626`)
+- Pregunta: puerta del nivel 0 antes de la serie A contra A.
+- Máquina: CPU 38 %, memoria libre 50 %.
+- Resultado:
+  - terminó (35 min), sin crash;
+  - espejo, borrado del héroe viejo, patrimonio inicial (2.977 frente a 3.026) y couriers (5 y 5 a 1.100), correctos.
+- Validez, según el revisor adversarial:
+  - **S6:** el Necrophos de Dire, que debía jugar Valve, lo jugó dota-bot;
+  - el héroe del puesto 1 de Radiant apareció en t=+3;
+  - la velocidad real fue ×2,28, no ×4, y varía con la carga de Lua.
+- Decisión: no lanzar la serie A contra A.
+  - Arreglos: el archivo de equipo se queda hasta el final, y la validez exige el observador, ningún héroe de Valve
+    jugado por dota-bot y ningún héroe aparecido tras el inicio.
+  - Prueba: añadir los bots un segundo después de sacar al humano.
+  - Siguiente paso: repetir el humo con dota-bot en cada lado.

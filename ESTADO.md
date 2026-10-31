@@ -40,8 +40,13 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
 - **Banco: Dota se cierra solo** (access violation) en 3 de 12 partidas con espejo; antes del espejo, 1 en 126.
   Causa probable: el héroe reemplazado seguía en el mapa. Corregido en `5d8bfb5` (se borra), **sin comprobar** aún,
   como tampoco que los couriers de Dire sobreviven a ese borrado (ahora es un control de validez).
-- **Banco: héroes que aparecen tarde.** El héroe del puesto 1 de cada equipo apareció unos 20 s de juego después del
-  inicio en una partida de humo, en los dos lados por igual. Sin explicar. La línea `start` espera a que estén todos.
+- **Banco: héroes que aparecen tarde**, sobre todo el del puesto 1 de Radiant (de t=-3 a t=+40), y no en Dire salvo
+  por el espejo. Pierden tiempo de línea y, hasta el arreglo de S6, los jugaba dota-bot aunque fueran de Valve.
+  Hipótesis: el humano ocupa un hueco de Radiant cuando se añaden los bots. Prueba en curso: añadir los bots 1 s
+  después de sacarlo. Ahora la validez rechaza cualquier héroe aparecido tras el inicio.
+- **Banco: S6 corregido sin comprobar en partida** (rama `claude/banco-s6`): el archivo de equipo dura toda la
+  partida y la validez rechaza héroes de Valve jugados por dota-bot.
+- **Banco: velocidad real variable** (×1,6 a ×3,4 con `--velocidad 4`), sin saber si afecta distinto a cada lado.
 - **Banco, sin comprobar:**
   - si a ×4 los bots de Lua piensan menos por segundo de juego que los de Valve;
   - el sorteo de héroes sale de una lista recordada, no de `BotImplemented`;

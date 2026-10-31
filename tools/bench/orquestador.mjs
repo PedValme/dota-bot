@@ -146,7 +146,7 @@ export function schedule(i, variants) {
 // pre-game; that the bots apply it was checked once with the "sonda" variant (bench/README.md) and each match logs
 // casts per team. (The bots' print does reach the log, but only in observer mode: OHA silences it otherwise.)
 export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo,
-  espejo = "", start, codigo, firstCodigo, couriers }) {
+  espejo = "", start, codigo, firstCodigo, couriers, intrusos, tardios }) {
   if (outcome === "tope") return `tope de ${GAME_CAP_MIN} min`;
   if (outcome !== "final") return "sin final";
   if (codigo === undefined || codigo.endsWith("+cambios")) return "código sin commit";
@@ -159,6 +159,11 @@ export function validity({ outcome, roster, variant, loggedVariant, version, fir
   if (!start || start.radiant !== 5 || start.dire !== 5) return "sin registro de inicio";
   if (roster.mismos !== true || start.mismos !== true) return "héroes distintos por lado";
   if (roster.viejos !== 0) return `héroe reemplazado sin borrar (${roster.viejos ?? "?"})`;
+  // Valve's team really played by Valve (S6): without observer mode it cannot be checked, so it is not valid.
+  if (!Array.isArray(intrusos)) return "sin observador: no se comprueba quién juega cada héroe";
+  if (intrusos.length) return `dota-bot jugó en el equipo de Valve (pid ${intrusos.join(",")})`;
+  if (!Array.isArray(tardios)) return "sin registro de aparición de héroes";
+  if (tardios.length) return `héroe aparecido tras el inicio (${tardios.join(",")})`;
   // Five couriers alive per side at minute 1, Turbo ones (1100) in turbo: S1 (no couriers) must not come back.
   if (!couriers || couriers.radiant !== 5 || couriers.dire !== 5) {
     return `couriers ${couriers?.radiant ?? 0}-${couriers?.dire ?? 0}`;
@@ -355,6 +360,40 @@ export function parseStart(text) {
   }
   return { radiant: teams[2].length, dire: teams[3].length, mismos: !none && teams[2].length > 0 && set(2) === set(3),
     nwRadiant: nw(2), nwDire: nw(3), heroGap };
+}
+
+// Bot heroes that appeared after the horn ("[dotabench] spawn pid=1 team=2 hero=... t=3.2"; a swapped hero counts
+// by its last spawn): they lose lane time, and Radiant's slot 1 used to do it in most matches. Returns "pid@t".
+export function lateSpawns(text) {
+  const lines = text.split(/\r?\n/);
+  const bots = new Set();
+  for (const line of lines) {
+    const r = line.match(/\[dotabench\] roster team=\d pid=(\d+) bot=1/);
+    if (r) bots.add(r[1]);
+  }
+  const last = new Map();
+  for (const line of lines) {
+    const m = line.match(/\[dotabench\] spawn pid=(\d+) team=\d hero=\S+ t=(-?[\d.]+)/);
+    if (m && bots.has(m[1])) last.set(m[1], Math.max(last.get(m[1]) ?? -Infinity, Number(m[2])));
+  }
+  return [...last].filter(([, t]) => t > 0).map(([pid, t]) => `${pid}@${t}`);
+}
+
+// Players of Valve's team (2 Radiant, 3 Dire) whose hero dota-bot's scripts played: only dota-bot writes
+// "[bench] mode t=... pid=N" (observer mode). Valve's team is told by roster lines.
+export function valveIntruders(text, valveTeam) {
+  const lines = text.split(/\r?\n/);
+  const valvePids = new Set();
+  const intruders = new Set();
+  for (const line of lines) {
+    const r = line.match(/\[dotabench\] roster team=(\d) pid=(\d+)/);
+    if (r && Number(r[1]) === valveTeam) valvePids.add(r[2]);
+  }
+  for (const line of lines) {
+    const m = line.match(/\[bench\] mode t=\S+ pid=(\d+)/);
+    if (m && valvePids.has(m[1])) intruders.add(m[1]);
+  }
+  return [...intruders].sort((a, b) => a - b);
 }
 
 // Couriers alive per team at minute 1 ("[dotabench] couriers team=3 n=5 speeds=1100/1100/..."): radiant, dire and
@@ -588,7 +627,7 @@ async function main(argv) {
       if (rival) {
         writeFileSync(VARIANT_FILE, rivalVariantLua(planned.radiant, planned.dire));
       } else {
-        writeFileSync(VALVE_TEAM_FILE, `-- written by tools/bench/orquestador.mjs for one match; deleted once the bots load\nreturn ${valveTeam}\n`);
+        writeFileSync(VALVE_TEAM_FILE, `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn ${valveTeam}\n`);
         if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
       }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
@@ -616,9 +655,9 @@ async function main(argv) {
         if (launchError) throw new Error(`No pude lanzar Dota: ${launchError.message}`);
         if (!childAlive) { outcome = "dota-cerrado"; break; }
         if (!lastPost && Date.now() - started > 8 * 60_000) { outcome = "sin-gsi"; break; }
-        // Every bot script has loaded by the horn: the team file is not needed any more, so a hard kill of this
-        // script from here on cannot leave it behind for the owner's normal games.
-        if (latest?.state === "DOTA_GAMERULES_STATE_GAME_IN_PROGRESS") removeTeamFile();
+        // The team file stays until the match ends: a hero swapped by the mirror or spawned after the horn loads its
+        // scripts then, and without the file dota-bot played it on Valve's team (S6, 2026-10-31; it used to be
+        // removed at the horn). A hard kill leaves it behind until the next run (bench/README.md).
         if (isFinished(latest)) { outcome = "final"; break; }
         if ((latest?.clock ?? 0) >= GAME_CAP_MIN * 60) { outcome = "tope"; break; }
       }
@@ -641,6 +680,8 @@ async function main(argv) {
       let roster = { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false };
       let start = null;
       let couriers = null;
+      let intrusos = null;
+      let tardios = null;
       let loggedVariant = null;
       let loggedModo = "";
       try {
@@ -651,6 +692,9 @@ async function main(argv) {
           roster = parseRoster(log);
           start = parseStart(log);
           couriers = parseCouriers(log);
+          // Only observer mode lets dota-bot's lines reach the log; without it there is nothing to check.
+          intrusos = rival ? [] : opt.observar ? valveIntruders(log, valveTeam) : null;
+          tardios = /\[dotabench\] spawn /.test(log) ? lateSpawns(log) : null;
           loggedVariant = parseVariant(log);
           loggedModo = parseModo(log);
           if (opt.observar) {
@@ -664,7 +708,7 @@ async function main(argv) {
       const codigoDespues = await currentCode();
       const codigo = codigoAntes === codigoDespues ? codigoDespues : `${codigoDespues.replace("+cambios", "")}+cambios`;
       const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo,
-        espejo: opt.espejo ?? "", start, codigo, firstCodigo, couriers });
+        espejo: opt.espejo ?? "", start, codigo, firstCodigo, couriers, intrusos, tardios });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));

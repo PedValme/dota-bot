@@ -136,3 +136,4 @@ fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,
 2026-10-31T14:05,justa,8,2,base_estado,si,,4,dire,radiant,final,40,31,48,fuera,skeleton_king zuus axe vengefulspirit crystal_maiden / dragon_knight omniknight lich bounty_hunter tidehunter,43858,27,4-3,6969,32,42,45,turbo
 2026-10-31T14:35,humo,1,1,,si,,4,radiant,radiant,final,39,43,17,fuera,phantom_assassin viper dragon_knight vengefulspirit warlock / phantom_assassin viper dragon_knight vengefulspirit warlock,78656,13,10-0,6969,56,93,44,turbo
 2026-10-31T14:43,humo,1,1,,no,sin final,4,radiant,,dota-cerrado,15,22,7,fuera,juggernaut razor sand_king lion warlock / juggernaut razor sand_king lion warlock,16838,11,11-10,6969,44,67,47,turbo,8b602799af26,valve
+2026-10-31T15:13,humo,1,1,,si,,4,radiant,dire,final,35,20,30,fuera,luna necrolyte tidehunter lion crystal_maiden / luna necrolyte tidehunter lion crystal_maiden,5488,,4-9,6969,27,34,46,turbo,448f626af63e,valve

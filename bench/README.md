@@ -58,8 +58,8 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   lanza y cierra su propio `dota2.exe`, escucha en `127.0.0.1`, y sus archivos temporales (la config de GSI,
   `bots/Customize/bench_valve_team.lua`, `bench_variant.lua`, `bench_observe.lua` y `tools/bench/addon/scripts/vscripts/bench_partida.lua`) se borran al
   terminar o al interrumpirlo con Ctrl+C.
-- Si el orquestador se cierra a la fuerza (Administrador de tareas), su Dota queda abierto y, en los primeros minutos
-  de una partida, puede quedar `bots/Customize/bench_valve_team.lua`: mientras exista, un equipo juega con los bots de
+- Si el orquestador se cierra a la fuerza (Administrador de tareas), su Dota queda abierto y puede quedar
+  `bots/Customize/bench_valve_team.lua` (dura toda la partida desde el 2026-10-31, por S6 de MEDICIONES.md): mientras exista, un equipo juega con los bots de
   Valve en cualquier partida local. La siguiente corrida lo borra; también se puede borrar a mano.
 - Línea de tiempo: el custom game escribe cada minuto torres, cuarteles, vida del Ancient, kills y oro de los dos
   equipos (el oro, solo de los bots); el orquestador la guarda en `lineas/<etiqueta>-<fecha>-<n>.csv` y resume la
@@ -105,6 +105,8 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 | Mismo patrimonio inicial (±300 por equipo, ±100 por héroe) | `start ... nw=`; el espejo da el patrimonio del héroe quitado (`gold=`) y devuelve guardianes y humo al stock (`restock=`) | `patrimonio inicial R-D`, `patrimonio inicial de un héroe` |
 | Ningún héroe reemplazado queda en el mapa | `[dotabench] mirror_old removed=true` por cada cambio | `héroe reemplazado sin borrar` |
 | 5 couriers vivos por lado en el minuto 1, Turbo (1100) en `--modo turbo` | `[dotabench] couriers team= n= speeds=` | `couriers R-D`, `couriers lentos` |
+| El equipo de Valve lo juega Valve | con `--observar` (obligatorio), ningún `[bench] mode` de un pid de ese equipo; el archivo de equipo dura toda la partida | `dota-bot jugó en el equipo de Valve`, `sin observador` |
+| Todos los héroes aparecen antes del inicio | `[dotabench] spawn ... t=` (último de cada pid ≤ 0) | `héroe aparecido tras el inicio`, `sin registro de aparición` |
 | Espejo encendido | `--espejo no` es solo para depurar | `espejo apagado` |
 | Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |
 | Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |
@@ -124,8 +126,11 @@ Mientras corre una serie, el trabajo en paralelo va en otro worktree, en su prop
 Sin comprobar (supuestos a la vista):
 - El sorteo de héroes sale de una lista recordada de los que saben jugar los bots de Valve, no de `BotImplemented`.
 - El Turbo imitado (couriers, oro y experiencia ×2, reaparición) no es el Turbo real: torres y runas son las normales.
-- La velocidad ×4: si a esa escala los bots de Lua piensan menos veces por segundo de juego que los de Valve (C++),
-  sesga siempre hacia el mismo lado. Comprobación barata pendiente: comparar la cadencia de `[bench] mode` a ×1 y ×4.
+- La velocidad: `--velocidad 4` da en la práctica ×1,6 a ×3,4 de tiempo de juego por tiempo real, según cuántos
+  héroes juega dota-bot (su Lua frena el servidor: cientos de avisos «took 2-4 ms»). Falta saber si a esa carga los
+  bots de Lua piensan menos veces por segundo de juego que los de Valve. La cadencia de `[bench] mode` no sirve para
+  medirlo (se escribe cada 2 s de juego pase lo que pase); hace falta un contador de llamadas a Think.
+- Los bots de Valve usan builds desfasadas en algunos héroes (p. ej. Tiny, talento inválido): juegan peor con ellos.
 - El ruido entre dos brazos iguales y la ventaja del lado: los mide la serie A contra A (nivel 0).
 
 Los defectos conocidos sin resolver del banco están en ESTADO.md («Problemas conocidos»): mientras sigan abiertos, no
