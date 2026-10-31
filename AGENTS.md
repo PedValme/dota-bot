@@ -26,6 +26,11 @@ once it exists.
     reemplazadas por una mejora grande con argumentos sólidos (cerebro de equipo con datos y criterio de juego), medida
     una sola vez al final, no una corrida por cada detalle (DECISIONES.md, 2026-10-30; diseño en `trabajo/cerebro-equipo.md`).
   - El objetivo es Turbo, medido imitado en el custom game con `--modo turbo` (DECISIONES.md, 2026-10-29).
+  - Puerta de medición antes de toda serie: partida de humo cotejada con el protocolo de `bench/README.md`, revisor
+    adversarial de la medición y pregunta escrita; por qué: cuatro reinicios por condiciones sin comprobar
+    (DECISIONES.md, 2026-10-31). La validez del orquestador es un control: se revisa antes, como el check.
+  - Una rama y un PR por tarea; mientras corre una serie, el trabajo paralelo va en otro worktree (DECISIONES.md,
+    2026-10-31).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).
 
 ## Where things are: one document per question

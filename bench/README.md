@@ -96,6 +96,14 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 | Lado, héroes y orden repartidos igual entre variantes | calendario por bloques (pruebas) | solo cuentan bloques completos |
 | Máquina libre | CPU y memoria por partida en `series.csv` | se anota; con carga alta, no se corre |
 
+Puerta antes de cada serie (DECISIONES 2026-10-31), sin excepción:
+1. Una partida de humo con `--observar`: su log se coteja fila por fila contra esta tabla (no el código).
+2. Un revisor adversarial (Opus, esfuerzo medio) lee ese log y la tabla con una sola pregunta, «¿qué hace mentir a
+   esta medición?», sin la conclusión del agente.
+3. Por escrito, antes de lanzar: la pregunta que responde la serie, qué cambió desde la anterior y qué queda sin
+   comprobar. Si algo de esa lista puede tumbar el resultado, no se lanza.
+Mientras corre una serie, el trabajo en paralelo va en otro worktree, en su propia rama.
+
 Sin comprobar (supuestos a la vista):
 - El sorteo de héroes sale de una lista recordada de los que saben jugar los bots de Valve, no de `BotImplemented`.
 - El Turbo imitado (couriers, oro y experiencia ×2, reaparición) no es el Turbo real: torres y runas son las normales.
