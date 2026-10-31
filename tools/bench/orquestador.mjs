@@ -169,9 +169,11 @@ export function drawHeroes(random = Math.random) {
 // Lua read by the custom game (tools/bench/addon/scripts/vscripts/addon_game_mode.lua).
 // turbo: the custom game imitates Turbo (Dota's real Turbo cannot run in a custom game: forcing game mode 23 changes
 // nothing and the VScript API has no switch for it, both checked 2026-10-29).
-export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false) {
+export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false, espejo = "") {
   const list = heroes.map((h) => `"${h}"`).join(", ");
-  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, heroes = { ${list} } }\n`;
+  // espejo: experimental ways to give Dire the drawn heroes too (addon_game_mode.lua), "entity" or "replace".
+  const mirror = espejo ? `espejo = "${espejo}", ` : "";
+  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, ${mirror}heroes = { ${list} } }\n`;
 }
 
 // With --observar: the custom game's lines and the engine's lines about the bots (script errors, slow bot functions,
@@ -323,6 +325,7 @@ function parseArgs(argv) {
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else if (k === "--observar") { opt.observar = true; i -= 1; } // a flag: takes no value
     else if (k === "--lado") opt.lado = v; // debugging one side: dota-bot always plays it (no side balance)
+    else if (k === "--espejo") opt.espejo = v; // experimental: "entity" or "replace" (addon_game_mode.lua)
     else if (k === "--rival") opt.rival = v; // "valve" (default) or "dotabot": both teams dota-bot, one variant each
     else throw new Error(`Opción desconocida: ${k}`);
   }
@@ -467,7 +470,7 @@ async function main(argv) {
       }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
       if (i % opt.block === 0) heroes = drawHeroes();
-      writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar)));
+      writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), opt.espejo ?? ""));
       latest = null;
       lastPost = 0;
       const short = heroes.map((h) => h.replace("npc_dota_hero_", "")).join(" ");

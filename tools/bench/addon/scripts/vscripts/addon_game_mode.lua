@@ -59,7 +59,13 @@ local function AddBots(cfg)
 	botsAdded = true
 	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
 		for slot, hero in ipairs(cfg.heroes) do
-			local ok = Tutorial:AddBot(hero, LANES[team][slot], cfg.difficulty, team == DOTA_TEAM_GOODGUYS)
+			local ok
+			if team == DOTA_TEAM_BADGUYS and cfg.espejo == "entity" then
+				-- Mirror test (2026-10-31): a bot added with its hero and team given directly.
+				ok = pcall(function() GameRules:AddBotPlayerWithEntityScript(hero, "dire" .. slot, DOTA_TEAM_BADGUYS, "", false) end)
+			else
+				ok = Tutorial:AddBot(hero, LANES[team][slot], cfg.difficulty, team == DOTA_TEAM_GOODGUYS)
+			end
 			print(string.format("[dotabench] AddBot team=%d slot=%d %s -> %s", team, slot, hero, tostring(ok)))
 		end
 	end
@@ -98,10 +104,33 @@ local function KeepHumansOut(why)
 	end
 end
 
+-- Mirror test "replace" (2026-10-31): once a Dire bot's hero really exists, swap it for its slot's hero (at pre-game
+-- ReplaceHeroWith said ok and changed nothing, maybe because the hero did not exist yet).
+local mirrored = {}
+local function MirrorOnSpawn(unit, pid)
+	local cfg = MatchConfig()
+	if cfg.espejo ~= "replace" or mirrored[pid] or unit:GetTeamNumber() ~= DOTA_TEAM_BADGUYS then return end
+	for slot = 1, PlayerResource:GetPlayerCountForTeam(DOTA_TEAM_BADGUYS) do
+		if PlayerResource:GetNthPlayerIDOnTeam(DOTA_TEAM_BADGUYS, slot) == pid then
+			local hero = cfg.heroes[slot]
+			if hero == nil or unit:GetUnitName() == hero then return end
+			mirrored[pid] = true
+			GameRules:GetGameModeEntity():SetThink(function()
+				local ok, err = pcall(function() PlayerResource:ReplaceHeroWith(pid, hero, PlayerResource:GetGold(pid), 0) end)
+				print(string.format("[dotabench] mirror slot=%d pid=%d %s -> %s ok=%s %s now=%s", slot, pid, unit:GetUnitName(),
+					hero, tostring(ok), tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))))
+				return nil
+			end, "dotabench_mirror_" .. pid, 0.5)
+			return
+		end
+	end
+end
+
 local function OnNpcSpawned(event)
 	local unit = EntIndexToHScript(event.entindex)
 	if not unit or not unit.IsRealHero or not unit:IsRealHero() then return end
 	local pid = unit:GetPlayerOwnerID()
+	if pid ~= nil and pid >= 0 and PlayerResource:IsFakeClient(pid) then MirrorOnSpawn(unit, pid) end
 	if not IsHuman(pid) then return end
 	print(string.format("[dotabench] human hero removed pid=%d team=%d %s", pid, unit:GetTeamNumber(), unit:GetUnitName()))
 	KeepHumanOut(pid, "hero spawned")
