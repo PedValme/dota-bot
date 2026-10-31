@@ -2,17 +2,19 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **En curso (2026-10-31, encargo de Pedro: reparar Dire con pruebas cortas, 2-3 soluciones a la vez).** Rama
-  `claude/cerebro-v2-builds` (sin fusionar). Hallado: en el custom game Dire juega con héroes al azar (selección,
-  estrategia y previa en el mismo segundo; tres intentos de espejo fallaron, documentado en addon_game_mode.lua); la
-  geometría de la API es relativa a cada equipo (medido, `[bench] geo`). El cerebro gana rápido pero muere ~2,5 veces
-  más que el base (Dire con héroes peores: 3/10). `cerebro_def` (defensa de los cinco) arregló las defensas por un
-  héroe; `prudente` no ayudó. Los bloques de 2 partidas por variante en Dire son ruido (héroes al azar en cada
-  partida; `dire-aislar` no aisló nada). Corriendo: `dire-ab`, 20 partidas en Dire `base,cerebro_def` intercaladas
-  (`node tools/bench/mecanismo.mjs dire-ab`, `resumir-serie.mjs dire-ab`): contesta si `cerebro_def` iguala al base.
-- Hecho en la rama: `--rival dotabot` (cada equipo su variante; partidas largas, falta un tope), `--lado`,
-  `tools/bench/mecanismo.mjs`, lógica Turbo de OHA activa también en el banco (`J.IsModeTurbo()`), cerebro v2 y builds.
-- Herramientas: `resumir-serie.mjs`, `mecanismo.mjs`, `analizar.mjs`; líneas `[bench] plan`, `plan_tick`, `geo`.
+- **2026-10-31, rama `claude/cerebro-v2-builds` (sin fusionar).** Causa de la «debilidad en Dire»: en el custom game
+  Dire jugaba con **héroes al azar** en todas las series anteriores. Resuelto: espejo con `ReplaceHeroWith` 0,5 s
+  después de aparecer (addon_game_mode.lua, por defecto; `--espejo no` lo apaga); comprobado con dota-bot y con Valve.
+  Las series anteriores por lado no valen. Geometría de la API: relativa a cada equipo (medido).
+- **Corriendo: serie `justa`** (12 partidas, `base,base_estado,cerebro_def`, los dos lados, espejo):
+  `node tools/bench/mecanismo.mjs justa` y `resumir-serie.mjs justa`. A la 5.ª: base 1/1, base_estado 0/2 y
+  cerebro_def 0/1 (las tres derrotas tras +10k). Una partida invalidada: Dota se cerró solo en el minuto 7.
+- Decisiones nuevas de Pedro (DECISIONES 2026-10-31): reglas por estado de partida y no por reloj (hecho como
+  variante `fase_estado`: fases por nivel medio calibrado con datos pro, `J.StateTime()`, farm y Roshan); punto dulce
+  del empuje en grupo; observadas: torres sin defender y ultis malgastadas (el observador ya registra `ult` y
+  defensores de torre). Siguiente: con la serie, decidir qué variante vale; filtro único de ultis y defensa de T1/T2.
+- Hecho en la rama: `--rival dotabot` (partidas largas, falta tope), `--lado`, `--espejo`, `mecanismo.mjs`, cerebro
+  v2, builds, `base_sinturbo` (`J.IsImitatedTurbo`), variantes de prueba de Dire.
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Sin cambios de juego activos por
