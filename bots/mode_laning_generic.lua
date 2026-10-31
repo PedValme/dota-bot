@@ -57,7 +57,9 @@ function GetDesire()
 		end
 	end
 
-	if GetGameMode() == 23 or J.IsImitatedTurbo() then currentTime = currentTime * 1.65 end
+	-- With "fase_estado" the minutes below are read from the state of the match (J.StateTime), with no Turbo multiplier.
+	if J.StatePhases() then currentTime = J.StateTime()
+	elseif GetGameMode() == 23 or J.IsImitatedTurbo() then currentTime = currentTime * 1.65 end
 	if currentTime < 0 then return BOT_ACTION_DESIRE_NONE end
 
 	-- if DotaTime() > 20 and DotaTime() - skipLaningState.lastCheckTime < skipLaningState.checkGap then

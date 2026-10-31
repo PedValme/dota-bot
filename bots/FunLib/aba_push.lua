@@ -56,7 +56,7 @@ function updateGameStateCache()
     local enemyTeam = GetOpposingTeam()
     local currentTime = DotaTime()
     local gameMode = GetGameMode()
-    local adjustedTime = (gameMode == 23 or jmz.IsImitatedTurbo()) and currentTime * 2 or currentTime
+    local adjustedTime = jmz.StatePhases() and jmz.StateTime() or ((gameMode == 23 or jmz.IsImitatedTurbo()) and currentTime * 2 or currentTime)
     gameStateCache = {
         lastUpdate = now,
         currentTime = adjustedTime,

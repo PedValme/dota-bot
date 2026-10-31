@@ -50,6 +50,12 @@ declare function IsModeTurbo(): boolean;
 
 declare function IsImitatedTurbo(): boolean;
 
+declare function StatePhases(): boolean;
+
+declare function StateTime(): number;
+
+declare function GamePhaseLevel(): number;
+
 declare function IsDoingRoshan(bot: Unit): boolean;
 
 declare function IsDoingTormentor(bot: Unit): boolean;

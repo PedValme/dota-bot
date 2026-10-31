@@ -77,6 +77,8 @@ export const VARIANTS = {
   // OHA's own Turbo logic (the GetGameMode() == 23 switches) off again in the imitated Turbo (2026-10-31: with it on,
   // dota-bot lost 6 of 6 as Dire).
   base_sinturbo: { sin_turbo_oha: true, thinkless: 1 },
+  // Phases and "how far the game is" by the state of the match instead of the clock (Pedro, 2026-10-31).
+  base_estado: { fase_estado: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };

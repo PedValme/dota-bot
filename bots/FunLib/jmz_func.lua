@@ -4343,7 +4343,58 @@ function J.GetNumOfTeamTotalKills( bEnemy )
 
 end
 
+-- Game phases by the state of the match, not the clock (Pedro, 2026-10-31: «todo debe estar amarrado a las condiciones
+-- de la partida»). The phase is the average level of the ten heroes (GetHeroLevel also works on hidden enemies), with
+-- thresholds at the levels a team has at OHA's minutes in 119 pro matches of normal mode
+-- (docs/investigacion/2026-10-30-datos-pro.md): minute 10 = 6.4, 14 = 8.5, 15 = 9.2, 30 = 16.6. In normal mode they
+-- fire about when OHA meant; in Turbo, where experience is doubled, they fire earlier on their own, with no clock
+-- multiplier. Benchmark variant "fase_estado" only, until measured.
+local nPhaseLevel, fPhaseLevelTime = 1, -1000
+function J.GamePhaseLevel()
+	if DotaTime() - fPhaseLevelTime < 1 then return nPhaseLevel end
+	fPhaseLevelTime = DotaTime()
+	local nSum, nCount = 0, 0
+	for _, team in ipairs( { GetTeam(), GetOpposingTeam() } )
+	do
+		for _, pid in ipairs( GetTeamPlayers( team ) )
+		do
+			local nLevel = GetHeroLevel( pid )
+			if nLevel ~= nil and nLevel > 0 then nSum, nCount = nSum + nLevel, nCount + 1 end
+		end
+	end
+	nPhaseLevel = nCount > 0 and nSum / nCount or 1
+	return nPhaseLevel
+end
+
+-- The normal-mode minute that matches the state of the match: the pro calibration (average level of a team by minute,
+-- normal mode) read backwards. OHA's rules that measure "how far the game is" in minutes keep their thresholds and get
+-- this instead of the clock (with "fase_estado"): about the clock in a typical normal game, earlier in Turbo, later
+-- when the game is slow. Seconds; the real clock before the horn.
+local tLevelByMinute = { { 0, 1 }, { 5, 3.6 }, { 8, 5.4 }, { 10, 6.4 }, { 12, 7.6 }, { 15, 9.2 }, { 18, 10.8 },
+	{ 20, 11.8 }, { 25, 14.4 }, { 30, 16.6 } }
+function J.StateTime()
+	if DotaTime() < 0 then return DotaTime() end
+	local l = J.GamePhaseLevel()
+	for i = 2, #tLevelByMinute
+	do
+		local a, b = tLevelByMinute[i - 1], tLevelByMinute[i]
+		if l <= b[2] then return 60 * ( a[1] + ( b[1] - a[1] ) * ( l - a[2] ) / ( b[2] - a[2] ) ) end
+	end
+	-- Past level 16.6, about 0.44 levels a minute as between minutes 25 and 30.
+	return 60 * ( 30 + ( l - 16.6 ) / 0.44 )
+end
+
+local bStatePhases = nil
+function J.StatePhases()
+	if bStatePhases == nil then
+		local ok, Customize = pcall( require, GetScriptDirectory()..'/Customize/general' )
+		bStatePhases = ok and type( Customize.BenchVariant ) == 'table' and Customize.BenchVariant.fase_estado == true
+	end
+	return bStatePhases
+end
+
 function J.IsEarlyGame()
+	if J.StatePhases() then return J.GamePhaseLevel() < 9.2 end
 	if DotaTime() < (J.IsModeTurbo() and 8 * 60 or 15 * 60) then
 		return true
 	end
@@ -4351,6 +4402,7 @@ function J.IsEarlyGame()
 end
 
 function J.IsMidGame()
+	if J.StatePhases() then local l = J.GamePhaseLevel(); return l >= 9.2 and l < 16.6 end
 	if DotaTime() > (J.IsModeTurbo() and 8 * 60 or 15 * 60) and DotaTime() < (J.IsModeTurbo() and 18 * 60 or 30 * 60) then
 		return true
 	end
@@ -4358,6 +4410,7 @@ function J.IsMidGame()
 end
 
 function J.IsLateGame()
+	if J.StatePhases() then return J.GamePhaseLevel() >= 16.6 end
 	if DotaTime() > (J.IsModeTurbo() and 18 * 60 or 30 * 60) then
 		return true
 	end
@@ -5602,6 +5655,14 @@ function J.AdjustLocationWithOffsetTowardsFountain(loc, distance)
 end
 
 function J.IsInLaningPhase()
+	-- By state (variant "fase_estado"): laning until the average level of minute 10 (6.4), or that of minute 14 (8.5)
+	-- while this bot is still poor, as OHA's clock rule below.
+	if J.StatePhases()
+	then
+		local l = J.GamePhaseLevel()
+		return DotaTime() < 0 or l < 6.4 or ( l < 8.5 and GetBot():GetNetWorth() < 8000 )
+	end
+
 	local nTime = DotaTime()
 	local bTurbo = J.IsModeTurbo()
 
