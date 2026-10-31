@@ -9,10 +9,15 @@
   - validez exige mismos héroes y patrimonio inicial por equipo y por héroe;
   - commit por partida, tope de 60 min, parada con más del 20 % inválidas, junctions comprobadas;
   - `rojas` en `.fabrica.json`.
-- Siguiente:
-  1. Repetir la partida de humo con el commit `5d8bfb5` o posterior y comprobar que Dota ya no se cierra solo.
-  2. Pasar el log al revisor adversarial.
-  3. Serie A contra A (`--variantes base,base_b`, 12 partidas), con la pregunta escrita antes en MEDICIONES.md.
+- Rama `claude/banco-s6` (sin PR): S6 corregido, línea de carga por bot, fase previa de 90 s (todos los héroes antes
+  del inicio), tope de 60 min válido. Falta la revisión de sus últimos commits antes del PR.
+- **Bloqueo: el espejo (`ReplaceHeroWith`) cierra Dota** en 5 de 16 partidas (1 de 126 sin él). Medido: el primer
+  equipo añadido recibe sus héroes, el segundo al azar (30 s de selección no cambia nada) y uno añadido 1 s tarde
+  ninguno.
+- **Espera a Pedro:** opción 1 recomendada (Dire 1 s tarde y `CreateHeroForPlayer` con el héroe sorteado, una
+  partida de humo); 2, sin espejo con la asimetría aceptada; 3, espejo con crashes inválidos.
+- Después: revisor adversarial del humo y serie A contra A (`--variantes base,base_b`, 12 partidas), con la pregunta
+  escrita antes en MEDICIONES.md.
 - La rama `claude/cerebro-v2-builds` se parte en un PR por tarea (orden de la fábrica, 2026-10-31).
 
 ## Madurez
