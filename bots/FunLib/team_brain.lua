@@ -314,6 +314,15 @@ local function SetState(state, info, now)
 	p.reason = info.reason or ''
 end
 
+local defendAll = nil
+local function DefendAll()
+	if defendAll == nil then
+		local ok, Customize = pcall(require, GetScriptDirectory()..'/Customize/general')
+		defendAll = ok and type(Customize.BenchVariant) == 'table' and Customize.BenchVariant.defensa_total == true
+	end
+	return defendAll
+end
+
 local function NearestAllies(loc, k)
 	local list = {}
 	for _, a in ipairs(Allies()) do if a:IsAlive() then table.insert(list, a) end end
@@ -382,6 +391,10 @@ function B.Update()
 	p.creepDefense = nil
 	if worst ~= nil and (worst.heroes >= 2 or (worst.heroes >= 1 and worst.inner)) then
 		local k = worst.heroes >= 3 and 5 or worst.heroes + 1
+		-- Variant "defensa_total" (2026-10-31): as Dire most of the brain's deaths were defending its base piecemeal
+		-- (107 deaths in DEFENDER, 74 inside the base, against 14 as Radiant), with 3 defenders against Valve's grouped
+		-- siege. With it, two enemy heroes at the base call all five.
+		if worst.heroes >= 2 and DefendAll() then k = 5 end
 		SetState('DEFENDER', { lane = worstLane, defendLane = worstLane, rally = worst.loc,
 			defenders = NearestAllies(worst.loc, k), reason = string.format('heroes=%d creeps=%d k=%d', worst.heroes, worst.creeps, k) }, now)
 		defendHoldUntil = now + 5
