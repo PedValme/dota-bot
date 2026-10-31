@@ -35,7 +35,7 @@
 //   bots/Customize/bench_observe.lua: the bots then print and log their mode in any local game (they play the same).
 import { spawn, execFile } from "node:child_process";
 import { createServer } from "node:http";
-import { existsSync, writeFileSync, unlinkSync, appendFileSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, writeFileSync, unlinkSync, appendFileSync, mkdirSync, readFileSync, statSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
@@ -159,6 +159,7 @@ export function validity({ outcome, roster, variant, loggedVariant, version, fir
   if (!start || start.radiant !== 5 || start.dire !== 5) return "sin registro de inicio";
   if (roster.mismos !== true || start.mismos !== true) return "héroes distintos por lado";
   if (Math.abs(start.nwRadiant - start.nwDire) > START_NW_GAP) return `patrimonio inicial ${start.nwRadiant}-${start.nwDire}`;
+  if ((start.heroGap ?? Infinity) > START_HERO_GAP) return `patrimonio inicial de un héroe (diferencia ${start.heroGap})`;
   if (roster.humano !== "fuera" && roster.humano !== "heroe-quitado") return `humano ${roster.humano || "?"}`;
   if (loggedVariant === null || loggedVariant === undefined) return "variante sin registro en el log";
   if ((variant || "") !== loggedVariant) return `variante ${loggedVariant || "ninguna"} en el log`;
@@ -176,7 +177,8 @@ export function summarize(results, variants) {
   return (variants.length ? variants : [""]).map((v) => {
     const rows = complete.filter((r) => r.variante === v);
     return { variante: v, ganadas: rows.filter((r) => r.ganador === r.dotabot).length, validas: rows.length,
-      jugadas: results.filter((r) => r.variante === v).length };
+      jugadas: results.filter((r) => r.variante === v).length,
+      topes: results.filter((r) => r.variante === v && r.resultado === "tope").length };
   });
 }
 const TIMELINES = join(root, "bench", "lineas");
@@ -331,12 +333,21 @@ export function parseStart(text) {
   }
   const set = (t) => teams[t].map((p) => p.hero).sort().join(" ");
   const nw = (t) => teams[t].reduce((a, p) => a + p.nw, 0);
-  return { radiant: teams[2].length, dire: teams[3].length, mismos: teams[2].length > 0 && set(2) === set(3),
-    nwRadiant: nw(2), nwDire: nw(3) };
+  const none = [...teams[2], ...teams[3]].some((p) => p.hero === "none");
+  // The largest gap between the two copies of one hero: a team total can hide one hero short of its first item.
+  let heroGap = 0;
+  for (const p of teams[2]) {
+    const twin = teams[3].find((q) => q.hero === p.hero);
+    if (twin) heroGap = Math.max(heroGap, Math.abs(p.nw - twin.nw));
+  }
+  return { radiant: teams[2].length, dire: teams[3].length, mismos: !none && teams[2].length > 0 && set(2) === set(3),
+    nwRadiant: nw(2), nwDire: nw(3), heroGap };
 }
 
-// Largest gap in starting net worth between the teams that still counts as the same start (purchase timing).
+// Largest gaps in starting net worth that still count as the same start (passive gold while slot 1 spawns late):
+// per team and between the two copies of one hero.
 export const START_NW_GAP = 300;
+export const START_HERO_GAP = 100;
 
 // The variant file the custom game found at the start ("[dotabench] variant name=base ..." or "variant none").
 export function parseVariant(text) {
@@ -428,7 +439,7 @@ function gitOut(args) {
 
 async function currentCode() {
   return codeState(await gitOut(["rev-parse", "HEAD"]),
-    await gitOut(["status", "--porcelain", "--", "bots", "tools/bench/addon"]));
+    await gitOut(["--no-optional-locks", "status", "--porcelain", "--", "bots", "tools/bench"]));
 }
 
 function running(image) {
@@ -521,8 +532,18 @@ async function main(argv) {
       const [head, ...rest] = readFileSync(CSV, "utf8").split("\n");
       if (head.trim() !== COLUMNS.join(",")) writeFileSync(CSV, [COLUMNS.join(","), ...rest].join("\n"));
     }
+    // Dota plays the clone its junctions point to (tools/instalar.ps1): from any other worktree, the files this script
+    // writes and the commit it records would not be what plays.
+    const real = (p) => { try { return realpathSync(p).toLowerCase(); } catch { return "?" + p; } };
+    if (real(resolve(opt.dota, "game/dota_addons/dotabench")) !== real(join(root, "tools/bench/addon"))
+      || real(join(root, "tools/bench/addon/scripts/vscripts/bots")) !== real(join(root, "bots"))) {
+      throw new Error("Dota no juega este clon (las junctions de tools/instalar.ps1 apuntan a otro); paro.");
+    }
     const firstCodigo = await currentCode();
     console.log(`Código de la serie: ${firstCodigo}`);
+    if (/\?|\+cambios/.test(firstCodigo)) {
+      throw new Error(`El código de bots/, del custom game o del orquestador no tiene commit (${firstCodigo}); ninguna partida valdría. Paro.`);
+    }
     const results = [];
     let heroes = [];
     for (let i = 0; i < opt.partidas; i++) {
@@ -649,7 +670,7 @@ async function main(argv) {
       const [s] = summarize(results, [opt.variantes[0]]);
       console.log(`${opt.variantes[0]} ganó ${s.ganadas} de ${s.validas} partidas válidas contra ${opt.variantes[1]} (jugó ${s.jugadas}). Detalle en bench/series.csv.`);
     } else for (const s of summarize(results, opt.variantes)) {
-      console.log(`${s.variante ? `Variante ${s.variante}: ` : ""}dota-bot ganó ${s.ganadas} de ${s.validas} partidas válidas de bloques completos (jugó ${s.jugadas}). Detalle en bench/series.csv.`);
+      console.log(`${s.variante ? `Variante ${s.variante}: ` : ""}dota-bot ganó ${s.ganadas} de ${s.validas} partidas válidas de bloques completos (jugó ${s.jugadas}; ${s.topes} llegaron al tope de ${GAME_CAP_MIN} min). Detalle en bench/series.csv.`);
     }
   } finally {
     cleanup();

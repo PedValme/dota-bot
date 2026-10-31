@@ -114,17 +114,34 @@ local function MirrorOnSpawn(unit, pid)
 			GameRules:GetGameModeEntity():SetThink(function()
 				-- The random hero may already have bought its starting items, and they vanish with it: their cost goes
 				-- back as gold (before 2026-10-31 it did not, and Dire started up to ~2.000 net worth behind).
-				local refund = 0
+				-- The gold given is the player's net worth (gold plus items at their buy value, a whole stack of tangos
+				-- included; the free TP does not count), and items with a team stock (wards, smoke) go back to it: wards
+				-- cost 0 and Dire used to start without them (review 2026-10-31).
+				local refund, restocked = 0, {}
 				if IsValidEntity(unit) then
 					for i = 0, 16 do
 						local item = unit:GetItemInSlot(i)
-						if item and item:GetAbilityName() ~= "item_tpscroll" then refund = refund + item:GetCost() end
+						local name = item and item:GetAbilityName()
+						if name and name ~= "item_tpscroll" then
+							refund = refund + item:GetCost()
+							local stock = ({ item_ward_observer = true, item_ward_sentry = true, item_smoke_of_deceit = true,
+								item_ward_dispenser = true })[name]
+							if stock then
+								local base = name == "item_ward_dispenser" and { "item_ward_observer", "item_ward_sentry" } or { name }
+								for _, b in ipairs(base) do
+									local n = math.max(1, (name == "item_ward_dispenser") and 1 or item:GetCurrentCharges())
+									local okStock = pcall(function() GameRules:IncreaseItemStock(DOTA_TEAM_BADGUYS, b, n, -1) end)
+									table.insert(restocked, b .. "x" .. n .. (okStock and "" or "!"))
+								end
+							end
+						end
 					end
 				end
-				local gold = PlayerResource:GetGold(pid) + refund
+				local gold = math.max(PlayerResource:GetNetWorth(pid), PlayerResource:GetGold(pid) + refund)
 				local ok, err = pcall(function() PlayerResource:ReplaceHeroWith(pid, hero, gold, 0) end)
 				print(string.format("[dotabench] mirror slot=%d pid=%d %s -> %s ok=%s %s now=%s", slot, pid, unit:GetUnitName(),
-					hero, tostring(ok), tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))) .. " refund=" .. refund)
+					hero, tostring(ok), tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))) .. " refund=" .. refund .. " gold=" .. gold
+					.. " restock=" .. (#restocked > 0 and table.concat(restocked, ",") or "-"))
 				return nil
 			end, "dotabench_mirror_" .. pid, 0.5)
 			return
