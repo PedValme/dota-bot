@@ -339,6 +339,20 @@ local function StartObserver()
 	end)
 	Listen("dota_player_used_ability", function(e)
 		Obs("cast pid=%s %s %s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.abilityname))
+		-- Ultimates (Pedro, 2026-10-31: ultimates thrown at creeps or at nothing in the own base): where the caster is
+		-- and which enemy heroes were near, to tell wasted ones from global ones (e.g. Zeus) that are fine from base.
+		local hero = e.PlayerID ~= nil and e.PlayerID >= 0 and PlayerResource:GetSelectedHeroEntity(e.PlayerID) or nil
+		local ability = hero and e.abilityname and hero:FindAbilityByName(e.abilityname) or nil
+		if ability and ability:GetAbilityType() == ABILITY_TYPE_ULTIMATE then
+			local pos = hero:GetAbsOrigin()
+			local enemies = FindUnitsInRadius(hero:GetTeamNumber(), pos, nil, 2500, DOTA_UNIT_TARGET_TEAM_ENEMY,
+				DOTA_UNIT_TARGET_HERO, DOTA_UNIT_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES, FIND_CLOSEST, false)
+			local near = 0
+			for _, en in ipairs(enemies) do if en:IsRealHero() and (en:GetAbsOrigin() - pos):Length2D() <= 1200 then near = near + 1 end end
+			local nearest = enemies[1] and math.floor((enemies[1]:GetAbsOrigin() - pos):Length2D()) or -1
+			Obs("ult pid=%d team=%d %s %s x=%d y=%d enemies1200=%d nearest=%d", e.PlayerID, hero:GetTeamNumber(),
+				HeroOf(e.PlayerID), e.abilityname, pos.x, pos.y, near, nearest)
+		end
 	end)
 	Listen("entity_killed", function(e)
 		local victim, vteam, vpid = UnitName(e.entindex_killed)
@@ -347,7 +361,19 @@ local function StartObserver()
 			or victim == "npc_dota_roshan")
 		if not important then return end
 		local killer, kteam, kpid = UnitName(e.entindex_attacker)
-		Obs("kill victim=%s vteam=%d vpid=%d killer=%s kteam=%d kpid=%d", victim, vteam, vpid, killer, kteam, kpid)
+		-- For towers (Pedro, 2026-10-31: towers left undefended while each hero goes its own way): how many heroes of
+		-- each team were near when it fell.
+		local around = ""
+		if unit:IsTower() then
+			local pos, own, foe = unit:GetAbsOrigin(), 0, 0
+			for _, h in ipairs(HeroList:GetAllHeroes()) do
+				if h:IsRealHero() and h:IsAlive() and (h:GetAbsOrigin() - pos):Length2D() <= 1500 then
+					if h:GetTeamNumber() == vteam then own = own + 1 else foe = foe + 1 end
+				end
+			end
+			around = string.format(" defenders1500=%d attackers1500=%d", own, foe)
+		end
+		Obs("kill victim=%s vteam=%d vpid=%d killer=%s kteam=%d kpid=%d%s", victim, vteam, vpid, killer, kteam, kpid, around)
 	end)
 	Listen("dota_rune_activated_server", function(e)
 		Obs("rune pid=%s %s rune=%s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.rune))
