@@ -2,13 +2,16 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Cerebro de equipo v1 construido y medido** (variante `cerebro`, apagado por defecto; resultado arriba de
-  [trabajo/cerebro-equipo.md](trabajo/cerebro-equipo.md)). Serie `cerebro-ab`: cierra en 10 min frente a 19, pero gana
-  8/12 frente a 11/12 (Dire 2/6). Pierde al cerrar en high ground y cuando un split-pusher arrastra a los defensores.
-- **Espera a Pedro:** recomendado una v2 corta sobre esos dos fallos (cerrar solo con pelea favorable y retirarse si
-  falla; un héroe enemigo solo no arrastra a dos) y una sola serie más; o dejarlo apagado y pasar a builds.
-- Herramientas: `node tools/bench/resumir-serie.mjs <etiqueta>`, `tools/bench/analizar.mjs`, líneas `[bench] plan`
-  y `plan_tick` en `bench/observaciones/`.
+- **En curso (2026-10-31, encargo de Pedro: reparar Dire con pruebas cortas, 2-3 soluciones a la vez).** Rama
+  `claude/cerebro-v2-builds` (sin fusionar). Hallado: en el custom game Dire juega con héroes al azar (selección,
+  estrategia y previa en el mismo segundo; tres intentos de espejo fallaron, documentado en addon_game_mode.lua); la
+  geometría de la API es relativa a cada equipo (medido, `[bench] geo`). El cerebro gana rápido pero muere ~2,5 veces
+  más que el base (Dire con héroes peores: 3/10). `cerebro_def` (defensa de los cinco) arregló las defensas por un
+  héroe; `prudente` no ayudó. Serie `dire-aislar` corriendo: `cerebro_sinbuilds`, `cerebro_sinpelea`, `builds`, para
+  aislar de dónde salen las muertes (`node tools/bench/mecanismo.mjs dire-fix dire-aislar`).
+- Hecho en la rama: `--rival dotabot` (cada equipo su variante; partidas largas, falta un tope), `--lado`,
+  `tools/bench/mecanismo.mjs`, lógica Turbo de OHA activa también en el banco (`J.IsModeTurbo()`), cerebro v2 y builds.
+- Herramientas: `resumir-serie.mjs`, `mecanismo.mjs`, `analizar.mjs`; líneas `[bench] plan`, `plan_tick`, `geo`.
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Sin cambios de juego activos por
