@@ -1,4 +1,4 @@
-fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano,heroes,ventaja_oro_max,minuto_10k,torres_fin,dota_version,cpu_media,cpu_max,mem_libre,modo
+fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,resultado,minutos,kills_radiant,kills_dire,humano,heroes,ventaja_oro_max,minuto_10k,torres_fin,dota_version,cpu_media,cpu_max,mem_libre,modo,codigo,rival
 2026-10-29T18:03,prueba-sonda,1,1,sonda,no,sin final,4,radiant,,dota-cerrado,10,0,9,fuera,drow_ranger lina sand_king skywrath_mage lich / lion bristleback kunkka jakiro sniper,158,,11-11,6969,23,27,59
 2026-10-29T18:17,prueba-sonda,2,1,empuje,si,,4,radiant,radiant,final,43,73,15,fuera,drow_ranger lina sand_king skywrath_mage lich / bounty_hunter necrolyte sven warlock dragon_knight,33671,21,6-1,6969,20,25,54
 2026-10-29T18:40,empuje-ab,1,1,base,si,,4,radiant,radiant,final,52,55,31,fuera,skeleton_king sniper tidehunter vengefulspirit crystal_maiden / axe earthshaker chaos_knight death_prophet bloodseeker,34459,42,4-1,6969,19,27,53
@@ -132,3 +132,7 @@ fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,
 2026-10-31T12:52,justa,4,1,base,no,sin final,4,dire,,dota-cerrado,7,3,4,fuera,juggernaut death_prophet dragon_knight skywrath_mage oracle / chaos_knight crystal_maiden tiny zuus bane,737,,11-11,6969,26,31,52,turbo
 2026-10-31T13:05,justa,5,1,base_estado,si,,4,dire,radiant,final,32,20,27,fuera,juggernaut death_prophet dragon_knight skywrath_mage oracle / witch_doctor phantom_assassin warlock nevermore necrolyte,18615,12,8-1,6969,26,34,46,turbo
 2026-10-31T13:09,justa,6,1,cerebro_def,no,sin final,4,dire,,dota-cerrado,8,5,1,fuera,juggernaut death_prophet dragon_knight skywrath_mage oracle / zuus jakiro tiny phantom_assassin earthshaker,-1018,,11-10,6969,30,37,48,turbo
+2026-10-31T13:44,justa,7,2,cerebro_def,si,,4,dire,dire,final,57,41,61,fuera,skeleton_king zuus axe vengefulspirit crystal_maiden / phantom_assassin oracle juggernaut skywrath_mage pudge,27773,16,0-3,6969,28,64,48,turbo
+2026-10-31T14:05,justa,8,2,base_estado,si,,4,dire,radiant,final,40,31,48,fuera,skeleton_king zuus axe vengefulspirit crystal_maiden / dragon_knight omniknight lich bounty_hunter tidehunter,43858,27,4-3,6969,32,42,45,turbo
+2026-10-31T14:35,humo,1,1,,si,,4,radiant,radiant,final,39,43,17,fuera,phantom_assassin viper dragon_knight vengefulspirit warlock / phantom_assassin viper dragon_knight vengefulspirit warlock,78656,13,10-0,6969,56,93,44,turbo
+2026-10-31T14:43,humo,1,1,,no,sin final,4,radiant,,dota-cerrado,15,22,7,fuera,juggernaut razor sand_king lion warlock / juggernaut razor sand_king lion warlock,16838,11,11-10,6969,44,67,47,turbo,8b602799af26,valve
