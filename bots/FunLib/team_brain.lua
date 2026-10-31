@@ -422,7 +422,10 @@ function B.Update()
 	-- Roshan is an option only once a team can kill it (from minute 10 in Turbo, 20 in normal) and not within 3 min of
 	-- a failed attempt.
 	local turbo = J ~= nil and J.IsModeTurbo and J.IsModeTurbo()
-	local roshanReady = RoshanAlive(now) and not hasAegis and now > (turbo and 10 or 20) * 60 and now - lastRoshanFail > 180
+	-- "Once a team can kill it": minute 20 of a normal game, read from the state of the match with "fase_estado".
+	local roshanTime = (J ~= nil and J.StatePhases and J.StatePhases()) and J.StateTime() > 20 * 60
+		or (not (J ~= nil and J.StatePhases and J.StatePhases()) and now > (turbo and 10 or 20) * 60)
+	local roshanReady = RoshanAlive(now) and not hasAegis and roshanTime and now - lastRoshanFail > 180
 
 	-- 3) Fight won: take the nearest objective before they respawn.
 	if enemyDeaths - allyDeaths >= 2 and aliveA >= aliveE + 2 then
