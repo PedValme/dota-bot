@@ -672,8 +672,18 @@ local function SelectTopWithFuzz(scored)
 	return scored[1].name
 end
 
+local tBenchHeroes = dofile(GetScriptDirectory()..'/FunLib/bench_heroes')
+
 local function PickHeroForBotSlot(i, id)
 	local team = TeamOfPlayer(id)
+
+	-- dota-bot benchmark (FunLib/bench_heroes.lua): the drawn hero of this player's position, by its slot in the team
+	-- (the position the bot plays, FunLib/aba_role.lua), not by the shuffled pick order.
+	if tBenchHeroes ~= nil then
+		for slot, pid in ipairs(GetTeamPlayers(team)) do
+			if pid == id and tBenchHeroes[slot] ~= nil then return tBenchHeroes[slot] end
+		end
+	end
 	local rolePool = tSelectPoolList[i]
 	local preselect = sSelectList[i]
 
