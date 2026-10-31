@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
-  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, codeState, tooManyInvalid, variantLua,
+  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, parseCouriers, codeState, tooManyInvalid, variantLua,
   VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
@@ -47,7 +47,12 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
   const start = { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005, heroGap: 20 };
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true, viejos: 0 }, variant: "base",
     loggedVariant: "base", version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal", start,
-    codigo: "abc123", firstCodigo: "abc123" };
+    codigo: "abc123", firstCodigo: "abc123", couriers: { radiant: 5, dire: 5, slowRadiant: 290, slowDire: 290 } };
+  assert.match(validity({ ...ok, couriers: undefined }), /couriers 0-0/);
+  assert.match(validity({ ...ok, couriers: { ...ok.couriers, dire: 3 } }), /couriers 5-3/);
+  assert.match(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), /couriers lentos 290-290/);
+  assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo",
+    couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 } }), "");
   assert.match(validity({ ...ok, outcome: "tope" }), /tope de 60 min/);
   assert.match(validity({ ...ok, codigo: "abc123+cambios" }), /código sin commit/);
   assert.match(validity({ ...ok, codigo: undefined }), /código sin commit/);
@@ -143,7 +148,7 @@ test("the mode the custom game applied is read from the log and must match the s
   assert.equal(parseModo("nothing"), "");
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true, viejos: 0 }, variant: "", loggedVariant: "",
     version: "1", firstVersion: "1", start: { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005, heroGap: 0 },
-    codigo: "a", firstCodigo: "a" };
+    codigo: "a", firstCodigo: "a", couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 } };
   assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), "");
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "normal" }), /modo/);
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "" }), /modo/);
@@ -217,6 +222,13 @@ test("each match records its commit, marked when bots/ had uncommitted changes; 
   assert.equal(tooManyInvalid(rows(2, 10)), false);
   assert.equal(tooManyInvalid(rows(3, 10)), true);
   assert.deepEqual(VARIANTS.base_b, VARIANTS.base);
+});
+
+test("couriers alive per team at minute 1, with the slowest speed per side", () => {
+  const line = (team, n, speeds) => `[VScript] [dotabench] couriers team=${team} n=${n} speeds=${speeds}`;
+  assert.deepEqual(parseCouriers([line(2, 5, "1100/1100/1100/1100/1100"), line(3, 4, "1100/1100/290/1100")].join("\r\n")),
+    { radiant: 5, dire: 4, slowRadiant: 1100, slowDire: 290 });
+  assert.deepEqual(parseCouriers(line(3, 0, "")), { radiant: 0, dire: 0, slowRadiant: 0, slowDire: 0 });
 });
 
 test("the start line tells the heroes really controlled and each team's starting net worth", () => {

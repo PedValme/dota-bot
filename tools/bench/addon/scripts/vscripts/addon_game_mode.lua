@@ -143,8 +143,8 @@ local function MirrorOnSpawn(unit, pid)
 					hero, tostring(ok), tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))) .. " refund=" .. refund .. " gold=" .. gold
 					.. " restock=" .. (#restocked > 0 and table.concat(restocked, ",") or "-"))
 				-- ReplaceHeroWith does not remove the old hero: it stayed in the world (seen acting at 0:13 and 0:17 after
-				-- the swap), and Dota closed itself with an access violation in 3 of 11 mirrored matches (none before the
-				-- mirror). It is removed once the new hero is the player's.
+				-- the swap), and Dota closed itself with an access violation in 3 of 12 mirrored matches (1 in 126 before
+				-- the mirror). It is removed once the new hero is the player's.
 				GameRules:GetGameModeEntity():SetThink(function()
 					local removed = false
 					if IsValidEntity(unit) and unit ~= PlayerResource:GetSelectedHeroEntity(pid) then
@@ -315,6 +315,17 @@ local function PrintMode()
 	end
 	print("[dotabench] mode couriers=" .. #speeds .. " speeds=" .. table.concat(speeds, "/")
 		.. " by_class=" .. #Entities:FindAllByClassname("npc_dota_courier"))
+	-- Per team, alive, for the orchestrator's validity: nobody had couriers before 2026-10-29, and the mirror removes
+	-- the hero each Dire courier first belonged to.
+	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
+		local alive = {}
+		for _, courier in ipairs(Entities:FindAllByClassname("npc_dota_courier")) do
+			if courier:GetTeamNumber() == team and courier:IsAlive() then
+				table.insert(alive, tostring(math.floor(courier:GetIdealSpeed())))
+			end
+		end
+		print(string.format("[dotabench] couriers team=%d n=%d speeds=%s", team, #alive, table.concat(alive, "/")))
+	end
 end
 
 local lastMinute = -1

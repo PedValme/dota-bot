@@ -146,7 +146,7 @@ export function schedule(i, variants) {
 // pre-game; that the bots apply it was checked once with the "sonda" variant (bench/README.md) and each match logs
 // casts per team. (The bots' print does reach the log, but only in observer mode: OHA silences it otherwise.)
 export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo,
-  espejo = "", start, codigo, firstCodigo }) {
+  espejo = "", start, codigo, firstCodigo, couriers }) {
   if (outcome === "tope") return `tope de ${GAME_CAP_MIN} min`;
   if (outcome !== "final") return "sin final";
   if (codigo === undefined || codigo.endsWith("+cambios")) return "código sin commit";
@@ -159,6 +159,13 @@ export function validity({ outcome, roster, variant, loggedVariant, version, fir
   if (!start || start.radiant !== 5 || start.dire !== 5) return "sin registro de inicio";
   if (roster.mismos !== true || start.mismos !== true) return "héroes distintos por lado";
   if (roster.viejos !== 0) return `héroe reemplazado sin borrar (${roster.viejos ?? "?"})`;
+  // Five couriers alive per side at minute 1, Turbo ones (1100) in turbo: S1 (no couriers) must not come back.
+  if (!couriers || couriers.radiant !== 5 || couriers.dire !== 5) {
+    return `couriers ${couriers?.radiant ?? 0}-${couriers?.dire ?? 0}`;
+  }
+  if (modo === "turbo" && Math.min(couriers.slowRadiant, couriers.slowDire) < 1100) {
+    return `couriers lentos ${couriers.slowRadiant}-${couriers.slowDire}`;
+  }
   if (Math.abs(start.nwRadiant - start.nwDire) > START_NW_GAP) return `patrimonio inicial ${start.nwRadiant}-${start.nwDire}`;
   if ((start.heroGap ?? Infinity) > START_HERO_GAP) return `patrimonio inicial de un héroe (diferencia ${start.heroGap})`;
   if (roster.humano !== "fuera" && roster.humano !== "heroe-quitado") return `humano ${roster.humano || "?"}`;
@@ -348,6 +355,20 @@ export function parseStart(text) {
   }
   return { radiant: teams[2].length, dire: teams[3].length, mismos: !none && teams[2].length > 0 && set(2) === set(3),
     nwRadiant: nw(2), nwDire: nw(3), heroGap };
+}
+
+// Couriers alive per team at minute 1 ("[dotabench] couriers team=3 n=5 speeds=1100/1100/..."): radiant, dire and
+// the slowest speed on each side.
+export function parseCouriers(text) {
+  const out = { radiant: 0, dire: 0, slowRadiant: 0, slowDire: 0 };
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/\[dotabench\] couriers team=(\d) n=(\d+) speeds=(\S*)/);
+    if (!m) continue;
+    const slow = m[3] ? Math.min(...m[3].split("/").map(Number)) : 0;
+    if (m[1] === "2") Object.assign(out, { radiant: Number(m[2]), slowRadiant: slow });
+    if (m[1] === "3") Object.assign(out, { dire: Number(m[2]), slowDire: slow });
+  }
+  return out;
 }
 
 // Largest gaps in starting net worth that still count as the same start (passive gold while a late hero spawns):
@@ -618,6 +639,7 @@ async function main(argv) {
       let timeline = [];
       let roster = { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false };
       let start = null;
+      let couriers = null;
       let loggedVariant = null;
       let loggedModo = "";
       try {
@@ -627,6 +649,7 @@ async function main(argv) {
           timeline = parseTimeline(log);
           roster = parseRoster(log);
           start = parseStart(log);
+          couriers = parseCouriers(log);
           loggedVariant = parseVariant(log);
           loggedModo = parseModo(log);
           if (opt.observar) {
@@ -640,7 +663,7 @@ async function main(argv) {
       const codigoDespues = await currentCode();
       const codigo = codigoAntes === codigoDespues ? codigoDespues : `${codigoDespues.replace("+cambios", "")}+cambios`;
       const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo,
-        espejo: opt.espejo ?? "", start, codigo, firstCodigo });
+        espejo: opt.espejo ?? "", start, codigo, firstCodigo, couriers });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));

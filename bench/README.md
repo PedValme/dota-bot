@@ -102,7 +102,9 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 | La partida terminó | GSI da ganador | `sin final` |
 | 5 bots por lado, humano fuera | `[dotabench] roster` | `reparto`, `humano` |
 | Mismos cinco héroes en los dos lados | `roster` + `mirror ok=true` y, cuando están los 10, `[dotabench] start` (héroe de la entidad) | `héroes distintos por lado`, `sin registro de inicio` |
-| Mismo patrimonio inicial (±300 por equipo) | `start ... nw=`; el espejo devuelve el coste de los objetos del héroe quitado (`refund=`) | `patrimonio inicial R-D` |
+| Mismo patrimonio inicial (±300 por equipo, ±100 por héroe) | `start ... nw=`; el espejo da el patrimonio del héroe quitado (`gold=`) y devuelve guardianes y humo al stock (`restock=`) | `patrimonio inicial R-D`, `patrimonio inicial de un héroe` |
+| Ningún héroe reemplazado queda en el mapa | `[dotabench] mirror_old removed=true` por cada cambio | `héroe reemplazado sin borrar` |
+| 5 couriers vivos por lado en el minuto 1, Turbo (1100) en `--modo turbo` | `[dotabench] couriers team= n= speeds=` | `couriers R-D`, `couriers lentos` |
 | Espejo encendido | `--espejo no` es solo para depurar | `espejo apagado` |
 | Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |
 | Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |

@@ -5,7 +5,8 @@
   "rojas": [
     "^tools/bench/",
     "^bots/FunLib/bench_",
-    "^tools/check/"
+    "^tools/check/",
+    "^bench/README\\.md$"
   ],
   "protocolo": "fabrica/2",
   "categoria": "construccion",

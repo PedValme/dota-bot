@@ -37,8 +37,9 @@ archivo de variante. Ninguna medida aún sin contaminación.
 
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
-- **Banco: Dota se cierra solo** (access violation) en 3 de 11 partidas con espejo; ninguna antes del espejo. Causa
-  probable: el héroe reemplazado seguía en el mapa. Corregido en `5d8bfb5` (se borra), **sin comprobar** aún.
+- **Banco: Dota se cierra solo** (access violation) en 3 de 12 partidas con espejo; antes del espejo, 1 en 126.
+  Causa probable: el héroe reemplazado seguía en el mapa. Corregido en `5d8bfb5` (se borra), **sin comprobar** aún,
+  como tampoco que los couriers de Dire sobreviven a ese borrado (ahora es un control de validez).
 - **Banco: héroes que aparecen tarde.** El héroe del puesto 1 de cada equipo apareció unos 20 s de juego después del
   inicio en una partida de humo, en los dos lados por igual. Sin explicar. La línea `start` espera a que estén todos.
 - **Banco, sin comprobar:**

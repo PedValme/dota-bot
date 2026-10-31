@@ -16,7 +16,10 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - **S4, Dire con héroes al azar:** Radiant jugaba los cinco sorteados y Dire, cinco al azar. Afecta a todas las series
   hasta `dire-ab` incluida y favorece a quien jugaba en Radiant.
 - **S5, el espejo con fallos (`justa`):** Dire perdía los objetos iniciales, los guardianes y el humo; el héroe viejo
-  seguía en el mapa; y Dota se cerró solo 3 veces en 11 partidas con espejo.
+  seguía en el mapa; y Dota se cerró solo 3 veces en 12 partidas con espejo (antes del espejo, 1 vez en 126:
+  `prueba-sonda`, 2026-10-29, causa desconocida).
+- **Filas contaminadas en `series.csv`:** muchas filas de series con estos sesgos dicen `valida=si`, porque la
+  validez de entonces no los miraba. Esa columna solo vale desde el banco del 2026-10-31.
 - **R, sin registro:** ninguna serie anterior anotó el commit; el estado de la máquina solo quedó por partida
   (`cpu_media`, `mem_libre`) desde el 2026-10-29.
 
@@ -64,7 +67,7 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Validez: S3, S4 y R. La diferencia entre lados era S4, no un fallo de posición.
 - Decisión: parar y arreglar Dire (DECISIONES 2026-10-31). La causa que se buscó era errónea.
 
-### 2026-10-31 · `v2-dire`, `dire-fix`, `dire-aislar`, `dire-ab`, `turbo-oha` (21, Turbo, todo en Dire)
+### 2026-10-31 · `v2-dire`, `dire-fix`, `dire-aislar`, `dire-ab`, `turbo-oha` (25, Turbo, todo en Dire)
 - Pregunta: ¿qué hace perder a dota-bot en Dire?
 - Resultado:
   - `v2-dire`: 2 de 6;
