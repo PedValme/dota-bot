@@ -126,3 +126,23 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Validez: puerta del nivel 0, no comparación.
 - Decisión: mismo enfrentamiento en los dos lados en lugar de mismos héroes (DECISIONES 2026-10-31); se quitan el
   espejo y la creación de héroes.
+
+### 2026-10-31 · `humo` del banco final (2 partidas, rama `claude/banco-s6`, PR #24)
+- Pregunta: puerta del nivel 0; ¿pasan todos los controles con dota-bot en cada lado?
+- Resultado: 2 de 2 válidas (43 y 29 min, sin cierres); cada equipo con su grupo, todos los héroes antes del inicio,
+  ningún héroe de Valve jugado por dota-bot, couriers Turbo y patrimonio inicial parejo. Antes, dos partidas
+  invalidadas por el propio control de código al tocar el orquestador y hacer un commit durante la serie (corregido:
+  se comparan los árboles de `bots/` y `tools/bench/`).
+- Decisión: pasar a la serie A contra A.
+
+### 2026-10-31 · `aa` (serie A contra A, nivel 0) — pregunta escrita antes de lanzarla
+- Pregunta: con dos versiones idénticas, ¿cuánto se separan por azar (el ruido) y cuánto gana el lado del mapa por sí
+  solo? Sin eso, ninguna diferencia entre variantes se puede leer.
+- Qué cambió desde la anterior: nada en el bot; primera serie con el banco completo (PR #24).
+- Configuración: `--variantes base,base_b --partidas 12 --modo turbo`, sin observador, Valve en Injusto, ×4. Bloques de
+  4 (cada variante en los dos lados, mismo enfrentamiento), 3 bloques.
+- Métricas, fijadas antes: victorias por brazo; victorias de dota-bot en Radiant frente a Dire; minutos de partida y
+  minuto de +10.000 hasta el final, con su dispersión por brazo; partidas inválidas y topes.
+- Qué se espera: brazos parecidos. Una diferencia grande entre brazos idénticos mide el ruido que tendrá cualquier
+  comparación de 12 partidas.
+- Sin comprobar que puede pesar: la velocidad real variable (×1,6 a ×3,4); la lista de héroes del sorteo, recordada.
