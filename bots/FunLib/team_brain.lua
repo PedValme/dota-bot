@@ -26,6 +26,7 @@ local enemyUltSeen = {} -- unit name -> DotaTime() we last saw it cast its ultim
 local holdUntil = -1000      -- REAGRUPAR, TOMAR and ROSHAN windows
 local lineaHoldUntil = -1000 -- farming after a stalled push or a failed Roshan
 local lastRoshanFail = -1000
+local defendHoldUntil = -1000
 local pushStart = { time = -1000, enemyTowers = 0 }
 
 local UPDATE_EVERY = 0.2
@@ -193,10 +194,22 @@ local function BaseThreats()
 			for _, e in ipairs(enemies) do if Dist(e:GetLocation(), loc) <= 1200 then h = h + 1 end end
 			for _, cr in ipairs(enemyCreeps) do if cr:IsAlive() and Dist(cr:GetLocation(), loc) <= 900 then c = c + 1 end end
 			if h > heroes or (h == heroes and c > creeps) then heroes, creeps, at = h, c, loc end
-			-- "Past the T3" when an enemy hero is at any structure behind it, whichever structure wins the count above
-			-- (barracks sit within 1200 of their T3, so a winner-based flag flickered with a lone split-pusher).
-			if s ~= t3 and (h > 0 or c >= 3) then inner = true end
 		end
+		-- "Past the T3": an enemy hero (or 3+ creeps) right at a structure behind it (700) and away from the T3 while it
+		-- stands (900). Barracks sit within 1200 of their T3, so counting anyone near a barracks made a lone
+		-- split-pusher hitting the T3 call the whole team (v2-ab: 14 and 19 such calls in two games as Dire).
+		local t3Alive = t3 ~= nil and t3:IsAlive()
+		local function PastT3(loc)
+			if t3Alive and Dist(loc, t3:GetLocation()) <= 900 then return false end
+			for _, s in ipairs(structures) do
+				if s ~= t3 and Dist(loc, s:GetLocation()) <= 700 then return true end
+			end
+			return false
+		end
+		for _, e in ipairs(enemies) do if PastT3(e:GetLocation()) then inner = true end end
+		local innerCreeps = 0
+		for _, cr in ipairs(enemyCreeps) do if cr:IsAlive() and PastT3(cr:GetLocation()) then innerCreeps = innerCreeps + 1 end end
+		if innerCreeps >= 3 then inner = true end
 		-- Creeps alone threaten when they are many (a normal wave with its catapult at a T3 is not an emergency) or
 		-- past the T3.
 		if at ~= nil and (heroes >= 1 or creeps >= 7 or (inner and creeps >= 3)) then
@@ -371,7 +384,10 @@ function B.Update()
 		local k = worst.heroes >= 3 and 5 or worst.heroes + 1
 		SetState('DEFENDER', { lane = worstLane, defendLane = worstLane, rally = worst.loc,
 			defenders = NearestAllies(worst.loc, k), reason = string.format('heroes=%d creeps=%d k=%d', worst.heroes, worst.creeps, k) }, now)
+		defendHoldUntil = now + 5
 		return
+	elseif p.state == 'DEFENDER' and now < defendHoldUntil then
+		return -- held 5 s so a threat at the edge of the radius does not make the plan flicker
 	elseif worst ~= nil then
 		local k = ((worst.heroes >= 1 and worst.creeps >= 5) or worst.creeps >= 8) and 2 or 1
 		p.creepDefense = { lane = worstLane, defenders = NearestAllies(worst.loc, k) }
