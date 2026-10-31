@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
-  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, sideGroups, parseCouriers, valveIntruders, lateSpawns, codeState, tooManyInvalid, variantLua,
+  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, sideGroups, parseCouriers, valveIntruders, lateSpawns, codeState, codeTree, tooManyInvalid, variantLua,
   VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
@@ -50,7 +50,7 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
   const esperado = { radiant: R.map((h) => "npc_dota_hero_" + h), dire: D.map((h) => "npc_dota_hero_" + h) };
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera" }, variant: "base",
     loggedVariant: "base", version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal", start,
-    codigo: "abc123", firstCodigo: "abc123", couriers: { radiant: 5, dire: 5, slowRadiant: 290, slowDire: 290 },
+    codigo: "abc123@t1.t2", firstCodigo: "abc123@t1.t2", couriers: { radiant: 5, dire: 5, slowRadiant: 290, slowDire: 290 },
     intrusos: [], tardios: [], esperado };
   // Each team must play exactly its drawn group (DECISIONES 2026-10-31), in any order.
   assert.equal(validity({ ...ok, start: { ...start, heroesDire: [...D].reverse() } }), "");
@@ -69,9 +69,12 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
     couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 } }), "");
   assert.equal(validity({ ...ok, outcome: "tope" }), "");
   assert.match(validity({ ...ok, outcome: "timeout" }), /sin final/);
-  assert.match(validity({ ...ok, codigo: "abc123+cambios" }), /código sin commit/);
+  assert.match(validity({ ...ok, codigo: "abc123@t1.t2+cambios" }), /código sin commit/);
   assert.match(validity({ ...ok, codigo: undefined }), /código sin commit/);
   assert.match(validity({ ...ok, codigo: "def456" }), /cambió en la serie/);
+  // A commit of documents only changes the commit, not the trees of bots/ and tools/bench/.
+  assert.equal(validity({ ...ok, codigo: "def456@t1.t2" }), "");
+  assert.match(validity({ ...ok, codigo: "abc123@t1.t3" }), /cambió en la serie/);
   assert.match(validity({ ...ok, loggedModo: undefined }), /modo/);
   assert.equal(validity(ok), "");
   assert.match(validity({ ...ok, start: undefined }), /inicio/);
@@ -162,7 +165,7 @@ test("the mode the custom game applied is read from the log and must match the s
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera" }, variant: "", loggedVariant: "",
     version: "1", firstVersion: "1",
     start: { radiant: 5, dire: 5, heroesRadiant: R, heroesDire: D, nwRadiant: 3005, nwDire: 3005 },
-    codigo: "a", firstCodigo: "a", couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 },
+    codigo: "a@t", firstCodigo: "a@t", couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 },
     intrusos: [], tardios: [], esperado: { radiant: R, dire: D } };
   assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), "");
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "normal" }), /modo/);
@@ -230,8 +233,11 @@ test("the roster tells the real heroes, the team sizes and whether the human pla
 });
 
 test("each match records its commit, marked when bots/ had uncommitted changes; too many invalid stops a series", () => {
-  assert.equal(codeState("0123456789abcdef\n", ""), "0123456789ab");
-  assert.equal(codeState("0123456789abcdef\n", " M bots/x.lua\n"), "0123456789ab+cambios");
+  const trees = "aaaaaaa1111\nbbbbbbb2222\n";
+  assert.equal(codeState("0123456789abcdef\n", "", trees), "0123456789ab@aaaaaaa.bbbbbbb");
+  assert.equal(codeState("0123456789abcdef\n", " M bots/x.lua\n", trees), "0123456789ab@aaaaaaa.bbbbbbb+cambios");
+  assert.equal(codeTree("0123456789ab@aaaaaaa.bbbbbbb+cambios"), "aaaaaaa.bbbbbbb");
+  assert.equal(codeTree("sin arroba"), "");
   const rows = (bad, total) => Array.from({ length: total }, (_, i) => ({ valida: i < bad ? "no" : "si" }));
   assert.equal(tooManyInvalid(rows(2, 4)), false);
   assert.equal(tooManyInvalid(rows(1, 5)), false);

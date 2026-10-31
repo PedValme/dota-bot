@@ -61,10 +61,18 @@ const COLUMNS = ["fecha", "etiqueta", "partida", "bloque", "variante", "valida",
 export const GAME_CAP_MIN = 60;
 export const MAX_INVALID_SHARE = 0.2;
 
-// The code a match played: the commit, with "+cambios" when bots/ or the custom game had uncommitted changes (the
-// bots read bots/ live, so such a match did not play any commit). Read-only git, in this repository.
-export function codeState(sha, porcelain) {
-  return `${sha.trim().slice(0, 12)}${porcelain.trim() ? "+cambios" : ""}`;
+// The code a match played: "commit@trees", where trees are git's tree ids of bots/ and tools/bench/ (what plays and
+// what judges), with "+cambios" when they had uncommitted changes (the bots read bots/ live, so such a match did not
+// play any commit). A commit of documents only changes the commit, not the trees, so it does not split a series.
+// Read-only git, in this repository.
+export function codeState(sha, porcelain, trees = "") {
+  const tree = trees.trim().split(/\s+/).map((t) => t.slice(0, 7)).join(".");
+  return `${sha.trim().slice(0, 12)}@${tree}${porcelain.trim() ? "+cambios" : ""}`;
+}
+
+// The part of a code state that must stay the same through a series: the trees.
+export function codeTree(codigo) {
+  return String(codigo ?? "").split("@")[1]?.replace("+cambios", "") ?? "";
 }
 
 // Whether the series must stop: from the fifth match on, more than MAX_INVALID_SHARE of them not valid.
@@ -152,7 +160,9 @@ export function validity({ outcome, roster, variant, loggedVariant, version, fir
   // exactly the matches an arm cannot close, a different number per arm.
   if (outcome !== "final" && outcome !== "tope") return "sin final";
   if (codigo === undefined || codigo.endsWith("+cambios")) return "código sin commit";
-  if (codigo !== firstCodigo) return `el código cambió en la serie (${firstCodigo} -> ${codigo})`;
+  if (!codeTree(codigo) || codeTree(codigo) !== codeTree(firstCodigo)) {
+    return `el código cambió en la serie (${firstCodigo} -> ${codigo})`;
+  }
   if (modo !== loggedModo) return `modo ${loggedModo || "sin registro"} en el log`;
   if (roster.radiant !== 5 || roster.dire !== 5) return `reparto ${roster.radiant ?? 0}-${roster.dire ?? 0}`;
   // Each team plays exactly its drawn group, read from the heroes really controlled once all have spawned: the same
@@ -509,7 +519,8 @@ function gitOut(args) {
 
 async function currentCode() {
   return codeState(await gitOut(["rev-parse", "HEAD"]),
-    await gitOut(["--no-optional-locks", "status", "--porcelain", "--", "bots", "tools/bench"]));
+    await gitOut(["--no-optional-locks", "status", "--porcelain", "--", "bots", "tools/bench"]),
+    await gitOut(["rev-parse", "HEAD:bots", "HEAD:tools/bench"]));
 }
 
 function running(image) {
@@ -713,7 +724,8 @@ async function main(argv) {
       const version = dotaVersion();
       // The bots read bots/ live: a change during the match means it played no single commit.
       const codigoDespues = await currentCode();
-      const codigo = codigoAntes === codigoDespues ? codigoDespues : `${codigoDespues.replace("+cambios", "")}+cambios`;
+      const codigo = codigoAntes.endsWith("+cambios") || codeTree(codigoAntes) !== codeTree(codigoDespues)
+        ? `${codigoDespues.replace("+cambios", "")}+cambios` : codigoDespues;
       const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo,
         espejo: opt.espejo ?? "", start, codigo, firstCodigo, couriers, intrusos, tardios, esperado });
       if (timeline.length) {
