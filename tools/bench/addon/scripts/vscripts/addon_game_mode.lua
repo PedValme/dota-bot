@@ -63,6 +63,8 @@ local function AddBots(cfg)
 			print(string.format("[dotabench] AddBot team=%d slot=%d %s -> %s", team, slot, hero, tostring(ok)))
 		end
 	end
+	-- Only Radiant gets the asked heroes here: hero selection, strategy and pre-game happen in the same second, so no
+	-- draft script runs and the engine gives Dire's bots random heroes. MirrorOnSpawn gives them the drawn ones.
 end
 
 -- Humans never play: they watch as spectators (team 1), which gives the broadcast view with a choice of Radiant,
@@ -94,10 +96,75 @@ local function KeepHumansOut(why)
 	end
 end
 
+-- Mirror heroes (Pedro, 2026-10-31: «no creo que no exista forma de homologar ambos lados»). Half a second after a
+-- Dire bot's hero spawns, ReplaceHeroWith swaps it for its slot's drawn hero, keeping its gold; the bot's scripts
+-- restart with the new hero (seen: its mode lines, purchases and spells are the new hero's, no script errors). Before
+-- this, every benchmark match gave Dire random heroes against Radiant's drawn ones. Tried and dropped: picking in
+-- dota-bot's draft (it never runs here), SetSelectedHero during selection and ReplaceHeroWith at pre-game (the hero
+-- did not exist yet: "ok", no effect). bench_partida.lua: espejo = "no" turns it off.
+local mirrored = {}
+local function MirrorOnSpawn(unit, pid)
+	local cfg = MatchConfig()
+	if cfg.espejo == "no" or mirrored[pid] or unit:GetTeamNumber() ~= DOTA_TEAM_BADGUYS then return end
+	for slot = 1, PlayerResource:GetPlayerCountForTeam(DOTA_TEAM_BADGUYS) do
+		if PlayerResource:GetNthPlayerIDOnTeam(DOTA_TEAM_BADGUYS, slot) == pid then
+			local hero = cfg.heroes[slot]
+			if hero == nil or unit:GetUnitName() == hero then return end
+			mirrored[pid] = true
+			GameRules:GetGameModeEntity():SetThink(function()
+				-- The random hero may already have bought its starting items, and they vanish with it: their cost goes
+				-- back as gold (before 2026-10-31 it did not, and Dire started up to ~2.000 net worth behind).
+				-- The gold given is the player's net worth (gold plus items at their buy value, a whole stack of tangos
+				-- included; the free TP does not count), and items with a team stock (wards, smoke) go back to it: wards
+				-- cost 0 and Dire used to start without them (review 2026-10-31).
+				local refund, restocked = 0, {}
+				if IsValidEntity(unit) then
+					for i = 0, 16 do
+						local item = unit:GetItemInSlot(i)
+						local name = item and item:GetAbilityName()
+						if name and name ~= "item_tpscroll" then
+							refund = refund + item:GetCost()
+							local stock = ({ item_ward_observer = true, item_ward_sentry = true, item_smoke_of_deceit = true,
+								item_ward_dispenser = true })[name]
+							if stock then
+								local base = name == "item_ward_dispenser" and { "item_ward_observer", "item_ward_sentry" } or { name }
+								for _, b in ipairs(base) do
+									local n = math.max(1, (name == "item_ward_dispenser") and 1 or item:GetCurrentCharges())
+									local okStock = pcall(function() GameRules:IncreaseItemStock(DOTA_TEAM_BADGUYS, b, n, -1) end)
+									table.insert(restocked, b .. "x" .. n .. (okStock and "" or "!"))
+								end
+							end
+						end
+					end
+				end
+				local gold = math.max(PlayerResource:GetNetWorth(pid), PlayerResource:GetGold(pid) + refund)
+				local ok, err = pcall(function() PlayerResource:ReplaceHeroWith(pid, hero, gold, 0) end)
+				print(string.format("[dotabench] mirror slot=%d pid=%d %s -> %s ok=%s %s now=%s", slot, pid, unit:GetUnitName(),
+					hero, tostring(ok), tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))) .. " refund=" .. refund .. " gold=" .. gold
+					.. " restock=" .. (#restocked > 0 and table.concat(restocked, ",") or "-"))
+				-- ReplaceHeroWith does not remove the old hero: it stayed in the world (seen acting at 0:13 and 0:17 after
+				-- the swap), and Dota closed itself with an access violation in 3 of 11 mirrored matches (none before the
+				-- mirror). It is removed once the new hero is the player's.
+				GameRules:GetGameModeEntity():SetThink(function()
+					local removed = false
+					if IsValidEntity(unit) and unit ~= PlayerResource:GetSelectedHeroEntity(pid) then
+						removed = pcall(function() UTIL_Remove(unit) end)
+					end
+					print(string.format("[dotabench] mirror_old pid=%d removed=%s", pid, tostring(removed)))
+					return nil
+				end, "dotabench_mirror_old_" .. pid, 0.1)
+				return nil
+			end, "dotabench_mirror_" .. pid, 0.5)
+			return
+		end
+	end
+end
+
 local function OnNpcSpawned(event)
 	local unit = EntIndexToHScript(event.entindex)
 	if not unit or not unit.IsRealHero or not unit:IsRealHero() then return end
 	local pid = unit:GetPlayerOwnerID()
+	if pid ~= nil and pid >= 0 and PlayerResource:IsFakeClient(pid) then MirrorOnSpawn(unit, pid) end
 	if not IsHuman(pid) then return end
 	print(string.format("[dotabench] human hero removed pid=%d team=%d %s", pid, unit:GetTeamNumber(), unit:GetUnitName()))
 	KeepHumanOut(pid, "hero spawned")
@@ -122,6 +189,38 @@ local function PrintRoster()
 			end
 		end
 	end
+end
+
+-- Once every bot has its hero and the mirror is done (at most 60 s; some heroes spawn after the horn, an open
+-- defect in ESTADO.md): the hero each player really controls (its entity, not the selection, which said "ok"
+-- once with no effect) and its net worth, so the orchestrator can check both sides start alike.
+local function PrintStart()
+	local waited = 0
+	GameRules:GetGameModeEntity():SetThink(function()
+		local players, ready = {}, true
+		for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
+			for i = 1, PlayerResource:GetPlayerCountForTeam(team) do
+				local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
+				if pid >= 0 and not IsHuman(pid) then
+					local hero = PlayerResource:GetSelectedHeroEntity(pid)
+					local slot = MatchConfig().heroes[i]
+					local pending = team == DOTA_TEAM_BADGUYS and MatchConfig().espejo ~= "no" and hero ~= nil
+						and slot ~= nil and hero:GetUnitName() ~= slot
+					if hero == nil or pending then ready = false end
+					table.insert(players, { team = team, pid = pid, hero = hero })
+				end
+			end
+		end
+		if not ready and waited < 60 then
+			waited = waited + 1
+			return 1
+		end
+		for _, p in ipairs(players) do
+			print(string.format("[dotabench] start team=%d pid=%d hero=%s nw=%d waited=%d", p.team, p.pid,
+				p.hero and p.hero:GetUnitName() or "none", PlayerResource:GetNetWorth(p.pid), waited))
+		end
+		return nil
+	end, "dotabench_start", 0)
 end
 
 -- The A/B variant file the orchestrator left for dota-bot this match (bots/Customize/bench_variant.lua, the same
@@ -152,6 +251,8 @@ local function OnStateChange()
 		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
 		SendToServerConsole("host_timescale " .. tostring(cfg.timescale or 1))
+	elseif state == DOTA_GAMERULES_STATE_GAME_IN_PROGRESS then
+		PrintStart()
 	end
 end
 
@@ -310,6 +411,20 @@ local function StartObserver()
 	end)
 	Listen("dota_player_used_ability", function(e)
 		Obs("cast pid=%s %s %s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.abilityname))
+		-- Ultimates (Pedro, 2026-10-31: ultimates thrown at creeps or at nothing in the own base): where the caster is
+		-- and which enemy heroes were near, to tell wasted ones from global ones (e.g. Zeus) that are fine from base.
+		local hero = e.PlayerID ~= nil and e.PlayerID >= 0 and PlayerResource:GetSelectedHeroEntity(e.PlayerID) or nil
+		local ability = hero and e.abilityname and hero:FindAbilityByName(e.abilityname) or nil
+		if ability and ability:GetAbilityType() == ABILITY_TYPE_ULTIMATE then
+			local pos = hero:GetAbsOrigin()
+			local enemies = FindUnitsInRadius(hero:GetTeamNumber(), pos, nil, 2500, DOTA_UNIT_TARGET_TEAM_ENEMY,
+				DOTA_UNIT_TARGET_HERO, DOTA_UNIT_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES, FIND_CLOSEST, false)
+			local near = 0
+			for _, en in ipairs(enemies) do if en:IsRealHero() and (en:GetAbsOrigin() - pos):Length2D() <= 1200 then near = near + 1 end end
+			local nearest = enemies[1] and math.floor((enemies[1]:GetAbsOrigin() - pos):Length2D()) or -1
+			Obs("ult pid=%d team=%d %s %s x=%d y=%d enemies1200=%d nearest=%d", e.PlayerID, hero:GetTeamNumber(),
+				HeroOf(e.PlayerID), e.abilityname, pos.x, pos.y, near, nearest)
+		end
 	end)
 	Listen("entity_killed", function(e)
 		local victim, vteam, vpid = UnitName(e.entindex_killed)
@@ -318,7 +433,19 @@ local function StartObserver()
 			or victim == "npc_dota_roshan")
 		if not important then return end
 		local killer, kteam, kpid = UnitName(e.entindex_attacker)
-		Obs("kill victim=%s vteam=%d vpid=%d killer=%s kteam=%d kpid=%d", victim, vteam, vpid, killer, kteam, kpid)
+		-- For towers (Pedro, 2026-10-31: towers left undefended while each hero goes its own way): how many heroes of
+		-- each team were near when it fell.
+		local around = ""
+		if unit:IsTower() then
+			local pos, own, foe = unit:GetAbsOrigin(), 0, 0
+			for _, h in ipairs(HeroList:GetAllHeroes()) do
+				if h:IsRealHero() and h:IsAlive() and (h:GetAbsOrigin() - pos):Length2D() <= 1500 then
+					if h:GetTeamNumber() == vteam then own = own + 1 else foe = foe + 1 end
+				end
+			end
+			around = string.format(" defenders1500=%d attackers1500=%d", own, foe)
+		end
+		Obs("kill victim=%s vteam=%d vpid=%d killer=%s kteam=%d kpid=%d%s", victim, vteam, vpid, killer, kteam, kpid, around)
 	end)
 	Listen("dota_rune_activated_server", function(e)
 		Obs("rune pid=%s %s rune=%s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.rune))

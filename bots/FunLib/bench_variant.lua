@@ -6,8 +6,13 @@
 --   grupo     true: with a 5k lead the whole team pushes one lane together, FunLib/aba_push.lua
 --   farm      true: keep farming with a 6k+ lead, mode_farm_generic.lua
 --   cerebro   true: the team brain plans for the five, team_desires.lua and FunLib/team_brain.lua
+--   builds    true: cores buy what high-level players buy (FunLib/data_builds.lua), item_purchase_generic.lua
 --   thinkless number: overrides Customize.ThinkLess, Customize/general.lua
 -- dofile (not require) so a stale answer is never cached between matches.
+-- With "teams" (orquestador.mjs --rival dotabot: dota-bot against dota-bot), each team plays its own entry.
 local ok, variant = pcall(dofile, GetScriptDirectory()..'/Customize/bench_variant')
-if ok and type(variant) == 'table' then return variant end
+if ok and type(variant) == 'table' then
+	if type(variant.teams) == 'table' then return variant.teams[GetTeam()] or {} end
+	return variant
+end
 return {}

@@ -22,10 +22,21 @@ once it exists.
   - Capitán LLM con pic: perfil openai con Sol de orquestador, un subagente por partida (DECISIONES.md, 2026-10-29).
   - Lo que se trae de `upstream` se revisa como código de terceros antes de fusionarlo (DECISIONES.md, 2026-10-28).
   - El orquestador del benchmark solo toca Steam y Dota y lo que el benchmark necesita (DECISIONES.md, 2026-10-28).
-  - Sin contaminación: solo cuentan partidas `valida=si` (DECISIONES.md, 2026-10-29). Las 3 etapas quedaron
+  - Sin contaminación: solo cuentan partidas `valida=si`, y `valida=si` no basta. Toda asimetría conocida entre los
+    lados es contaminación aunque el comprobador no la mire: se arregla o se convierte en comprobación antes de medir,
+    nunca se anota como «así es el banco» (DECISIONES.md, 2026-10-29 y 2026-10-31; Dire jugó con héroes al azar
+    durante horas porque estaba anotado como un hecho). Las 3 etapas quedaron
     reemplazadas por una mejora grande con argumentos sólidos (cerebro de equipo con datos y criterio de juego), medida
     una sola vez al final, no una corrida por cada detalle (DECISIONES.md, 2026-10-30; diseño en `trabajo/cerebro-equipo.md`).
   - El objetivo es Turbo, medido imitado en el custom game con `--modo turbo` (DECISIONES.md, 2026-10-29).
+  - Puerta de medición antes de toda serie: partida de humo cotejada con el protocolo de `bench/README.md`, revisor
+    adversarial de la medición y pregunta escrita; por qué: cuatro reinicios por condiciones sin comprobar
+    (DECISIONES.md, 2026-10-31). La validez del orquestador es un control: se revisa antes, como el check.
+  - Se avanza en tres niveles (banco, mecanismo, resultado) con su puerta cada uno, tamaño de serie decidido antes y
+    análisis fijo; por qué: series pequeñas sin medir el ruido no distinguen nada (DECISIONES.md, 2026-10-31;
+    `bench/README.md`, «Cómo se avanza»).
+  - Una rama y un PR por tarea; mientras corre una serie, el trabajo paralelo va en otro worktree (DECISIONES.md,
+    2026-10-31).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).
 
 ## Where things are: one document per question
@@ -36,6 +47,7 @@ once it exists.
 | What is the product? | `PRODUCTO.md`, created with the first product rule | The agent, from the owner's decisions |
 | How do we work here? | This file | The owner |
 | A feature that spans sessions | `trabajo/<feature>.md`, deleted when it closes | The agent |
+| What was measured, with its validity and decision (read before measuring) | [MEDICIONES.md](MEDICIONES.md) | The agent, one entry per series, appended |
 | How the bot, the custom game and Dota really behave (seen in game, read in code, assumed) | [docs/mapa.md](docs/mapa.md) | The agent, from the night of 2026-10-29 |
 | How OHA's code is organized | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/BOT_API_REFERENCE.md](docs/BOT_API_REFERENCE.md) | Upstream |
 | How to update for a new Dota patch | [docs/PATCH_UPDATE_GUIDE.md](docs/PATCH_UPDATE_GUIDE.md) | Upstream |
