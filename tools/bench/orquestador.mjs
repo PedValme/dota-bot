@@ -365,8 +365,9 @@ export function sameSet(a, b) {
   return Array.isArray(a) && Array.isArray(b) && a.length > 0 && !a.includes("none") && norm(a) === norm(b);
 }
 
-// Bot heroes that appeared after the horn ("[dotabench] spawn pid=1 team=2 hero=... t=3.2"; a pid counts by its last
-// spawn): they lose lane time, and the first bot added used to do it in most matches. Returns "pid@t".
+// Bot heroes that appeared after the horn ("[dotabench] spawn pid=1 team=2 hero=... t=3.2"; a pid counts by its first
+// spawn, since a real-hero copy such as Dazzle's Nothl Projection spawns mid-game): they lose lane time, and the first
+// bot added used to do it in most matches. Returns "pid@t".
 export function lateSpawns(text) {
   const lines = text.split(/\r?\n/);
   const bots = new Set();
@@ -377,7 +378,7 @@ export function lateSpawns(text) {
   const last = new Map();
   for (const line of lines) {
     const m = line.match(/\[dotabench\] spawn pid=(\d+) team=\d hero=\S+ t=(-?[\d.]+)/);
-    if (m && bots.has(m[1])) last.set(m[1], Math.max(last.get(m[1]) ?? -Infinity, Number(m[2])));
+    if (m && bots.has(m[1])) last.set(m[1], Math.min(last.get(m[1]) ?? Infinity, Number(m[2])));
   }
   return [...last].filter(([, t]) => t > 0).map(([pid, t]) => `${pid}@${t}`);
 }

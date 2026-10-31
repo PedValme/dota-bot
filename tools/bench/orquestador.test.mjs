@@ -251,8 +251,9 @@ test("dota-bot's lines from a player of Valve's team and heroes that spawned aft
   assert.deepEqual(valveIntruders([roster(2, 1), roster(3, 6), load(1, 2), load(6, 3)].join("\n"), 2), ["1"]);
   assert.deepEqual(valveIntruders([roster(2, 1), roster(3, 6), load(6, 3)].join("\n"), 2), []);
   const spawn = (pid, t) => `[VScript] [dotabench] spawn pid=${pid} team=3 hero=npc_dota_hero_luna t=${t}`;
-  const spawns = [roster(2, 0, 0), roster(3, 6), roster(3, 7), spawn(0, 5), spawn(6, -14.5), spawn(7, -0.6), spawn(7, 0.4),
-    spawn(6, -14)].join("\n");
+  // First spawn per pid: 7 came after the horn; 6's copy at minute 26 (Dazzle's projection) does not count.
+  const spawns = [roster(2, 0, 0), roster(3, 6), roster(3, 7), spawn(0, 5), spawn(6, -14.5), spawn(7, 0.4), spawn(7, 30),
+    spawn(6, 1597.7)].join("\n");
   assert.deepEqual(lateSpawns(spawns), ["7@0.4"]);
 });
 
