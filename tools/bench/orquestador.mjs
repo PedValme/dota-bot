@@ -1,5 +1,7 @@
 // dota-bot benchmark orchestrator: plays N local bot-vs-bot matches, dota-bot on one side and Valve's own bots on the
-// other (sides alternate), five heroes drawn per match and asked for both teams (only Radiant gets them; Dire picks its own, whoever plays it), and
+// other (sides alternate), the same five drawn heroes on both teams (Radiant gets them when the bots are added; the
+// custom game swaps each Dire hero for its slot's one after it spawns, and a match without the same five per side is
+// not valid), and
 // records each winner from Dota's Game State Integration (GSI). The match runs in the local custom game
 // tools/bench/addon ("dotabench"), which keeps the human out of the teams, adds the bots and speeds the match up.
 //   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--velocidad 4] [--etiqueta texto]
@@ -123,10 +125,13 @@ export function schedule(i, variants) {
 // Whether a match can be counted, and why not. The variant is confirmed by the custom game reading the same file at
 // pre-game; that the bots apply it was checked once with the "sonda" variant (bench/README.md) and each match logs
 // casts per team. (The bots' print does reach the log, but only in observer mode: OHA silences it otherwise.)
-export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo }) {
+export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo,
+  espejo = "" }) {
   if (outcome !== "final") return "sin final";
   if (modo !== loggedModo) return `modo ${loggedModo || "sin registro"} en el log`;
   if (roster.radiant !== 5 || roster.dire !== 5) return `reparto ${roster.radiant ?? 0}-${roster.dire ?? 0}`;
+  // Same five heroes on both sides (DECISIONES 2026-10-29: no contamination); only "--espejo no" accepts otherwise.
+  if (espejo !== "no" && roster.mismos !== true) return "héroes distintos por lado";
   if (roster.humano !== "fuera" && roster.humano !== "heroe-quitado") return `humano ${roster.humano || "?"}`;
   if (loggedVariant === null || loggedVariant === undefined) return "variante sin registro en el log";
   if ((variant || "") !== loggedVariant) return `variante ${loggedVariant || "ninguna"} en el log`;
@@ -260,24 +265,32 @@ export function summarizeTimeline(rows, dotabot) {
 
 // The custom game logs who really plays ("[dotabench] roster team=2 pid=1 bot=1 hero=npc_dota_hero_luna") and
 // whether the human got a hero it had to remove. humano: "fuera" (clean), "heroe-quitado" (removed, the match still
-// counts) or "en-equipo" (a human slot played the match: discard it). heroes: the real ones, Radiant / Dire.
+// counts) or "en-equipo" (a human slot played the match: discard it). heroes: the real ones, Radiant / Dire, after
+// the mirror ("[dotabench] mirror ... pid=6 ... ok=true  now=npc_dota_hero_x" replaces that player's hero).
+// mismos: both teams play the same five heroes.
 export function parseRoster(text) {
   const teams = { 2: [], 3: [] };
+  const mirrored = {};
   let humanInTeam = false;
   let removed = false;
   for (const line of text.split(/\r?\n/)) {
     if (line.includes("[dotabench] human hero removed")) removed = true;
-    const m = line.match(/\[dotabench\] roster team=(\d) pid=\d+ bot=(\d) hero=(\S+)/);
+    const mm = line.match(/\[dotabench\] mirror .*pid=(\d+) .*ok=true\s+now=(\S+)/);
+    if (mm) mirrored[mm[1]] = mm[2].replace("npc_dota_hero_", "");
+    const m = line.match(/\[dotabench\] roster team=(\d) pid=(\d+) bot=(\d) hero=(\S+)/);
     if (!m) continue;
-    if (m[2] === "0") humanInTeam = true;
-    teams[m[1]]?.push(m[3].replace("npc_dota_hero_", ""));
+    if (m[3] === "0") humanInTeam = true;
+    teams[m[1]]?.push({ pid: m[2], hero: m[4].replace("npc_dota_hero_", "") });
   }
-  if (!teams[2].length && !teams[3].length) return { humano: "", heroes: "", radiant: 0, dire: 0 };
+  if (!teams[2].length && !teams[3].length) return { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false };
+  const names = (t) => teams[t].map((p) => mirrored[p.pid] ?? p.hero);
+  const set = (t) => names(t).slice().sort().join(" ");
   return {
     humano: humanInTeam ? "en-equipo" : removed ? "heroe-quitado" : "fuera",
-    heroes: `${teams[2].join(" ")} / ${teams[3].join(" ")}`,
+    heroes: `${names(2).join(" ")} / ${names(3).join(" ")}`,
     radiant: teams[2].length,
     dire: teams[3].length,
+    mismos: teams[2].length > 0 && set(2) === set(3),
   };
 }
 
@@ -514,7 +527,7 @@ async function main(argv) {
       // The custom game's per-minute timeline, from this launch's console.log (-condebug rewrites it each launch).
       const fecha = new Date().toISOString().slice(0, 16);
       let timeline = [];
-      let roster = { humano: "", heroes: "", radiant: 0, dire: 0 };
+      let roster = { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false };
       let loggedVariant = null;
       let loggedModo = "";
       try {
@@ -532,7 +545,8 @@ async function main(argv) {
         }
       } catch {}
       const version = dotaVersion();
-      const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo });
+      const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo,
+        espejo: opt.espejo ?? "" });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));
