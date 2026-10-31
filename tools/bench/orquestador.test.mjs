@@ -277,6 +277,15 @@ test("the mirror replaces Dire's random heroes; only the same five per side coun
   const stayed = [...base, mirror(6, "viper", "razor"), mirror(7, "lina", "luna"), gone(6),
     "[VScript] [dotabench] mirror_old pid=7 removed=false"].join("\n");
   assert.equal(parseRoster(stayed).viejos, 1);
+  // A hero-less Dire bot given its hero leaves no old hero behind.
+  const give = (pid, to, ok = "true") =>
+    `[VScript] [dotabench] give slot=1 pid=${pid} how=create ok=${ok}  now=npc_dota_hero_${to}`;
+  const emptyDire = [roster(2, 1, 1, "luna"), roster(2, 2, 1, "razor"),
+    "[VScript] [dotabench] roster team=3 pid=6 bot=1 hero= name=", "[VScript] [dotabench] roster team=3 pid=7 bot=1 hero= name="];
+  const givenBoth = parseRoster([...emptyDire, give(6, "razor"), give(7, "luna")].join("\n"));
+  assert.equal(givenBoth.mismos, true);
+  assert.equal(givenBoth.viejos, 0);
+  assert.equal(parseRoster([...emptyDire, give(6, "razor"), give(7, "luna", "false")].join("\n")).mismos, false);
   const half = [...base, mirror(6, "viper", "razor")].join("\n");
   assert.equal(parseRoster(half).mismos, false);
   const failed = [...base, mirror(6, "viper", "razor"), mirror(7, "lina", "luna", "false")].join("\n");

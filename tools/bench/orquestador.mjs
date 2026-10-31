@@ -317,6 +317,7 @@ export function parseRoster(text) {
   const teams = { 2: [], 3: [] };
   const mirrored = {};
   const oldGone = new Set();
+  const given = {};
   let humanInTeam = false;
   let removed = false;
   for (const line of text.split(/\r?\n/)) {
@@ -325,13 +326,18 @@ export function parseRoster(text) {
     if (mm) mirrored[mm[1]] = mm[2].replace("npc_dota_hero_", "");
     const mo = line.match(/\[dotabench\] mirror_old pid=(\d+) removed=true/);
     if (mo) oldGone.add(mo[1]);
-    const m = line.match(/\[dotabench\] roster team=(\d) pid=(\d+) bot=(\d) hero=(\S+)/);
+    // A Dire bot given its hero ("[dotabench] give slot=1 pid=6 how=create ok=true  now=npc_dota_hero_x"): no old
+    // hero is left behind.
+    const mg = line.match(/\[dotabench\] give .*pid=(\d+) .*ok=true\s+now=(\S+)/);
+    if (mg && mg[2] !== "nil") given[mg[1]] = mg[2].replace("npc_dota_hero_", "");
+    // hero= can be empty: a Dire bot has no hero yet when the roster is printed (it is given one in pre-game).
+    const m = line.match(/\[dotabench\] roster team=(\d) pid=(\d+) bot=(\d) hero=(\S*)/);
     if (!m) continue;
     if (m[3] === "0") humanInTeam = true;
     teams[m[1]]?.push({ pid: m[2], hero: m[4].replace("npc_dota_hero_", "") });
   }
   if (!teams[2].length && !teams[3].length) return { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false };
-  const names = (t) => teams[t].map((p) => mirrored[p.pid] ?? p.hero);
+  const names = (t) => teams[t].map((p) => mirrored[p.pid] ?? given[p.pid] ?? p.hero);
   const set = (t) => names(t).slice().sort().join(" ");
   return {
     humano: humanInTeam ? "en-equipo" : removed ? "heroe-quitado" : "fuera",

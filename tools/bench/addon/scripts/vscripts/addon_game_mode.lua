@@ -248,19 +248,73 @@ local function PrintVariant()
 	print("[dotabench] variant name=" .. tostring(variant.name) .. " " .. table.concat(fields, " "))
 end
 
+local direScheduled = false
+
+local function GiveDireHero(slot, pid, hero, how)
+	local player = PlayerResource:GetPlayer(pid)
+	local ok, err = pcall(function()
+		if how == "select" then
+			player:SetSelectedHero(hero)
+		else
+			-- CreateHeroForPlayer makes it the player's hero; it is placed at Dire's fountain like a normal spawn.
+			local unit = CreateHeroForPlayer(hero, player)
+			local fountain = Entities:FindByClassname(nil, "ent_dota_fountain")
+			while fountain and fountain:GetTeamNumber() ~= DOTA_TEAM_BADGUYS do
+				fountain = Entities:FindByClassname(fountain, "ent_dota_fountain")
+			end
+			if fountain then FindClearSpaceForUnit(unit, fountain:GetAbsOrigin(), true) end
+		end
+	end)
+	print(string.format("[dotabench] give slot=%d pid=%d how=%s ok=%s %s now=%s", slot, pid, how, tostring(ok),
+		tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))))
+end
+
+-- Each Dire bot without a hero gets its slot's drawn hero: "select" picks it during hero selection; "create", three
+-- seconds into pre-game, creates it for any that still has no hero entity.
+local function GiveDireHeroes(cfg, how)
+	local function each(fn)
+		for slot = 1, PlayerResource:GetPlayerCountForTeam(DOTA_TEAM_BADGUYS) do
+			local pid = PlayerResource:GetNthPlayerIDOnTeam(DOTA_TEAM_BADGUYS, slot)
+			if pid >= 0 and cfg.heroes[slot] and PlayerResource:IsFakeClient(pid) then fn(slot, pid, cfg.heroes[slot]) end
+		end
+	end
+	if how == "select" then
+		each(function(slot, pid, hero)
+			local name = PlayerResource:GetSelectedHeroName(pid)
+			if name == nil or name == "" then GiveDireHero(slot, pid, hero, "select") end
+		end)
+		return
+	end
+	GameRules:GetGameModeEntity():SetThink(function()
+		each(function(slot, pid, hero)
+			if PlayerResource:GetSelectedHeroEntity(pid) == nil then GiveDireHero(slot, pid, hero, "create") end
+		end)
+		return nil
+	end, "dotabench_give_dire", 3)
+end
+
 local function OnStateChange()
 	local cfg = MatchConfig()
 	local state = GameRules:State_Get()
 	KeepHumansOut("state " .. tostring(state))
 	if state == DOTA_GAMERULES_STATE_HERO_SELECTION or state == DOTA_GAMERULES_STATE_STRATEGY_TIME then
-		-- Both teams in the same instant, Radiant first. Tried 2026-10-31: a team added a second later got no heroes
-		-- at all, and the team added first gets the asked heroes while the other gets random ones (the mirror swaps
-		-- those). The first bot added spawns later than the rest whichever team it is; pre-game is long enough for it.
+		-- Measured 2026-10-31: of two teams added in the same instant only the first gets the asked heroes (the second
+		-- gets random ones, and swapping them with ReplaceHeroWith crashed Dota in 5 of 16 matches); a team added a
+		-- second later gets none. So Radiant goes first and Dire a second later, hero-less, and GiveDireHeroes gives
+		-- each Dire bot its slot's drawn hero. The mirror stays as a fallback if Dire still gets random ones.
 		AddBots(cfg, DOTA_TEAM_GOODGUYS)
-		AddBots(cfg, DOTA_TEAM_BADGUYS)
+		if not direScheduled then
+			direScheduled = true
+			GameRules:GetGameModeEntity():SetThink(function()
+				AddBots(cfg, DOTA_TEAM_BADGUYS)
+				GiveDireHeroes(cfg, "select")
+				return nil
+			end, "dotabench_add_dire", 1)
+		end
 	elseif state == DOTA_GAMERULES_STATE_PRE_GAME then
 		AddBots(cfg, DOTA_TEAM_GOODGUYS)
 		AddBots(cfg, DOTA_TEAM_BADGUYS)
+		GiveDireHeroes(cfg, "create")
 		PrintRoster()
 		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
@@ -522,10 +576,7 @@ function Activate()
 	GameRules:SetCustomGameTeamMaxPlayers(DOTA_TEAM_BADGUYS, 5)
 	GameRules:SetCustomGameSetupAutoLaunchDelay(0)
 	GameRules:LockCustomGameSetupTeamAssignment(true)
-	-- Trial 2026-10-31: with 5 s only the first team added got the asked heroes (the second got random ones, which the
-	-- mirror swaps with ReplaceHeroWith, and Dota crashed in 5 of 15 mirrored matches). Longer, in case the second
-	-- team's picks need the time.
-	GameRules:SetHeroSelectionTime(30)
+	GameRules:SetHeroSelectionTime(5) -- 30 s did not give the second team its heroes either (2026-10-31)
 	GameRules:SetStrategyTime(0)
 	GameRules:SetShowcaseTime(0)
 	-- 90 s, as in normal Dota (it was 30): the first bot added spawns 15-50 s after the rest, and with 30 s it often
