@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
-  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, variantLua,
+  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, codeState, tooManyInvalid, variantLua,
   VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
@@ -46,7 +46,12 @@ test("the variant file is plain Lua data with the variant's fields", () => {
 test("a match counts only if it ended, 5v5 bots, human out, the right variant and the same Dota", () => {
   const start = { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005 };
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true }, variant: "base",
-    loggedVariant: "base", version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal", start };
+    loggedVariant: "base", version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal", start,
+    codigo: "abc123", firstCodigo: "abc123" };
+  assert.match(validity({ ...ok, outcome: "tope" }), /tope de 60 min/);
+  assert.match(validity({ ...ok, codigo: "abc123+cambios" }), /código sin commit/);
+  assert.match(validity({ ...ok, codigo: undefined }), /código sin commit/);
+  assert.match(validity({ ...ok, codigo: "def456" }), /cambió en la serie/);
   assert.match(validity({ ...ok, loggedModo: undefined }), /modo/);
   assert.equal(validity(ok), "");
   assert.match(validity({ ...ok, roster: { ...ok.roster, mismos: false } }), /héroes distintos/);
@@ -133,7 +138,8 @@ test("the mode the custom game applied is read from the log and must match the s
   assert.equal(parseModo("[VScript] [dotabench] turbo off"), "normal");
   assert.equal(parseModo("nothing"), "");
   const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true }, variant: "", loggedVariant: "",
-    version: "1", firstVersion: "1", start: { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005 } };
+    version: "1", firstVersion: "1", start: { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005 },
+    codigo: "a", firstCodigo: "a" };
   assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), "");
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "normal" }), /modo/);
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "" }), /modo/);
@@ -164,7 +170,7 @@ test("a finished match needs post-game and a winner", () => {
 
 test("CSV rows keep their columns", () => {
   const row = csvRow({ fecha: "2026-10-28T19:00", etiqueta: "a,b", partida: 1, dotabot: "radiant", ganador: "dire" });
-  assert.equal(row.split(",").length, 24);
+  assert.equal(row.split(",").length, 26);
   assert.ok(row.includes("a;b"));
 });
 
@@ -195,6 +201,18 @@ test("the roster tells the real heroes, the team sizes and whether the human pla
   assert.equal(parseRoster(removed).humano, "heroe-quitado");
   assert.equal(parseRoster([clean, roster(2, 0, 0, "phantom_assassin")].join("\n")).humano, "en-equipo");
   assert.deepEqual(parseRoster("no roster here"), { humano: "", heroes: "", radiant: 0, dire: 0, mismos: false });
+});
+
+test("each match records its commit, marked when bots/ had uncommitted changes; too many invalid stops a series", () => {
+  assert.equal(codeState("0123456789abcdef\n", ""), "0123456789ab");
+  assert.equal(codeState("0123456789abcdef\n", " M bots/x.lua\n"), "0123456789ab+cambios");
+  const rows = (bad, total) => Array.from({ length: total }, (_, i) => ({ valida: i < bad ? "no" : "si" }));
+  assert.equal(tooManyInvalid(rows(2, 4)), false);
+  assert.equal(tooManyInvalid(rows(1, 5)), false);
+  assert.equal(tooManyInvalid(rows(2, 5)), true);
+  assert.equal(tooManyInvalid(rows(2, 10)), false);
+  assert.equal(tooManyInvalid(rows(3, 10)), true);
+  assert.deepEqual(VARIANTS.base_b, VARIANTS.base);
 });
 
 test("the start line tells the heroes really controlled and each team's starting net worth", () => {

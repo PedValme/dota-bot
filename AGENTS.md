@@ -32,6 +32,9 @@ once it exists.
   - Puerta de medición antes de toda serie: partida de humo cotejada con el protocolo de `bench/README.md`, revisor
     adversarial de la medición y pregunta escrita; por qué: cuatro reinicios por condiciones sin comprobar
     (DECISIONES.md, 2026-10-31). La validez del orquestador es un control: se revisa antes, como el check.
+  - Se avanza en tres niveles (banco, mecanismo, resultado) con su puerta cada uno, tamaño de serie decidido antes y
+    análisis fijo; por qué: series pequeñas sin medir el ruido no distinguen nada (DECISIONES.md, 2026-10-31;
+    `bench/README.md`, «Cómo se avanza»).
   - Una rama y un PR por tarea; mientras corre una serie, el trabajo paralelo va en otro worktree (DECISIONES.md,
     2026-10-31).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).

@@ -80,6 +80,17 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   tuvo pantalla ni GPU (monitor apagado, sesión bloqueada o remota). Deja la pantalla encendida durante la serie.
 - Mide la máquina antes de una serie y anótalo con los resultados (regla del entorno): CPU, memoria libre y procesos.
 
+## Cómo se avanza (DECISIONES 2026-10-31)
+| Nivel | Para qué | Tamaño | Puerta |
+|---|---|---|---|
+| 0. Banco | Que la medición no mienta | Partida de humo y una serie A contra A (`--variantes base,base_b`); se repite cuando cambia el banco | La tabla de abajo se comprueba sola; revisor adversarial; ruido y ventaja de lado medidos |
+| 1. Mecanismo | Que un arreglo hace lo que dice | 1-2 partidas con `--observar` | La métrica del arreglo se mueve en el log; sin eso no se pasa al nivel 2 |
+| 2. Resultado | Que un paquete de cambios gana más | Calculado antes según la diferencia buscada y el ruido del nivel 0 | Pregunta y métrica principal por escrito antes; análisis fijo, sin cortar por lado o héroe después |
+
+En todos: cada partida anota su commit (`codigo`; con `+cambios` no vale y si cambia a mitad de serie tampoco), tope de
+60 min de juego (`tope`, no válida, se cuenta aparte), la serie se para sola con más del 20 % de partidas no válidas
+(desde la quinta), y de vez en cuando una prueba en el entorno real (lobby Local Host, Turbo real).
+
 ## Protocolo de medición
 Una serie mide solo si cada condición de esta tabla se comprueba sola, en cada partida. Una condición que nadie
 comprueba es una suposición: va a «Sin comprobar» y se resuelve antes de sacar conclusiones, no después. Una asimetría
@@ -90,9 +101,13 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 |---|---|---|
 | La partida terminó | GSI da ganador | `sin final` |
 | 5 bots por lado, humano fuera | `[dotabench] roster` | `reparto`, `humano` |
-| Mismos cinco héroes en los dos lados | `roster` + `[dotabench] mirror ok=true` | `héroes distintos por lado` |
+| Mismos cinco héroes en los dos lados | `roster` + `mirror ok=true` y, cuando están los 10, `[dotabench] start` (héroe de la entidad) | `héroes distintos por lado`, `sin registro de inicio` |
+| Mismo patrimonio inicial (±300 por equipo) | `start ... nw=`; el espejo devuelve el coste de los objetos del héroe quitado (`refund=`) | `patrimonio inicial R-D` |
+| Espejo encendido | `--espejo no` es solo para depurar | `espejo apagado` |
 | Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |
 | Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |
+| Mismo código, con commit, en toda la serie | `git rev-parse` y `git status` de `bots/` y del custom game antes y después de cada partida | `código sin commit`, `el código cambió en la serie` |
+| La partida termina en tiempo razonable | reloj de GSI | `tope de 60 min` |
 | Lado, héroes y orden repartidos igual entre variantes | calendario por bloques (pruebas) | solo cuentan bloques completos |
 | Máquina libre | CPU y memoria por partida en `series.csv` | se anota; con carga alta, no se corre |
 
@@ -107,8 +122,14 @@ Mientras corre una serie, el trabajo en paralelo va en otro worktree, en su prop
 Sin comprobar (supuestos a la vista):
 - El sorteo de héroes sale de una lista recordada de los que saben jugar los bots de Valve, no de `BotImplemented`.
 - El Turbo imitado (couriers, oro y experiencia ×2, reaparición) no es el Turbo real: torres y runas son las normales.
-- La columna `heroes` de las series anteriores al control (hasta `justa` incluida) muestra los héroes de Dire antes
-  del espejo; el espejo se comprobó en los logs de `observaciones/` (las 7 primeras de `justa`: 5 de 5 en todas).
+- La columna `heroes` de las series anteriores al control muestra los héroes de Dire antes del espejo.
+- La serie `justa` (2026-10-31) no vale: el espejo se aplicó, pero Dire perdía los objetos iniciales al cambiar de
+  héroe y empezaba hasta ~2.000 de patrimonio detrás (visto en `obs t=0`). Corregido con `refund`.
+- La velocidad ×4: si a esa escala los bots de Lua piensan menos veces por segundo de juego que los de Valve (C++),
+  sesga siempre hacia el mismo lado. Comprobación barata pendiente: comparar la cadencia de `[bench] mode` a ×1 y ×4.
+- El ruido entre dos brazos iguales y la ventaja del lado: los mide la serie A contra A (nivel 0).
+- El héroe del puesto 1 de cada equipo aparece unos 20 s de juego después del inicio, en los dos lados por igual
+  (partidas de humo del 2026-10-31); su efecto es pequeño y simétrico, pero no se ha explicado.
 
 ## Cómo leerlo
 - 10 partidas solo distinguen diferencias grandes (por ejemplo 8 de 10); un 6 de 10 puede ser suerte. Con 20 por

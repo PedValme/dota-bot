@@ -53,11 +53,31 @@ const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", 
 const CSV = join(root, "bench", "series.csv");
 const COLUMNS = ["fecha", "etiqueta", "partida", "bloque", "variante", "valida", "motivo", "dificultad", "dotabot",
   "ganador", "resultado", "minutos", "kills_radiant", "kills_dire", "humano", "heroes", "ventaja_oro_max",
-  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo"];
+  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo", "codigo", "rival"];
+
+// Measurement protocol (DECISIONES 2026-10-31): a match that reaches this game minute stops as "tope" (not valid;
+// counted apart), and a series stops once more than this share of its matches (from the fifth on) is not valid.
+export const GAME_CAP_MIN = 60;
+export const MAX_INVALID_SHARE = 0.2;
+
+// The code a match played: the commit, with "+cambios" when bots/ or the custom game had uncommitted changes (the
+// bots read bots/ live, so such a match did not play any commit). Read-only git, in this repository.
+export function codeState(sha, porcelain) {
+  return `${sha.trim().slice(0, 12)}${porcelain.trim() ? "+cambios" : ""}`;
+}
+
+// Whether the series must stop: from the fifth match on, more than MAX_INVALID_SHARE of them not valid.
+export function tooManyInvalid(results) {
+  const bad = results.filter((r) => r.valida !== "si").length;
+  return results.length >= 5 && bad / results.length > MAX_INVALID_SHARE;
+}
 
 // Versions of dota-bot a series can interleave (FunLib/bench_variant.lua reads them in the bots' VM).
 export const VARIANTS = {
   base: { empuje: false, thinkless: 1 }, // before PR #11: push caps not relaxed with a 10k lead
+  // The same as base under another name, for an A/A series: how far two identical arms land apart (the noise) and how
+  // much the side alone gives (DECISIONES 2026-10-31).
+  base_b: { empuje: false, thinkless: 1 },
   empuje: { empuje: true, thinkless: 1 }, // PR #11
   thinkless0: { empuje: true, thinkless: 0 }, // PR #11 and bots think every frame
   // "remate" (Pedro, 2026-10-30): the whole team pushes one lane with a 5k lead; grupo_farm also keeps farming at 6k+.
@@ -126,8 +146,11 @@ export function schedule(i, variants) {
 // pre-game; that the bots apply it was checked once with the "sonda" variant (bench/README.md) and each match logs
 // casts per team. (The bots' print does reach the log, but only in observer mode: OHA silences it otherwise.)
 export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo,
-  espejo = "", start }) {
+  espejo = "", start, codigo, firstCodigo }) {
+  if (outcome === "tope") return `tope de ${GAME_CAP_MIN} min`;
   if (outcome !== "final") return "sin final";
+  if (codigo === undefined || codigo.endsWith("+cambios")) return "código sin commit";
+  if (codigo !== firstCodigo) return `el código cambió en la serie (${firstCodigo} -> ${codigo})`;
   if (modo !== loggedModo) return `modo ${loggedModo || "sin registro"} en el log`;
   if (roster.radiant !== 5 || roster.dire !== 5) return `reparto ${roster.radiant ?? 0}-${roster.dire ?? 0}`;
   // Same five heroes and the same starting net worth on both sides, read at the horn from the heroes really
@@ -399,6 +422,15 @@ function cpuSampler() {
   };
 }
 
+function gitOut(args) {
+  return new Promise((ok) => execFile("git", ["-C", root, ...args], (err, out) => ok(err ? "?" : out)));
+}
+
+async function currentCode() {
+  return codeState(await gitOut(["rev-parse", "HEAD"]),
+    await gitOut(["status", "--porcelain", "--", "bots", "tools/bench/addon"]));
+}
+
 function running(image) {
   return new Promise((ok, fail) =>
     execFile("tasklist", ["/FI", `IMAGENAME eq ${image}`, "/FO", "CSV", "/NH"], (err, out) =>
@@ -484,12 +516,20 @@ async function main(argv) {
     writeFileSync(gsiFile, gsiConfig());
     mkdirSync(dirname(CSV), { recursive: true });
     if (!existsSync(CSV)) appendFileSync(CSV, COLUMNS.join(",") + "\n");
+    else {
+      // New columns go at the end: rewrite only the header, older rows just leave them empty.
+      const [head, ...rest] = readFileSync(CSV, "utf8").split("\n");
+      if (head.trim() !== COLUMNS.join(",")) writeFileSync(CSV, [COLUMNS.join(","), ...rest].join("\n"));
+    }
+    const firstCodigo = await currentCode();
+    console.log(`Código de la serie: ${firstCodigo}`);
     const results = [];
     let heroes = [];
     for (let i = 0; i < opt.partidas; i++) {
       if (await running("dota2.exe")) throw new Error("Hay un Dota abierto que no es mío; paro sin tocarlo.");
       const rival = opt.rival === "dotabot";
       const planned = rival ? rivalSchedule(i, opt.variantes) : schedule(i, opt.variantes);
+      const codigoAntes = await currentCode();
       const { block } = planned;
       const dotabot = opt.lado ?? planned.dotabot;
       const valveTeam = dotabot === "radiant" ? DIRE : RADIANT;
@@ -531,6 +571,7 @@ async function main(argv) {
         // script from here on cannot leave it behind for the owner's normal games.
         if (latest?.state === "DOTA_GAMERULES_STATE_GAME_IN_PROGRESS") removeTeamFile();
         if (isFinished(latest)) { outcome = "final"; break; }
+        if ((latest?.clock ?? 0) >= GAME_CAP_MIN * 60) { outcome = "tope"; break; }
       }
       removeTeamFile();
       removeVariantFile();
@@ -568,8 +609,11 @@ async function main(argv) {
         }
       } catch {}
       const version = dotaVersion();
+      // The bots read bots/ live: a change during the match means it played no single commit.
+      const codigoDespues = await currentCode();
+      const codigo = codigoAntes === codigoDespues ? codigoDespues : `${codigoDespues.replace("+cambios", "")}+cambios`;
       const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo,
-        espejo: opt.espejo ?? "", start });
+        espejo: opt.espejo ?? "", start, codigo, firstCodigo });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));
@@ -587,11 +631,17 @@ async function main(argv) {
         cpu_max: cpuSamples.length ? Math.round(Math.max(...cpuSamples)) : "",
         mem_libre: memFree,
         modo: opt.modo,
+        codigo,
+        rival: opt.rival,
       };
       appendFileSync(CSV, csvRow(row) + "\n");
       results.push(row);
       console.log(`  ${outcome}${row.ganador ? `: gana ${row.ganador} (${row.ganador === dotabot ? "dota-bot" : "Valve"})` : ""}${motivo ? ` · NO VÁLIDA: ${motivo}` : ""}`);
       if (outcome === "sin-gsi") { console.log("Dota no envió datos por GSI; paro."); break; }
+      if (tooManyInvalid(results)) {
+        console.log(`Más del ${MAX_INVALID_SHARE * 100} % de las partidas no son válidas; paro para investigar.`);
+        break;
+      }
       await sleep(8000);
     }
     if (opt.rival === "dotabot") {
