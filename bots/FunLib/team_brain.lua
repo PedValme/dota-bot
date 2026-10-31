@@ -239,7 +239,10 @@ local function ChooseLane(center, closing)
 	for _, lane in ipairs(LANES) do
 		local tower, tier = NextEnemyTower(lane)
 		if tower ~= nil and (closing or tier < 3) then
-			local score = Dist(center, tower:GetLocation()) - 1500 * GetLaneFrontAmount(GetTeam(), lane, false)
+			-- How far the lane is pushed, by geometry (front to enemy Ancient), not GetLaneFrontAmount: the brain v1
+			-- won 10/10 as Radiant and 3/10 as Dire, and Dire's bots gathered in their own base.
+			local front = GetLaneFrontLocation(GetTeam(), lane, 0)
+			local score = Dist(center, tower:GetLocation()) + 0.5 * Dist(front, GetAncient(GetOpposingTeam()):GetLocation())
 			if score < bestScore then best, bestScore = lane, score end
 		end
 	end
@@ -247,7 +250,14 @@ local function ChooseLane(center, closing)
 end
 
 local function RallyPoint(lane)
-	return GetLaneFrontLocation(GetTeam(), lane, -800)
+	-- 800 behind our creep front, toward our own Ancient, computed here so it does not depend on which side the API's
+	-- offset counts from.
+	local front = GetLaneFrontLocation(GetTeam(), lane, 0)
+	local home = GetAncient(GetTeam()):GetLocation()
+	local d = Dist(front, home)
+	if d < 1 then return front end
+	local k = math.min(800, d) / d
+	return Vector(front.x + (home.x - front.x) * k, front.y + (home.y - front.y) * k, front.z)
 end
 
 -- Our safest standing tower near the group, to fall back to.
@@ -278,8 +288,9 @@ local ROSHAN_MAX = 60 -- seconds the team may spend on a Roshan attempt
 local function SetState(state, info, now)
 	local p = B.plan
 	if p.state ~= state or p.lane ~= info.lane then
-		print(string.format('[bench] plan t=%d team=%d %s -> %s lane=%s %s', math.floor(now), GetTeam(), p.state, state,
-			tostring(info.lane), info.reason or ''))
+		local r = info.rally
+		print(string.format('[bench] plan t=%d team=%d %s -> %s lane=%s %s rally=%s', math.floor(now), GetTeam(), p.state, state,
+			tostring(info.lane), info.reason or '', r and string.format('%d,%d', r.x, r.y) or 'nil'))
 		p.since = now
 	end
 	p.state = state
@@ -317,8 +328,14 @@ function B.Update()
 	local lead = NetWorthLead(allies, enemies)
 	if now - (B.lastTick or -1000) >= 30 then
 		B.lastTick = now
-		print(string.format('[bench] plan_tick t=%d team=%d state=%s lead=%d alive=%d-%d', math.floor(now), GetTeam(),
-			B.plan.state, lead, aliveA, aliveE))
+		-- Lane fronts by the API's own measure and by geometry, to check how GetLaneFrontAmount counts for each side.
+		local fronts = {}
+		for _, lane in ipairs(LANES) do
+			local f = GetLaneFrontLocation(GetTeam(), lane, 0)
+			table.insert(fronts, string.format('%d:%.2f@%d,%d', lane, GetLaneFrontAmount(GetTeam(), lane, false), f.x, f.y))
+		end
+		print(string.format('[bench] plan_tick t=%d team=%d state=%s lead=%d alive=%d-%d fronts=%s', math.floor(now), GetTeam(),
+			B.plan.state, lead, aliveA, aliveE, table.concat(fronts, ' ')))
 	end
 	local okAegis, aegis = pcall(function() return J ~= nil and J.DoesTeamHaveAegis() end)
 	local hasAegis = okAegis and aegis == true

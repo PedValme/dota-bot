@@ -3,7 +3,8 @@
 // records each winner from Dota's Game State Integration (GSI). The match runs in the local custom game
 // tools/bench/addon ("dotabench"), which keeps the human out of the teams, adds the bots and speeds the match up.
 //   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--velocidad 4] [--etiqueta texto]
-//                                    [--variantes base,empuje] [--modo turbo] [--observar] [--dota "<dota 2 beta>"]
+//                                    [--variantes base,empuje] [--modo turbo] [--observar] [--lado dire]
+//                                    [--dota "<dota 2 beta>"]
 //                                    [--muestra-gsi <file>]
 // --variantes interleaves versions of dota-bot (VARIANTS) in one series: per block of heroes, every variant plays
 // both sides, and the order flips every block, so heroes, side, Dota's version and the PC's load hit every variant
@@ -289,6 +290,7 @@ function parseArgs(argv) {
     else if (k === "--dota") opt.dota = v;
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else if (k === "--observar") { opt.observar = true; i -= 1; } // a flag: takes no value
+    else if (k === "--lado") opt.lado = v; // debugging one side: dota-bot always plays it (no side balance)
     else throw new Error(`Opción desconocida: ${k}`);
   }
   if (!Number.isInteger(opt.partidas) || opt.partidas < 1 || opt.partidas > 50) throw new Error("--partidas: 1 a 50");
@@ -298,6 +300,7 @@ function parseArgs(argv) {
   opt.variantes ??= [];
   opt.modo ??= "normal";
   if (!["normal", "turbo"].includes(opt.modo)) throw new Error("--modo: normal o turbo");
+  if (opt.lado !== undefined && !["radiant", "dire"].includes(opt.lado)) throw new Error("--lado: radiant o dire");
   for (const v of opt.variantes) if (!Object.hasOwn(VARIANTS, v)) throw new Error(`--variantes: ${Object.keys(VARIANTS).join(", ")}`);
   if (new Set(opt.variantes).size !== opt.variantes.length) throw new Error("--variantes: sin repetir");
   const block = 2 * Math.max(opt.variantes.length, 1);
@@ -409,7 +412,10 @@ async function main(argv) {
     let heroes = [];
     for (let i = 0; i < opt.partidas; i++) {
       if (await running("dota2.exe")) throw new Error("Hay un Dota abierto que no es mío; paro sin tocarlo.");
-      const { block, dotabot, valveTeam, variant } = schedule(i, opt.variantes);
+      const planned = schedule(i, opt.variantes);
+      const { block, variant } = planned;
+      const dotabot = opt.lado ?? planned.dotabot;
+      const valveTeam = dotabot === "radiant" ? DIRE : RADIANT;
       writeFileSync(VALVE_TEAM_FILE, `-- written by tools/bench/orquestador.mjs for one match; deleted once the bots load\nreturn ${valveTeam}\n`);
       removeVariantFile();
       if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
