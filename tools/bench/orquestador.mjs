@@ -364,7 +364,8 @@ export function parseCouriers(text) {
   for (const line of text.split(/\r?\n/)) {
     const m = line.match(/\[dotabench\] couriers team=(\d) n=(\d+) speeds=(\S*)/);
     if (!m) continue;
-    const slow = m[3] ? Math.min(...m[3].split("/").map(Number)) : 0;
+    const min = m[3] ? Math.min(...m[3].split("/").map(Number)) : 0;
+    const slow = Number.isFinite(min) ? min : 0; // a speed that is not a number fails the turbo check
     if (m[1] === "2") Object.assign(out, { radiant: Number(m[2]), slowRadiant: slow });
     if (m[1] === "3") Object.assign(out, { dire: Number(m[2]), slowDire: slow });
   }
