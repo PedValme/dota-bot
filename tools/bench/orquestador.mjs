@@ -55,8 +55,9 @@ const COLUMNS = ["fecha", "etiqueta", "partida", "bloque", "variante", "valida",
   "ganador", "resultado", "minutos", "kills_radiant", "kills_dire", "humano", "heroes", "ventaja_oro_max",
   "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo", "codigo", "rival"];
 
-// Measurement protocol (DECISIONES 2026-10-31): a match that reaches this game minute stops as "tope" (not valid;
-// counted apart), and a series stops once more than this share of its matches (from the fifth on) is not valid.
+// Measurement protocol (DECISIONES 2026-10-31): a match that reaches this game minute stops as "tope" (valid, with no
+// winner, so dota-bot did not win it; counted apart in the summary), and a series stops once more than this share of
+// its matches (from the fifth on) is not valid.
 export const GAME_CAP_MIN = 60;
 export const MAX_INVALID_SHARE = 0.2;
 
@@ -147,8 +148,9 @@ export function schedule(i, variants) {
 // casts per team. (The bots' print does reach the log, but only in observer mode: OHA silences it otherwise.)
 export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo,
   espejo = "", start, codigo, firstCodigo, couriers, intrusos, tardios }) {
-  if (outcome === "tope") return `tope de ${GAME_CAP_MIN} min`;
-  if (outcome !== "final") return "sin final";
+  // A match stopped at the cap counts, as a match dota-bot did not win (Pedro, 2026-10-31): dropping it would drop
+  // exactly the matches an arm cannot close, a different number per arm.
+  if (outcome !== "final" && outcome !== "tope") return "sin final";
   if (codigo === undefined || codigo.endsWith("+cambios")) return "código sin commit";
   if (codigo !== firstCodigo) return `el código cambió en la serie (${firstCodigo} -> ${codigo})`;
   if (modo !== loggedModo) return `modo ${loggedModo || "sin registro"} en el log`;

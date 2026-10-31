@@ -58,7 +58,8 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
   assert.match(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), /couriers lentos 290-290/);
   assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo",
     couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 } }), "");
-  assert.match(validity({ ...ok, outcome: "tope" }), /tope de 60 min/);
+  assert.equal(validity({ ...ok, outcome: "tope" }), "");
+  assert.match(validity({ ...ok, outcome: "timeout" }), /sin final/);
   assert.match(validity({ ...ok, codigo: "abc123+cambios" }), /código sin commit/);
   assert.match(validity({ ...ok, codigo: undefined }), /código sin commit/);
   assert.match(validity({ ...ok, codigo: "def456" }), /cambió en la serie/);
@@ -92,11 +93,14 @@ test("the summary counts only complete, fully valid blocks", () => {
   const row = (bloque, variante, valida, win) => ({ bloque, variante, valida, dotabot: "radiant", ganador: win ? "radiant" : "dire" });
   const results = [
     row(1, "base", "si", true), row(1, "empuje", "si", true), row(1, "base", "si", false), row(1, "empuje", "si", true),
-    row(2, "empuje", "si", true), { ...row(2, "base", "no", false), resultado: "tope" }, row(2, "empuje", "si", true), row(2, "base", "si", true),
+    row(2, "empuje", "si", true), row(2, "base", "no", false), row(2, "empuje", "si", true), row(2, "base", "si", true),
+    { ...row(3, "base", "si", false), ganador: "", resultado: "tope" }, row(3, "empuje", "si", true),
+    row(3, "base", "si", true), row(3, "empuje", "si", true),
   ];
+  // A capped match is valid with no winner: it counts as played and not won.
   assert.deepEqual(summarize(results, ["base", "empuje"]), [
-    { variante: "base", ganadas: 1, validas: 2, jugadas: 4, topes: 1 },
-    { variante: "empuje", ganadas: 2, validas: 2, jugadas: 4, topes: 0 },
+    { variante: "base", ganadas: 2, validas: 4, jugadas: 6, topes: 1 },
+    { variante: "empuje", ganadas: 4, validas: 4, jugadas: 6, topes: 0 },
   ]);
 });
 

@@ -88,7 +88,7 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
 | 2. Resultado | Que un paquete de cambios gana más | Calculado antes según la diferencia buscada y el ruido del nivel 0 | Pregunta y métrica principal por escrito antes; análisis fijo, sin cortar por lado o héroe después |
 
 En todos: cada partida anota su commit (`codigo`; con `+cambios` no vale y si cambia a mitad de serie tampoco), tope de
-60 min de juego (`tope`, no válida, se cuenta aparte), la serie se para sola con más del 20 % de partidas no válidas
+60 min de juego (`tope`: válida y «no ganó» para dota-bot, y el resumen la cuenta aparte; DECISIONES 2026-10-31), la serie se para sola con más del 20 % de partidas no válidas
 (desde la quinta), y de vez en cuando una prueba en el entorno real (lobby Local Host, Turbo real).
 
 ## Protocolo de medición
@@ -111,7 +111,7 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 | Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |
 | Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |
 | Mismo código, con commit, en toda la serie | `git rev-parse` y `git status` de `bots/` y del custom game antes y después de cada partida | `código sin commit`, `el código cambió en la serie` |
-| La partida termina en tiempo razonable | reloj de GSI | `tope de 60 min` |
+| La partida termina en tiempo razonable | reloj de GSI: a los 60 min se corta (`resultado=tope`, válida, sin ganador) | no la invalida |
 | Lado, héroes y orden repartidos igual entre variantes | calendario por bloques (pruebas) | solo cuentan bloques completos |
 | Máquina libre | CPU y memoria por partida en `series.csv` | se anota; con carga alta, no se corre |
 

@@ -13,8 +13,6 @@
   1. Repetir la partida de humo con el commit `5d8bfb5` o posterior y comprobar que Dota ya no se cierra solo.
   2. Pasar el log al revisor adversarial.
   3. Serie A contra A (`--variantes base,base_b`, 12 partidas), con la pregunta escrita antes en MEDICIONES.md.
-- **Espera a Pedro:** si una partida que llega al tope de 60 min cuenta como válida y como «no ganó» para dota-bot
-  (recomendado) o se descarta.
 - La rama `claude/cerebro-v2-builds` se parte en un PR por tarea (orden de la fábrica, 2026-10-31).
 
 ## Madurez
