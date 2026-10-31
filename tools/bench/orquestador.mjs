@@ -211,18 +211,25 @@ export const HERO_POOL = [
   ["crystal_maiden", "witch_doctor", "lich", "warlock", "dazzle", "oracle"],
 ];
 
-export function drawHeroes(random = Math.random) {
-  return HERO_POOL.map((pool) => "npc_dota_hero_" + pool[Math.floor(random() * pool.length)]);
+export function drawHeroes(random = Math.random, avoid = []) {
+  return HERO_POOL.map((pool) => {
+    const free = pool.filter((h) => !avoid.includes("npc_dota_hero_" + h));
+    const from = free.length ? free : pool;
+    return "npc_dota_hero_" + from[Math.floor(random() * from.length)];
+  });
 }
 
 // Lua read by the custom game (tools/bench/addon/scripts/vscripts/addon_game_mode.lua).
 // turbo: the custom game imitates Turbo (Dota's real Turbo cannot run in a custom game: forcing game mode 23 changes
 // nothing and the VScript API has no switch for it, both checked 2026-10-29).
-export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false, espejo = "") {
+export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false, espejo = "", heroesDire = null) {
   const list = heroes.map((h) => `"${h}"`).join(", ");
   // espejo = "no" turns off giving Dire the drawn heroes too (on by default since 2026-10-31, addon_game_mode.lua).
   const mirror = espejo ? `espejo = "${espejo}", ` : "";
-  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, ${mirror}heroes = { ${list} } }\n`;
+  // heroes_dire: Dire's own drawn heroes, none shared with Radiant's ("--espejo cruzado"): the engine never gives the
+  // same hero to both teams (0 of 112 matches did), so each team asks for its own and nothing is swapped.
+  const dire = heroesDire ? `heroes_dire = { ${heroesDire.map((h) => `"${h}"`).join(", ")} }, ` : "";
+  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, ${mirror}${dire}heroes = { ${list} } }\n`;
 }
 
 // With --observar: the custom game's lines and the engine's lines about the bots (script errors, slow bot functions,
@@ -622,6 +629,7 @@ async function main(argv) {
     }
     const results = [];
     let heroes = [];
+    let rivals = [];
     for (let i = 0; i < opt.partidas; i++) {
       if (await running("dota2.exe")) throw new Error("Hay un Dota abierto que no es mío; paro sin tocarlo.");
       const rival = opt.rival === "dotabot";
@@ -640,8 +648,12 @@ async function main(argv) {
         if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
       }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
-      if (i % opt.block === 0) heroes = drawHeroes();
-      writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), opt.espejo ?? ""));
+      if (i % opt.block === 0) { heroes = drawHeroes(); rivals = drawHeroes(Math.random, heroes); }
+      // "--espejo cruzado": dota-bot always gets the block's first draw and its rival the second, whatever the side.
+      const cruzado = opt.espejo === "cruzado";
+      const radiantList = cruzado && dotabot !== "radiant" ? rivals : heroes;
+      const direList = cruzado ? (dotabot === "radiant" ? rivals : heroes) : null;
+      writeFileSync(MATCH_FILE, matchConfigLua(radiantList, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), opt.espejo ?? "", direList));
       latest = null;
       lastPost = 0;
       const short = heroes.map((h) => h.replace("npc_dota_hero_", "")).join(" ");

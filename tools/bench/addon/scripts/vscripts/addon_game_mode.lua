@@ -60,7 +60,9 @@ local botsAdded = {}
 local function AddBots(cfg, team)
 	if botsAdded[team] then return end
 	botsAdded[team] = true
-	for slot, hero in ipairs(cfg.heroes) do
+	-- heroes_dire ("--espejo cruzado"): Dire asks for its own draw, none shared with Radiant's.
+	local list = (team == DOTA_TEAM_BADGUYS and cfg.heroes_dire) or cfg.heroes
+	for slot, hero in ipairs(list) do
 		local ok = Tutorial:AddBot(hero, LANES[team][slot], cfg.difficulty, team == DOTA_TEAM_GOODGUYS)
 		print(string.format("[dotabench] AddBot team=%d slot=%d %s -> %s", team, slot, hero, tostring(ok)))
 	end
@@ -104,7 +106,7 @@ end
 local mirrored = {}
 local function MirrorOnSpawn(unit, pid)
 	local cfg = MatchConfig()
-	if cfg.espejo == "no" or mirrored[pid] or unit:GetTeamNumber() ~= DOTA_TEAM_BADGUYS then return end
+	if cfg.espejo == "no" or cfg.heroes_dire or mirrored[pid] or unit:GetTeamNumber() ~= DOTA_TEAM_BADGUYS then return end
 	for slot = 1, PlayerResource:GetPlayerCountForTeam(DOTA_TEAM_BADGUYS) do
 		if PlayerResource:GetNthPlayerIDOnTeam(DOTA_TEAM_BADGUYS, slot) == pid then
 			local hero = cfg.heroes[slot]
@@ -212,7 +214,8 @@ local function PrintStart()
 				local pid = PlayerResource:GetNthPlayerIDOnTeam(team, i)
 				if pid >= 0 and not IsHuman(pid) then
 					local hero = PlayerResource:GetSelectedHeroEntity(pid)
-					local slot = MatchConfig().heroes[i]
+					local cfg = MatchConfig()
+					local slot = ((team == DOTA_TEAM_BADGUYS and cfg.heroes_dire) or cfg.heroes)[i]
 					local pending = team == DOTA_TEAM_BADGUYS and MatchConfig().espejo ~= "no" and hero ~= nil
 						and slot ~= nil and hero:GetUnitName() ~= slot
 					if hero == nil or pending then ready = false end
@@ -303,7 +306,10 @@ local function OnStateChange()
 		-- second later gets none. So Radiant goes first and Dire a second later, hero-less, and GiveDireHeroes gives
 		-- each Dire bot its slot's drawn hero. The mirror stays as a fallback if Dire still gets random ones.
 		AddBots(cfg, DOTA_TEAM_GOODGUYS)
-		if not direScheduled then
+		if cfg.heroes_dire then
+			-- Each team its own heroes: both join at once and keep what the engine gives them, nothing is swapped.
+			AddBots(cfg, DOTA_TEAM_BADGUYS)
+		elseif not direScheduled then
 			direScheduled = true
 			GameRules:GetGameModeEntity():SetThink(function()
 				AddBots(cfg, DOTA_TEAM_BADGUYS)
@@ -314,7 +320,7 @@ local function OnStateChange()
 	elseif state == DOTA_GAMERULES_STATE_PRE_GAME then
 		AddBots(cfg, DOTA_TEAM_GOODGUYS)
 		AddBots(cfg, DOTA_TEAM_BADGUYS)
-		GiveDireHeroes(cfg, "create")
+		if not cfg.heroes_dire then GiveDireHeroes(cfg, "create") end
 		PrintRoster()
 		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
