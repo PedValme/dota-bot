@@ -519,7 +519,7 @@ function gitOut(args) {
 
 async function currentCode() {
   return codeState(await gitOut(["rev-parse", "HEAD"]),
-    await gitOut(["--no-optional-locks", "status", "--porcelain", "--", "bots", "tools/bench"]),
+    await gitOut(["--no-optional-locks", "status", "--porcelain", "--untracked-files=all", "--", "bots", "tools/bench"]),
     await gitOut(["rev-parse", "HEAD:bots", "HEAD:tools/bench"]));
 }
 
