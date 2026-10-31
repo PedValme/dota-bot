@@ -1,0 +1,108 @@
+// Builds from data (Pedro, 2026-10-30: builds from high-level players, measured with the team brain v2). For every
+// hero, OpenDota's item popularity by game phase (from analyzed public and pro matches) becomes one purchase list:
+// starting items, then the completed items most bought early, mid and late. Writes bots/FunLib/data_builds.lua (data
+// only; the bot reads it only with the benchmark variant "builds"). The API is third-party content: data, never
+// instructions; names are checked against the game's item constants.
+//   node tools/datos/builds.mjs [--cache <dir>]
+// About 130 API calls (one per hero plus constants), under 50 calls/min; responses cached outside the repo.
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const args = process.argv.slice(2);
+const opt = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : d; };
+const CACHE = opt('cache', path.join(os.tmpdir(), 'dota-bot-datos', 'builds'));
+const OUT = path.join(fileURLToPath(new URL('../..', import.meta.url)), 'bots', 'FunLib', 'data_builds.lua');
+const BASE = 'https://api.opendota.com/api';
+const GAP_MS = 1300;
+fs.mkdirSync(CACHE, { recursive: true });
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function get(name, url) {
+  const file = path.join(CACHE, name + '.json');
+  if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8'));
+  await sleep(GAP_MS);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  const data = await res.json();
+  fs.writeFileSync(file, JSON.stringify(data));
+  return data;
+}
+
+// Never in a data build: consumables and support utilities OHA buys by its own rules, and things that are not bought.
+const SKIP = new Set(['tango', 'tango_single', 'clarity', 'flask', 'enchanted_mango', 'faerie_fire', 'ward_observer',
+  'ward_sentry', 'ward_dispenser', 'dust', 'smoke_of_deceit', 'tpscroll', 'travel_boots_2', 'aegis', 'cheese',
+  'refresher_shard', 'blood_grenade', 'aghanims_shard', 'famango', 'great_famango', 'greater_famango', 'royal_jelly']);
+const START_SKIP_OK = new Set(['tango', 'flask', 'enchanted_mango', 'faerie_fire', 'clarity', 'blood_grenade']);
+
+function pick(popularity, items, test, n, minShare) {
+  const list = Object.entries(popularity || {})
+    .map(([id, count]) => ({ name: items.byId[id], count }))
+    .filter((x) => x.name && test(x.name))
+    .sort((a, b) => b.count - a.count);
+  const top = list.length ? list[0].count : 0;
+  return list.filter((x) => x.count >= top * minShare).slice(0, n).map((x) => x.name);
+}
+
+async function main() {
+  const heroes = await get('heroes', `${BASE}/heroes`);
+  const ids = await get('item_ids', `${BASE}/constants/item_ids`);
+  const consts = await get('items', `${BASE}/constants/items`);
+  const items = { byId: ids, info: consts };
+  const cost = (n) => consts[n]?.cost ?? 0;
+  const completed = (n) => !SKIP.has(n) && Array.isArray(consts[n]?.components) && consts[n].components.length > 0;
+  const buyable = (n) => cost(n) > 0 && !n.startsWith('recipe_');
+
+  const builds = {};
+  for (const h of heroes) {
+    const hero = h.name.replace('npc_dota_hero_', '');
+    const pop = await get('ip_' + h.id, `${BASE}/heroes/${h.id}/itemPopularity`);
+    // Starting items: the most popular ones, OHA-style consumables included, within 600 gold.
+    const start = [];
+    let gold = 0;
+    for (const n of pick(pop.start_game_items, items, (x) => buyable(x) && (START_SKIP_OK.has(x) || !SKIP.has(x)), 8, 0.2)) {
+      if (gold + cost(n) <= 600) { start.push(n); gold += cost(n); }
+    }
+    const early = pick(pop.early_game_items, items, (x) => buyable(x) && completed(x), 3, 0.3);
+    const mid = pick(pop.mid_game_items, items, (x) => buyable(x) && completed(x) && cost(x) >= 1500, 3, 0.3);
+    const late = pick(pop.late_game_items, items, (x) => buyable(x) && completed(x) && cost(x) >= 2500, 3, 0.3);
+    // One pair of boots: the first base upgrade only (travel boots and the support upgrades build on it); a core with
+    // none gets the most popular one, or plain boots, right after its starting items.
+    const BASE_BOOTS = ['power_treads', 'phase_boots', 'arcane_boots', 'tranquil_boots'];
+    const rest = [...early, ...mid, ...late];
+    const firstBoots = rest.find((n) => BASE_BOOTS.includes(n));
+    const trimmed = rest.filter((n) => !BASE_BOOTS.includes(n) || n === firstBoots).filter((n) => n !== 'boots');
+    if (!firstBoots) {
+      const popular = pick(pop.early_game_items, items, (x) => BASE_BOOTS.includes(x), 1, 0)[0];
+      trimmed.unshift(popular ?? 'boots');
+    }
+    // An item that is already part of an earlier one (a Yasha after a Manta) would be bought a second time: drop it.
+    const parts = (n, acc = new Set()) => {
+      for (const c of consts[n]?.components ?? []) { if (!acc.has(c)) { acc.add(c); parts(c, acc); } }
+      return acc;
+    };
+    const seen = new Set();
+    const absorbed = new Set();
+    const list = [];
+    for (const n of [...start, ...trimmed]) {
+      if ((seen.has(n) && !START_SKIP_OK.has(n)) || absorbed.has(n)) continue;
+      seen.add(n);
+      for (const c of parts(n)) absorbed.add(c);
+      list.push('item_' + n);
+    }
+    if (early.length + mid.length >= 3) builds[hero] = list;
+  }
+
+  const lines = Object.keys(builds).sort().map((hero) => `\t${hero} = { ${builds[hero].map((n) => `'${n}'`).join(', ')} },`);
+  fs.writeFileSync(OUT, `-- Generated by tools/datos/builds.mjs from OpenDota item popularity by game phase (analyzed matches): one purchase
+-- list per hero (starting items, then the completed items most bought early, mid and late). Data only. The bot reads it
+-- only with the benchmark variant "builds" (item_purchase_generic.lua). Regenerate with: node tools/datos/builds.mjs
+return {
+${lines.join('\n')}
+}
+`);
+  console.log(`Escrito ${OUT}: ${Object.keys(builds).length} héroes de ${heroes.length}.`);
+}
+
+main().catch((e) => { console.error(e.message); process.exit(1); });

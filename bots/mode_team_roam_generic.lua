@@ -900,7 +900,7 @@ end
 -- Courier scan (unchanged)
 local courierFindCD, lastFindTime = 0.1, -90
 function X.GetEnemyCourier(b, nRadius)
-    if GetGameMode() == 23 then return nil end
+    if GetGameMode() == 23 or J.IsImitatedTurbo() then return nil end
     if J.GetDistanceFromEnemyFountain(b) < 1400 then return nil end
     if DotaTime() > lastFindTime + courierFindCD then
         lastFindTime = DotaTime()
@@ -1247,7 +1247,7 @@ end
 -- winnable and the team is not regrouping (no one avenges alone), and hit the team's focus target when it is at hand.
 -- Without the variant it returns the same as before: the enemy hero, true.
 function X.BrainHelpTarget(ally, enemyHero)
-    if not TeamBrain.Enabled() then return enemyHero, true end
+    if not TeamBrain.FightHooks() then return enemyHero, true end
     if not TeamBrain.ShouldHelpAlly(bot, ally) then return nil, false end
     return TeamBrain.Focus(bot) or enemyHero, true
 end
