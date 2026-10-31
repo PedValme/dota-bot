@@ -63,8 +63,10 @@ local function AddBots(cfg)
 			print(string.format("[dotabench] AddBot team=%d slot=%d %s -> %s", team, slot, hero, tostring(ok)))
 		end
 	end
-	-- Dire's bots pick their own heroes (AddBot only gives Radiant the asked one); when dota-bot plays Dire, its draft
-	-- picks these same heroes from bots/Customize/bench_heroes.lua (FunLib/bench_heroes.lua).
+	-- Only Radiant gets the asked heroes: hero selection, strategy and pre-game happen in the same second here, so no
+	-- draft script runs and the engine gives Dire's bots random heroes. Tried and dropped on 2026-10-31: picking them
+	-- in dota-bot's draft (it never runs), SetSelectedHero during selection and ReplaceHeroWith at pre-game (both "ok",
+	-- no effect). A/B series stay fair because every variant plays both sides.
 end
 
 -- Humans never play: they watch as spectators (team 1), which gives the broadcast view with a choice of Radiant,

@@ -19,8 +19,7 @@
 //   plays; deleted when each match ends), tools/bench/addon/scripts/vscripts/bench_partida.lua (heroes, difficulty,
 //   speed; deleted at the end too), bench/series.csv and bench/lineas/ (per-match timelines, read from its own
 //   Dota's <dota>/game/dota/console.log), with --observar bench/observaciones/ (per-match observer lines from that
-//   same log; and bots/Customize/bench_observe.lua, deleted when each match ends, so the bots log their mode),
-//   bots/Customize/bench_heroes.lua (the drawn heroes for dota-bot's draft; deleted when each match ends), and,
+//   same log; and bots/Customize/bench_observe.lua, deleted when each match ends, so the bots log their mode), and,
 //   only with --muestra-gsi <file> (debugging), the last raw GSI post in
 //   that file. It reads <dota>/game/dota/steam.inf (Dota's version) and the PC's CPU and memory through Node's os
 //   module. The team file lives only from launch until the
@@ -47,7 +46,6 @@ const root = fileURLToPath(new URL("../..", import.meta.url));
 const VALVE_TEAM_FILE = join(root, "bots", "Customize", "bench_valve_team.lua");
 const VARIANT_FILE = join(root, "bots", "Customize", "bench_variant.lua");
 const OBSERVE_FILE = join(root, "bots", "Customize", "bench_observe.lua"); // --observar: the bots log their mode
-const HEROES_FILE = join(root, "bots", "Customize", "bench_heroes.lua"); // the drawn heroes, so Dire mirrors Radiant
 const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", "bench_partida.lua");
 // bench/partidas.csv holds the runs before 2026-10-29 (they cannot prove the human stayed out); new runs go here.
 const CSV = join(root, "bench", "series.csv");
@@ -70,6 +68,8 @@ export const VARIANTS = {
   cerebro_builds: { cerebro: true, builds: true, thinkless: 1 },
   // Fixing Dire (2026-10-31): the whole team defends the base against two or more heroes.
   cerebro_def: { cerebro: true, builds: true, defensa_total: true, thinkless: 1 },
+  // ...and also groups to push only with the fight around the team clearly in favour.
+  cerebro_prud: { cerebro: true, builds: true, defensa_total: true, prudente: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
@@ -77,12 +77,6 @@ export const VARIANTS = {
 export function variantLua(name) {
   const fields = Object.entries(VARIANTS[name]).map(([k, v]) => `${k} = ${v}`).join(", ");
   return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { name = "${name}", ${fields} }\n`;
-}
-
-// The drawn heroes for dota-bot's draft (FunLib/bench_heroes.lua): Dire's bots pick their own, so without this file a
-// side compared different line-ups.
-export function heroesLua(heroes) {
-  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { ${heroes.map((h) => `"${h}"`).join(", ")} }\n`;
 }
 
 // --rival dotabot: dota-bot against dota-bot in the same match, one variant per team (Pedro, 2026-10-31: against
@@ -380,7 +374,7 @@ async function main(argv) {
   }
   if (!(await running("steam.exe"))) throw new Error("Steam no está abierto; ábrelo y vuelve a correr esto.");
   if (await running("dota2.exe")) throw new Error("Ya hay un Dota abierto; ciérralo primero (no lo toco).");
-  for (const f of [VALVE_TEAM_FILE, VARIANT_FILE, OBSERVE_FILE, HEROES_FILE]) {
+  for (const f of [VALVE_TEAM_FILE, VARIANT_FILE, OBSERVE_FILE]) {
     if (!existsSync(f)) continue;
     // Only this script writes them: a leftover means an earlier run was killed hard.
     unlinkSync(f);
@@ -422,7 +416,6 @@ async function main(argv) {
   const removeVariantFile = () => {
     try { if (existsSync(VARIANT_FILE)) unlinkSync(VARIANT_FILE); } catch {}
     try { if (existsSync(OBSERVE_FILE)) unlinkSync(OBSERVE_FILE); } catch {}
-    try { if (existsSync(HEROES_FILE)) unlinkSync(HEROES_FILE); } catch {}
   };
   // Synchronous on purpose: it also runs from process.on('exit'), after an uncaught error or process.exit().
   const cleanup = () => {
@@ -466,7 +459,6 @@ async function main(argv) {
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
       if (i % opt.block === 0) heroes = drawHeroes();
       writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar)));
-      writeFileSync(HEROES_FILE, heroesLua(heroes));
       latest = null;
       lastPost = 0;
       const short = heroes.map((h) => h.replace("npc_dota_hero_", "")).join(" ");

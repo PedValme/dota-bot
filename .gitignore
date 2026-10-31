@@ -69,7 +69,6 @@ game/Customize
 bots/Customize/bench_valve_team.lua
 bots/Customize/bench_variant.lua
 bots/Customize/bench_observe.lua
-bots/Customize/bench_heroes.lua
 bench/observaciones/
 # dota-bot benchmark: per-match file and the junction to bots/ that tools/instalar.ps1 creates
 tools/bench/addon/scripts/vscripts/bench_partida.lua

@@ -54,7 +54,7 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   (enlaza `bots/` y el custom game; ya hecho en el PC de Pedro).
 - Qué hace y qué no toca: los límites están al inicio de [orquestador.mjs](../tools/bench/orquestador.mjs). Solo
   lanza y cierra su propio `dota2.exe`, escucha en `127.0.0.1`, y sus archivos temporales (la config de GSI,
-  `bots/Customize/bench_valve_team.lua`, `bench_variant.lua`, `bench_observe.lua`, `bench_heroes.lua` y `tools/bench/addon/scripts/vscripts/bench_partida.lua`) se borran al
+  `bots/Customize/bench_valve_team.lua`, `bench_variant.lua`, `bench_observe.lua` y `tools/bench/addon/scripts/vscripts/bench_partida.lua`) se borran al
   terminar o al interrumpirlo con Ctrl+C.
 - Si el orquestador se cierra a la fuerza (Administrador de tareas), su Dota queda abierto y, en los primeros minutos
   de una partida, puede quedar `bots/Customize/bench_valve_team.lua`: mientras exista, un equipo juega con los bots de

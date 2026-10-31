@@ -314,14 +314,16 @@ local function SetState(state, info, now)
 	p.reason = info.reason or ''
 end
 
-local defendAll = nil
-local function DefendAll()
-	if defendAll == nil then
+-- Benchmark variant flags beyond "cerebro", read once per match (Customize/general.lua at load).
+local flags = {}
+local function Flag(name)
+	if flags[name] == nil then
 		local ok, Customize = pcall(require, GetScriptDirectory()..'/Customize/general')
-		defendAll = ok and type(Customize.BenchVariant) == 'table' and Customize.BenchVariant.defensa_total == true
+		flags[name] = ok and type(Customize.BenchVariant) == 'table' and Customize.BenchVariant[name] == true
 	end
-	return defendAll
+	return flags[name]
 end
+local function DefendAll() return Flag('defensa_total') end
 
 local function NearestAllies(loc, k)
 	local list = {}
@@ -448,7 +450,11 @@ function B.Update()
 	-- 4) Clear lead at even or better numbers: Roshan, or group and push one lane; into the base with Aegis or +10k.
 	-- Hysteresis: a group already formed keeps going while the lead stays above 3.5k and at most one hero is down.
 	local grouped = p.state == 'AGRUPAR' or p.state == 'EMPUJAR' or p.state == 'CERRAR'
-	if (lead >= LEAD_GROUP and aliveA >= aliveE) or (grouped and lead >= LEAD_GROUP - 1500 and aliveA >= aliveE - 1) then
+	-- Variant "prudente" (2026-10-31): as Dire, with weaker heroes (random, see the custom game), the brain grouped and
+	-- pushed on a gold lead it could not fight for. With it, a new group push also needs the fight around the team
+	-- clearly ours.
+	local fightOk = not Flag('prudente') or grouped or B.EvaluateFight(center, now) >= 1.1
+	if fightOk and ((lead >= LEAD_GROUP and aliveA >= aliveE) or (grouped and lead >= LEAD_GROUP - 1500 and aliveA >= aliveE - 1)) then
 		if roshanReady and aliveA >= 4 and lead >= LEAD_GROUP and (p.state == 'ROSHAN' or aliveE <= 3) then
 			SetState('ROSHAN', { reason = string.format('lead=%d', lead) }, now)
 			return

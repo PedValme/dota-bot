@@ -672,18 +672,8 @@ local function SelectTopWithFuzz(scored)
 	return scored[1].name
 end
 
-local tBenchHeroes = dofile(GetScriptDirectory()..'/FunLib/bench_heroes')
-
 local function PickHeroForBotSlot(i, id)
 	local team = TeamOfPlayer(id)
-
-	-- dota-bot benchmark (FunLib/bench_heroes.lua): the drawn hero of this player's position, by its slot in the team
-	-- (the position the bot plays, FunLib/aba_role.lua), not by the shuffled pick order.
-	if tBenchHeroes ~= nil then
-		for slot, pid in ipairs(GetTeamPlayers(team)) do
-			if pid == id and tBenchHeroes[slot] ~= nil then return tBenchHeroes[slot] end
-		end
-	end
 	local rolePool = tSelectPoolList[i]
 	local preselect = sSelectList[i]
 
@@ -731,16 +721,6 @@ local function AllPickHeros()
 	if not ShuffledPickOrder[sTeamName] and not Utils.IsHumanPlayerInTeam(GetTeam()) then
 		X.ShufflePickOrder(teamPlayers)
 		ShuffledPickOrder[sTeamName] = true
-	end
-
-	-- dota-bot benchmark: with the drawn heroes (FunLib/bench_heroes.lua) every bot picks at once. The custom game
-	-- gives 5 s to pick and the schedule waits up to 9 s per slot on Dire, so the engine used to give Dire's bots random
-	-- heroes (every benchmark match before 2026-10-31).
-	if tBenchHeroes ~= nil then
-		for i, id in pairs(teamPlayers) do
-			if IsPlayerBot(id) and GetSelectedHeroName(id) == "" then SelectHero(id, PickHeroForBotSlot(i, id)) end
-		end
-		return
 	end
 
 	for i, id in pairs(teamPlayers) do
@@ -964,8 +944,6 @@ function Think()
 		CaptainMode.AddToList();
 	elseif GetGameMode() == GAMEMODE_1V1MID then
 		OneVsOneLogic()
-	elseif tBenchHeroes ~= nil then
-		AllPickHeros() -- benchmark: pick the drawn heroes at once, without the readiness and schedule gates below
 	else
 		if (GameTime() < 3.0 and not bLineupReserve)
 		or X.IsHumanNotReady(GetTeam())
