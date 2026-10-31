@@ -1424,7 +1424,7 @@ function J.IsDisabled( npcTarget )
 				or J.IsTaunted( npcTarget )
 		-- dota-bot team brain (variant "cerebro"): chain disables instead of waiting for one to end. With 0.5 s or
 		-- less left, the target counts as free so the next ally's disable lands as this one ends, without overlap.
-		if bDisabled and J.TeamBrain().Enabled()
+		if bDisabled and J.TeamBrain().FightHooks()
 		then
 			local remain = J.GetDisableRemaining( npcTarget )
 			if remain ~= nil and remain <= 0.5 then return false end
@@ -1496,7 +1496,7 @@ function J.IsInTeamFight( bot, nRadius )
 
 	-- dota-bot team brain (variant "cerebro"): a fight the brain called counts, so initiator ultimates start it instead
 	-- of waiting for 2 allies already in ATTACK mode, which Valve drives (FunLib/team_brain.lua).
-	if J.TeamBrain().Enabled() and J.TeamBrain().InEngage( bot ) then return true end
+	if J.TeamBrain().FightHooks() and J.TeamBrain().InEngage( bot ) then return true end
 
 	local attackModeAllyList = J.GetNearbyHeroes(bot, nRadius, false, BOT_MODE_ATTACK )
 
@@ -3283,7 +3283,7 @@ function J.GetTeamFightLocation( bot )
 			targetLocation = J.GetCenterOfUnits( allyList )
 			-- dota-bot team brain (variant "cerebro"): a fight the brain called may start before anyone is in ATTACK
 			-- mode; the center of no units is (0, 0), the middle of the map, so use the brain's engage point instead.
-			if #allyList == 0 and J.TeamBrain().Enabled() and J.TeamBrain().plan.engage ~= nil
+			if #allyList == 0 and J.TeamBrain().FightHooks() and J.TeamBrain().plan.engage ~= nil
 			then
 				targetLocation = J.TeamBrain().plan.engage.loc
 			end
@@ -4343,7 +4343,58 @@ function J.GetNumOfTeamTotalKills( bEnemy )
 
 end
 
+-- Game phases by the state of the match, not the clock (Pedro, 2026-10-31: «todo debe estar amarrado a las condiciones
+-- de la partida»). The phase is the average level of the ten heroes (GetHeroLevel also works on hidden enemies), with
+-- thresholds at the levels a team has at OHA's minutes in 119 pro matches of normal mode
+-- (docs/investigacion/2026-10-30-datos-pro.md): minute 10 = 6.4, 14 = 8.5, 15 = 9.2, 30 = 16.6. In normal mode they
+-- fire about when OHA meant; in Turbo, where experience is doubled, they fire earlier on their own, with no clock
+-- multiplier. Benchmark variant "fase_estado" only, until measured.
+local nPhaseLevel, fPhaseLevelTime = 1, -1000
+function J.GamePhaseLevel()
+	if DotaTime() - fPhaseLevelTime < 1 then return nPhaseLevel end
+	fPhaseLevelTime = DotaTime()
+	local nSum, nCount = 0, 0
+	for _, team in ipairs( { GetTeam(), GetOpposingTeam() } )
+	do
+		for _, pid in ipairs( GetTeamPlayers( team ) )
+		do
+			local nLevel = GetHeroLevel( pid )
+			if nLevel ~= nil and nLevel > 0 then nSum, nCount = nSum + nLevel, nCount + 1 end
+		end
+	end
+	nPhaseLevel = nCount > 0 and nSum / nCount or 1
+	return nPhaseLevel
+end
+
+-- The normal-mode minute that matches the state of the match: the pro calibration (average level of a team by minute,
+-- normal mode) read backwards. OHA's rules that measure "how far the game is" in minutes keep their thresholds and get
+-- this instead of the clock (with "fase_estado"): about the clock in a typical normal game, earlier in Turbo, later
+-- when the game is slow. Seconds; the real clock before the horn.
+local tLevelByMinute = { { 0, 1 }, { 5, 3.6 }, { 8, 5.4 }, { 10, 6.4 }, { 12, 7.6 }, { 15, 9.2 }, { 18, 10.8 },
+	{ 20, 11.8 }, { 25, 14.4 }, { 30, 16.6 } }
+function J.StateTime()
+	if DotaTime() < 0 then return DotaTime() end
+	local l = J.GamePhaseLevel()
+	for i = 2, #tLevelByMinute
+	do
+		local a, b = tLevelByMinute[i - 1], tLevelByMinute[i]
+		if l <= b[2] then return 60 * ( a[1] + ( b[1] - a[1] ) * ( l - a[2] ) / ( b[2] - a[2] ) ) end
+	end
+	-- Past level 16.6, about 0.44 levels a minute as between minutes 25 and 30.
+	return 60 * ( 30 + ( l - 16.6 ) / 0.44 )
+end
+
+local bStatePhases = nil
+function J.StatePhases()
+	if bStatePhases == nil then
+		local ok, Customize = pcall( require, GetScriptDirectory()..'/Customize/general' )
+		bStatePhases = ok and type( Customize.BenchVariant ) == 'table' and Customize.BenchVariant.fase_estado == true
+	end
+	return bStatePhases
+end
+
 function J.IsEarlyGame()
+	if J.StatePhases() then return J.GamePhaseLevel() < 9.2 end
 	if DotaTime() < (J.IsModeTurbo() and 8 * 60 or 15 * 60) then
 		return true
 	end
@@ -4351,6 +4402,7 @@ function J.IsEarlyGame()
 end
 
 function J.IsMidGame()
+	if J.StatePhases() then local l = J.GamePhaseLevel(); return l >= 9.2 and l < 16.6 end
 	if DotaTime() > (J.IsModeTurbo() and 8 * 60 or 15 * 60) and DotaTime() < (J.IsModeTurbo() and 18 * 60 or 30 * 60) then
 		return true
 	end
@@ -4358,6 +4410,7 @@ function J.IsMidGame()
 end
 
 function J.IsLateGame()
+	if J.StatePhases() then return J.GamePhaseLevel() >= 16.6 end
 	if DotaTime() > (J.IsModeTurbo() and 18 * 60 or 30 * 60) then
 		return true
 	end
@@ -4610,6 +4663,18 @@ function J.GetClosestUnit(units)
 		return units[1];
 	end
 	return target;
+end
+
+-- Turbo detected by its couriers, for the switches OHA wrote as GetGameMode() == 23 (they never ran in the benchmark's
+-- imitated Turbo until 2026-10-31). The benchmark variant "sin_turbo_oha" turns them off again, to measure them: with
+-- them on, dota-bot lost 6 of 6 as Dire where it used to win 9 of 10. In real Turbo GetGameMode() == 23 rules anyway.
+local bImitatedTurboOff = nil
+function J.IsImitatedTurbo()
+	if bImitatedTurboOff == nil then
+		local ok, Customize = pcall( require, GetScriptDirectory()..'/Customize/general' )
+		bImitatedTurboOff = ok and type( Customize.BenchVariant ) == 'table' and Customize.BenchVariant.sin_turbo_oha == true
+	end
+	return not bImitatedTurboOff and J.IsModeTurbo()
 end
 
 function J.IsModeTurbo()
@@ -5590,6 +5655,14 @@ function J.AdjustLocationWithOffsetTowardsFountain(loc, distance)
 end
 
 function J.IsInLaningPhase()
+	-- By state (variant "fase_estado"): laning until the average level of minute 10 (6.4), or that of minute 14 (8.5)
+	-- while this bot is still poor, as OHA's clock rule below.
+	if J.StatePhases()
+	then
+		local l = J.GamePhaseLevel()
+		return DotaTime() < 0 or l < 6.4 or ( l < 8.5 and GetBot():GetNetWorth() < 8000 )
+	end
+
 	local nTime = DotaTime()
 	local bTurbo = J.IsModeTurbo()
 

@@ -26,6 +26,7 @@ local enemyUltSeen = {} -- unit name -> DotaTime() we last saw it cast its ultim
 local holdUntil = -1000      -- REAGRUPAR, TOMAR and ROSHAN windows
 local lineaHoldUntil = -1000 -- farming after a stalled push or a failed Roshan
 local lastRoshanFail = -1000
+local defendHoldUntil = -1000
 local pushStart = { time = -1000, enemyTowers = 0 }
 
 local UPDATE_EVERY = 0.2
@@ -192,12 +193,27 @@ local function BaseThreats()
 			local h, c = 0, 0
 			for _, e in ipairs(enemies) do if Dist(e:GetLocation(), loc) <= 1200 then h = h + 1 end end
 			for _, cr in ipairs(enemyCreeps) do if cr:IsAlive() and Dist(cr:GetLocation(), loc) <= 900 then c = c + 1 end end
-			if h > heroes or (h == heroes and c > creeps) then heroes, creeps, at, inner = h, c, loc, s ~= t3 end
+			if h > heroes or (h == heroes and c > creeps) then heroes, creeps, at = h, c, loc end
 		end
+		-- "Past the T3": an enemy hero (or 3+ creeps) right at a structure behind it (700) and away from the T3 while it
+		-- stands (900). Barracks sit within 1200 of their T3, so counting anyone near a barracks made a lone
+		-- split-pusher hitting the T3 call the whole team (v2-ab: 14 and 19 such calls in two games as Dire).
+		local t3Alive = t3 ~= nil and t3:IsAlive()
+		local function PastT3(loc)
+			if t3Alive and Dist(loc, t3:GetLocation()) <= 900 then return false end
+			for _, s in ipairs(structures) do
+				if s ~= t3 and Dist(loc, s:GetLocation()) <= 700 then return true end
+			end
+			return false
+		end
+		for _, e in ipairs(enemies) do if PastT3(e:GetLocation()) then inner = true end end
+		local innerCreeps = 0
+		for _, cr in ipairs(enemyCreeps) do if cr:IsAlive() and PastT3(cr:GetLocation()) then innerCreeps = innerCreeps + 1 end end
+		if innerCreeps >= 3 then inner = true end
 		-- Creeps alone threaten when they are many (a normal wave with its catapult at a T3 is not an emergency) or
 		-- past the T3.
 		if at ~= nil and (heroes >= 1 or creeps >= 7 or (inner and creeps >= 3)) then
-			threats[lane] = { heroes = heroes, creeps = creeps, loc = at }
+			threats[lane] = { heroes = heroes, creeps = creeps, loc = at, inner = inner }
 		end
 	end
 	return threats
@@ -236,7 +252,10 @@ local function ChooseLane(center, closing)
 	for _, lane in ipairs(LANES) do
 		local tower, tier = NextEnemyTower(lane)
 		if tower ~= nil and (closing or tier < 3) then
-			local score = Dist(center, tower:GetLocation()) - 1500 * GetLaneFrontAmount(GetTeam(), lane, false)
+			-- How far the lane is pushed, by geometry (front to enemy Ancient), not GetLaneFrontAmount: the brain v1
+			-- won 10/10 as Radiant and 3/10 as Dire, and Dire's bots gathered in their own base.
+			local front = GetLaneFrontLocation(GetTeam(), lane, 0)
+			local score = Dist(center, tower:GetLocation()) + 0.5 * Dist(front, GetAncient(GetOpposingTeam()):GetLocation())
 			if score < bestScore then best, bestScore = lane, score end
 		end
 	end
@@ -244,7 +263,14 @@ local function ChooseLane(center, closing)
 end
 
 local function RallyPoint(lane)
-	return GetLaneFrontLocation(GetTeam(), lane, -800)
+	-- 800 behind our creep front, toward our own Ancient, computed here so it does not depend on which side the API's
+	-- offset counts from.
+	local front = GetLaneFrontLocation(GetTeam(), lane, 0)
+	local home = GetAncient(GetTeam()):GetLocation()
+	local d = Dist(front, home)
+	if d < 1 then return front end
+	local k = math.min(800, d) / d
+	return Vector(front.x + (home.x - front.x) * k, front.y + (home.y - front.y) * k, front.z)
 end
 
 -- Our safest standing tower near the group, to fall back to.
@@ -275,8 +301,9 @@ local ROSHAN_MAX = 60 -- seconds the team may spend on a Roshan attempt
 local function SetState(state, info, now)
 	local p = B.plan
 	if p.state ~= state or p.lane ~= info.lane then
-		print(string.format('[bench] plan t=%d team=%d %s -> %s lane=%s %s', math.floor(now), GetTeam(), p.state, state,
-			tostring(info.lane), info.reason or ''))
+		local r = info.rally
+		print(string.format('[bench] plan t=%d team=%d %s -> %s lane=%s %s rally=%s', math.floor(now), GetTeam(), p.state, state,
+			tostring(info.lane), info.reason or '', r and string.format('%d,%d', r.x, r.y) or 'nil'))
 		p.since = now
 	end
 	p.state = state
@@ -286,6 +313,17 @@ local function SetState(state, info, now)
 	p.defenders = info.defenders or {}
 	p.reason = info.reason or ''
 end
+
+-- Benchmark variant flags beyond "cerebro", read once per match (Customize/general.lua at load).
+local flags = {}
+local function Flag(name)
+	if flags[name] == nil then
+		local ok, Customize = pcall(require, GetScriptDirectory()..'/Customize/general')
+		flags[name] = ok and type(Customize.BenchVariant) == 'table' and Customize.BenchVariant[name] == true
+	end
+	return flags[name]
+end
+local function DefendAll() return Flag('defensa_total') end
 
 local function NearestAllies(loc, k)
 	local list = {}
@@ -314,8 +352,14 @@ function B.Update()
 	local lead = NetWorthLead(allies, enemies)
 	if now - (B.lastTick or -1000) >= 30 then
 		B.lastTick = now
-		print(string.format('[bench] plan_tick t=%d team=%d state=%s lead=%d alive=%d-%d', math.floor(now), GetTeam(),
-			B.plan.state, lead, aliveA, aliveE))
+		-- Lane fronts by the API's own measure and by geometry, to check how GetLaneFrontAmount counts for each side.
+		local fronts = {}
+		for _, lane in ipairs(LANES) do
+			local f = GetLaneFrontLocation(GetTeam(), lane, 0)
+			table.insert(fronts, string.format('%d:%.2f@%d,%d', lane, GetLaneFrontAmount(GetTeam(), lane, false), f.x, f.y))
+		end
+		print(string.format('[bench] plan_tick t=%d team=%d state=%s lead=%d alive=%d-%d fronts=%s', math.floor(now), GetTeam(),
+			B.plan.state, lead, aliveA, aliveE, table.concat(fronts, ' ')))
 	end
 	local okAegis, aegis = pcall(function() return J ~= nil and J.DoesTeamHaveAegis() end)
 	local hasAegis = okAegis and aegis == true
@@ -337,21 +381,31 @@ function B.Update()
 
 	if now < 0 then SetState('LINEA', { reason = 'pregame' }, now) return end
 
-	-- 1) Defend the base first, whatever the lead. Enemy heroes there make the whole plan DEFENDER; creeps alone only
-	-- send the nearest one or two allies (p.creepDefense), and the rest of the team keeps its plan.
+	-- 1) Defend the base first, whatever the lead. Two or more enemy heroes, or any past the T3, make the whole plan
+	-- DEFENDER. A lone hero at a T3 (a split-pusher) or creeps alone only send the nearest one or two allies
+	-- (p.creepDefense) and the rest keep the plan: in v1 a lone split-pusher pulled two defenders out of every push
+	-- (series cerebro-ab, games lost on Dire).
 	local threats = BaseThreats()
 	local worstLane, worst = nil, nil
 	for lane, t in pairs(threats) do
 		if worst == nil or t.heroes > worst.heroes or (t.heroes == worst.heroes and t.creeps > worst.creeps) then worstLane, worst = lane, t end
 	end
 	p.creepDefense = nil
-	if worst ~= nil and worst.heroes >= 1 then
+	if worst ~= nil and (worst.heroes >= 2 or (worst.heroes >= 1 and worst.inner)) then
 		local k = worst.heroes >= 3 and 5 or worst.heroes + 1
+		-- Variant "defensa_total" (2026-10-31): as Dire most of the brain's deaths were defending its base piecemeal
+		-- (107 deaths in DEFENDER, 74 inside the base, against 14 as Radiant), with 3 defenders against Valve's grouped
+		-- siege. With it, two enemy heroes at the base call all five.
+		if worst.heroes >= 2 and DefendAll() then k = 5 end
 		SetState('DEFENDER', { lane = worstLane, defendLane = worstLane, rally = worst.loc,
 			defenders = NearestAllies(worst.loc, k), reason = string.format('heroes=%d creeps=%d k=%d', worst.heroes, worst.creeps, k) }, now)
+		defendHoldUntil = now + 5
 		return
+	elseif p.state == 'DEFENDER' and now < defendHoldUntil then
+		return -- held 5 s so a threat at the edge of the radius does not make the plan flicker
 	elseif worst ~= nil then
-		p.creepDefense = { lane = worstLane, defenders = NearestAllies(worst.loc, worst.creeps >= 8 and 2 or 1) }
+		local k = ((worst.heroes >= 1 and worst.creeps >= 5) or worst.creeps >= 8) and 2 or 1
+		p.creepDefense = { lane = worstLane, defenders = NearestAllies(worst.loc, k) }
 	end
 
 	-- Hold the current state a little unless something above overrides it.
@@ -368,7 +422,10 @@ function B.Update()
 	-- Roshan is an option only once a team can kill it (from minute 10 in Turbo, 20 in normal) and not within 3 min of
 	-- a failed attempt.
 	local turbo = J ~= nil and J.IsModeTurbo and J.IsModeTurbo()
-	local roshanReady = RoshanAlive(now) and not hasAegis and now > (turbo and 10 or 20) * 60 and now - lastRoshanFail > 180
+	-- "Once a team can kill it": minute 20 of a normal game, read from the state of the match with "fase_estado".
+	local roshanTime = (J ~= nil and J.StatePhases and J.StatePhases()) and J.StateTime() > 20 * 60
+		or (not (J ~= nil and J.StatePhases and J.StatePhases()) and now > (turbo and 10 or 20) * 60)
+	local roshanReady = RoshanAlive(now) and not hasAegis and roshanTime and now - lastRoshanFail > 180
 
 	-- 3) Fight won: take the nearest objective before they respawn.
 	if enemyDeaths - allyDeaths >= 2 and aliveA >= aliveE + 2 then
@@ -396,12 +453,29 @@ function B.Update()
 	-- 4) Clear lead at even or better numbers: Roshan, or group and push one lane; into the base with Aegis or +10k.
 	-- Hysteresis: a group already formed keeps going while the lead stays above 3.5k and at most one hero is down.
 	local grouped = p.state == 'AGRUPAR' or p.state == 'EMPUJAR' or p.state == 'CERRAR'
-	if (lead >= LEAD_GROUP and aliveA >= aliveE) or (grouped and lead >= LEAD_GROUP - 1500 and aliveA >= aliveE - 1) then
+	-- Variant "prudente" (2026-10-31): as Dire, with weaker heroes (random, see the custom game), the brain grouped and
+	-- pushed on a gold lead it could not fight for. With it, a new group push also needs the fight around the team
+	-- clearly ours.
+	local fightOk = not Flag('prudente') or grouped or B.EvaluateFight(center, now) >= 1.1
+	if fightOk and ((lead >= LEAD_GROUP and aliveA >= aliveE) or (grouped and lead >= LEAD_GROUP - 1500 and aliveA >= aliveE - 1)) then
 		if roshanReady and aliveA >= 4 and lead >= LEAD_GROUP and (p.state == 'ROSHAN' or aliveE <= 3) then
 			SetState('ROSHAN', { reason = string.format('lead=%d', lead) }, now)
 			return
 		end
-		local close = hasAegis or lead >= LEAD_CLOSE
+		-- Into the enemy base only with the fight in favour, not just Aegis or a lead: in v1 the team went up the high
+		-- ground, lost the fight there and the base after it (series cerebro-ab). Needs at least four alive, no fewer
+		-- than them, and the fight around the group evaluated clearly ours.
+		local fightHere = B.EvaluateFight(center, now)
+		-- Hysteresis: 1.2 to start closing, 1.0 to keep at it (the evaluation moves with what the team sees).
+		local close = (hasAegis or lead >= LEAD_CLOSE) and aliveA >= 4 and aliveA >= aliveE
+			and fightHere >= (p.state == 'CERRAR' and 1.0 or 1.2)
+		-- And back out in time: once the closing goes wrong (an ally down and the fight no longer ours), stop and farm
+		-- instead of feeding the rest of the team into the towers.
+		if p.state == 'CERRAR' and allyDeaths >= 1 and fightHere < 1.0 then
+			SetState('LINEA', { reason = string.format('retirada del high ground eval=%.2f', fightHere) }, now)
+			lineaHoldUntil = now + 25
+			return
+		end
 		local lane = p.lane
 		local laneAtT3 = false
 		if lane ~= nil then local _, tier = NextEnemyTower(lane); laneAtT3 = tier >= 3 and not close end
@@ -411,6 +485,7 @@ function B.Update()
 		if lane == nil then
 			-- Every lane is at the enemy T3 and the team cannot go in yet: farm and wait for Aegis or a bigger lead.
 			SetState('LINEA', { reason = string.format('esperando high ground lead=%d', lead) }, now)
+			lineaHoldUntil = now + 10
 			return
 		end
 		local rally = RallyPoint(lane)
@@ -448,6 +523,12 @@ local function Enabled()
 	return enabled
 end
 B.Enabled = Enabled
+-- The brain's fight-level pieces (disable chaining, engage for initiators, help-ally filter, focus): on with the brain
+-- unless the variant "sin_pelea" turns them off, to tell their effect apart from the team plan's (2026-10-31: every
+-- brain variant died about 2.5 times as often as the base bot, most of it outside the plan's own states).
+function B.FightHooks()
+	return Enabled() and not Flag('sin_pelea')
+end
 
 function B.IsDefender(bot)
 	local pid = bot:GetPlayerID()

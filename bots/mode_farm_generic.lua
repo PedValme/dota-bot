@@ -364,15 +364,19 @@ function GetDesireHelper()
 
 	-- Gradual farm desire cap: ramps from 0.3 during laning to 0.6 by 20min (turbo: 14min)
 	-- Keeps jungle farming as a secondary priority — never dominant over teamfight/push/defend
-	local nFarmRampStart = J.IsModeTurbo() and 8 * 60 or 10 * 60
-	local nFarmRampEnd   = J.IsModeTurbo() and 14 * 60 or 20 * 60
-	local nFarmCap = RemapValClamped(DotaTime(), nFarmRampStart, nFarmRampEnd, 0.3, 0.6)
+	-- With "fase_estado" the ramp follows the state of the match (J.StateTime, normal-mode minutes), not the clock.
+	local bStatePhases = J.StatePhases()
+	local nGameTime = bStatePhases and J.StateTime() or DotaTime()
+	local bTurboClock = not bStatePhases and J.IsModeTurbo()
+	local nFarmRampStart = bTurboClock and 8 * 60 or 10 * 60
+	local nFarmRampEnd   = bTurboClock and 14 * 60 or 20 * 60
+	local nFarmCap = RemapValClamped(nGameTime, nFarmRampStart, nFarmRampEnd, 0.3, 0.6)
 
 	if GetGameMode() ~= GAMEMODE_MO
 	and J.Site.IsTimeToFarm(bot)
 	and not J.IsDefending(bot)
 	and (bot:GetUnitName() ~= 'npc_dota_hero_lone_druid_bear' or (bot:HasScepter() and not J.IsValid(LoneDruid.hero)))
-	and (DotaTime() > 8 * 60 or bot:GetLevel() >= 8 or ( bot:GetAttackRange() < 220 and bot:GetLevel() >= 6 ))
+	and (nGameTime > 8 * 60 or bot:GetLevel() >= 8 or ( bot:GetAttackRange() < 220 and bot:GetLevel() >= 6 ))
 	-- dota-bot "remate" (Pedro, 2026-10-30): the benchmark variant "farm = true" keeps farming with a 6k+ lead, and so
 	-- does the team brain (variant "cerebro") when its plan is to farm (FunLib/team_brain.lua).
 	and (networthAdvantage < 6000 or Customize.BenchVariant.farm == true or (TeamBrain.Enabled() and TeamBrain.FarmAllowed()))
@@ -397,7 +401,7 @@ function GetDesireHelper()
 			-- Early game: prefer lane farming over jungle
 			-- Lane creeps give more gold/XP per minute than jungle camps,
 			-- especially before the bot has farming items.
-			local bEarlyGame = (J.IsModeTurbo() and DotaTime() < 18 * 60 or DotaTime() < 25 * 60)
+			local bEarlyGame = (bTurboClock and nGameTime < 18 * 60 or nGameTime < 25 * 60)
 				and bot:GetNetWorth() < 15000
 			local nDeaths = GetHeroDeaths(bot:GetPlayerID())
 
