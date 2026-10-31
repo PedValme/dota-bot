@@ -63,6 +63,17 @@ local function AddBots(cfg)
 			print(string.format("[dotabench] AddBot team=%d slot=%d %s -> %s", team, slot, hero, tostring(ok)))
 		end
 	end
+	-- Mirror heroes: AddBot only gives Radiant the asked hero, and Dire's bots pick their own (seen 2026-10-30, every
+	-- match), so a side compared different line-ups. Give each Dire bot its slot's hero before its script picks.
+	for slot = 1, PlayerResource:GetPlayerCountForTeam(DOTA_TEAM_BADGUYS) do
+		local pid = PlayerResource:GetNthPlayerIDOnTeam(DOTA_TEAM_BADGUYS, slot)
+		local hero = cfg.heroes[slot]
+		if pid >= 0 and hero and PlayerResource:IsFakeClient(pid) and PlayerResource:GetSelectedHeroName(pid) == "" then
+			local player = PlayerResource:GetPlayer(pid)
+			local ok, err = pcall(function() player:SetSelectedHero(hero) end)
+			print(string.format("[dotabench] mirror team=3 slot=%d pid=%d %s -> %s %s", slot, pid, hero, tostring(ok), tostring(err or "")))
+		end
+	end
 end
 
 -- Humans never play: they watch as spectators (team 1), which gives the broadcast view with a choice of Radiant,

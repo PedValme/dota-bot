@@ -396,7 +396,7 @@ function X.SetTalkMessage()
 	local nCurrentGold = bot:GetGold()
 	local nCurrentKills = GetHeroKills( nBotID )
 	local nCurrentDeaths = GetHeroDeaths( nBotID )
-	local nRate = GetGameMode() == GAMEMODE_TURBO and 2.0 or 1.0
+	local nRate = (GetGameMode() == GAMEMODE_TURBO or J.IsModeTurbo()) and 2.0 or 1.0
 
 	--回复玩家的对话
 	if nBotID == J.Role.GetReplyMemberID()
@@ -815,7 +815,7 @@ end
 
 
 function X.IsCourierTargetedByUnit( courier )
-	if GetGameMode() == GAMEMODE_TURBO then return false end
+	if GetGameMode() == GAMEMODE_TURBO or J.IsModeTurbo() then return false end
 	
 	local botLV = bot:GetLevel()
 
@@ -8414,6 +8414,20 @@ function BuybackUsageThink()
 		print(string.format('[bench] mode t=%d pid=%d %s %s %.2f alive=%d', math.floor(DotaTime()), bot:GetPlayerID(),
 			string.gsub(botName, 'npc_dota_hero_', ''), benchModeNames[mode] or tostring(mode), bot:GetActiveModeDesire(),
 			bot:IsAlive() and 1 or 0))
+		-- Which way the API's lane geometry counts for this team (one bot, once a minute): is a negative offset of
+		-- GetLaneFrontLocation toward our base, and does GetAmountAlongLane count from our side? (Pedro, 2026-10-31:
+		-- dota-bot plays worse as Dire in every variant.)
+		if GetTeamPlayers(GetTeam())[1] == bot:GetPlayerID() and DotaTime() - (bot.benchGeoTime or -1000) >= 60 then
+			bot.benchGeoTime = DotaTime()
+			local home = GetAncient(GetTeam()):GetLocation()
+			local f0 = GetLaneFrontLocation(GetTeam(), LANE_MID, 0)
+			local fNeg = GetLaneFrontLocation(GetTeam(), LANE_MID, -800)
+			local along = GetAmountAlongLane(LANE_MID, home)
+			print(string.format('[bench] geo t=%d team=%d front0_to_home=%d frontNeg800_to_home=%d along_home=%.2f front_amount=%.2f',
+				math.floor(DotaTime()), GetTeam(), GetUnitToLocationDistance(GetAncient(GetTeam()), f0),
+				GetUnitToLocationDistance(GetAncient(GetTeam()), fNeg), along and along.amount or -1,
+				GetLaneFrontAmount(GetTeam(), LANE_MID, false)))
+		end
 	end
 	if bot.lastBuybackFrameProcessTime == nil then bot.lastBuybackFrameProcessTime = DotaTime() end
 	if DotaTime() > 30 and (DotaTime() - bot.lastBuybackFrameProcessTime < 2) then return end

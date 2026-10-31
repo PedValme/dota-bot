@@ -1096,7 +1096,7 @@ function ItemPurchaseThink()
 
 	if ( GetGameMode() ~= 23 and botLevel > 6 and currentTime > bot.fullInvCheck + 1.0
 		and (botDistanceFromFountain <= 200 or bot:DistanceFromSecretShop() <= 200 ))
-		or ( GetGameMode() == 23 and botLevel > 9 and currentTime > bot.fullInvCheck + 1.0 )
+		or ( (GetGameMode() == 23 or J.IsModeTurbo()) and botLevel > 9 and currentTime > bot.fullInvCheck + 1.0 )
 	then
 		local emptySlot = Item.GetEmptyInventoryAmount( bot )
 		local slotToSell = nil
@@ -1290,7 +1290,8 @@ function ItemPurchaseThink()
 		then
 			bot.currBuyingBasicItem = _popIfNoLongerNeeded()
 		else
-			if GetGameMode() == 23
+			-- Turbo's purchase path also when Turbo is detected by its couriers (the benchmark's imitated Turbo)
+			if GetGameMode() == 23 or J.IsModeTurbo()
 			then
 				TurboModeGeneralPurchase()
 			else

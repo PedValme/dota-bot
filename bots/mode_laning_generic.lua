@@ -57,7 +57,7 @@ function GetDesire()
 		end
 	end
 
-	if GetGameMode() == 23 then currentTime = currentTime * 1.65 end
+	if GetGameMode() == 23 or J.IsModeTurbo() then currentTime = currentTime * 1.65 end
 	if currentTime < 0 then return BOT_ACTION_DESIRE_NONE end
 
 	-- if DotaTime() > 20 and DotaTime() - skipLaningState.lastCheckTime < skipLaningState.checkGap then

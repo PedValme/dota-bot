@@ -900,7 +900,7 @@ end
 -- Courier scan (unchanged)
 local courierFindCD, lastFindTime = 0.1, -90
 function X.GetEnemyCourier(b, nRadius)
-    if GetGameMode() == 23 then return nil end
+    if GetGameMode() == 23 or J.IsModeTurbo() then return nil end
     if J.GetDistanceFromEnemyFountain(b) < 1400 then return nil end
     if DotaTime() > lastFindTime + courierFindCD then
         lastFindTime = DotaTime()

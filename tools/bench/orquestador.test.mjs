@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
   parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, variantLua,
-  VARIANTS, summarize, parseModo, observationLines } from "./orquestador.mjs";
+  VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
 
@@ -25,6 +25,17 @@ test("with variants, every block plays each variant once per side and flips the 
   }
   assert.deepEqual(s.slice(0, 4).map((x) => `${x.variant}-${x.dotabot}`), ["base-radiant", "empuje-radiant", "base-dire", "empuje-dire"]);
   assert.deepEqual(s.slice(4).map((x) => `${x.variant}-${x.dotabot}`), ["empuje-dire", "base-dire", "empuje-radiant", "base-radiant"]);
+});
+
+test("dota-bot against dota-bot: pairs swap sides on one draw, the start flips each pair, rows from a's side", () => {
+  const s = [0, 1, 2, 3].map((i) => rivalSchedule(i, ["cerebro", "base"]));
+  assert.deepEqual(s.map((x) => `${x.radiant}/${x.dire}`), ["cerebro/base", "base/cerebro", "base/cerebro", "cerebro/base"]);
+  assert.deepEqual(s.map((x) => x.dotabot), ["radiant", "dire", "dire", "radiant"]);
+  assert.deepEqual(s.map((x) => x.block), [0, 0, 1, 1]);
+  for (const x of s) assert.equal(x.variant, "cerebro");
+  const lua = rivalVariantLua("cerebro", "base");
+  assert.match(lua, /name = "cerebro-vs-base", teams = \{ \[2\] = \{ name = "cerebro", cerebro = true, thinkless = 1 \}, \[3\] = \{ name = "base", empuje = false, thinkless = 1 \} \}/);
+  assert.equal(rivalName("a", "b"), "a-vs-b");
 });
 
 test("the variant file is plain Lua data with the variant's fields", () => {

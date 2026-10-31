@@ -75,6 +75,25 @@ export function variantLua(name) {
   return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { name = "${name}", ${fields} }\n`;
 }
 
+// --rival dotabot: dota-bot against dota-bot in the same match, one variant per team (Pedro, 2026-10-31: against
+// Valve the base bot already wins ~91%, so wins there can only show a change got worse). FunLib/bench_variant.lua gives
+// each team its own entry of "teams".
+export function rivalVariantLua(radiant, dire) {
+  const fields = (name) => Object.entries(VARIANTS[name]).map(([k, v]) => `${k} = ${v}`).join(", ");
+  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { name = "${rivalName(radiant, dire)}", teams = { [2] = { name = "${radiant}", ${fields(radiant)} }, [3] = { name = "${dire}", ${fields(dire)} } } }\n`;
+}
+export const rivalName = (radiant, dire) => `${radiant}-vs-${dire}`;
+
+// Match i of a dota-bot against dota-bot series of variants [a, b]: pairs of matches share a hero draw and swap sides,
+// and the side that starts flips every pair. The row is written from a's point of view (dotabot = a's side).
+export function rivalSchedule(i, variants) {
+  const [a, b] = variants;
+  const block = Math.floor(i / 2);
+  const aRadiant = (i % 2 === 0) === (block % 2 === 0);
+  return { block, dotabot: aRadiant ? "radiant" : "dire", variant: a,
+    radiant: aRadiant ? a : b, dire: aRadiant ? b : a };
+}
+
 // Match i (0-based) of a series with these variants: block of 2 x variants matches sharing one hero draw, where every
 // variant plays once on each side; the side that starts and the variant order flip every block.
 export function schedule(i, variants) {
@@ -291,6 +310,7 @@ function parseArgs(argv) {
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else if (k === "--observar") { opt.observar = true; i -= 1; } // a flag: takes no value
     else if (k === "--lado") opt.lado = v; // debugging one side: dota-bot always plays it (no side balance)
+    else if (k === "--rival") opt.rival = v; // "valve" (default) or "dotabot": both teams dota-bot, one variant each
     else throw new Error(`Opción desconocida: ${k}`);
   }
   if (!Number.isInteger(opt.partidas) || opt.partidas < 1 || opt.partidas > 50) throw new Error("--partidas: 1 a 50");
@@ -301,10 +321,16 @@ function parseArgs(argv) {
   opt.modo ??= "normal";
   if (!["normal", "turbo"].includes(opt.modo)) throw new Error("--modo: normal o turbo");
   if (opt.lado !== undefined && !["radiant", "dire"].includes(opt.lado)) throw new Error("--lado: radiant o dire");
+  opt.rival ??= "valve";
+  if (!["valve", "dotabot"].includes(opt.rival)) throw new Error("--rival: valve o dotabot");
+  if (opt.rival === "dotabot" && ((opt.variantes ?? []).length !== 2 || opt.lado !== undefined)) {
+    throw new Error("--rival dotabot: exactamente dos --variantes (la que se prueba primero) y sin --lado");
+  }
   for (const v of opt.variantes) if (!Object.hasOwn(VARIANTS, v)) throw new Error(`--variantes: ${Object.keys(VARIANTS).join(", ")}`);
   if (new Set(opt.variantes).size !== opt.variantes.length) throw new Error("--variantes: sin repetir");
-  const block = 2 * Math.max(opt.variantes.length, 1);
+  const block = opt.rival === "dotabot" ? 2 : 2 * Math.max(opt.variantes.length, 1);
   if (opt.variantes.length && opt.partidas % block !== 0) throw new Error(`--partidas: múltiplo de ${block} con esas variantes`);
+  opt.block = block;
   return opt;
 }
 
@@ -412,20 +438,29 @@ async function main(argv) {
     let heroes = [];
     for (let i = 0; i < opt.partidas; i++) {
       if (await running("dota2.exe")) throw new Error("Hay un Dota abierto que no es mío; paro sin tocarlo.");
-      const planned = schedule(i, opt.variantes);
-      const { block, variant } = planned;
+      const rival = opt.rival === "dotabot";
+      const planned = rival ? rivalSchedule(i, opt.variantes) : schedule(i, opt.variantes);
+      const { block } = planned;
       const dotabot = opt.lado ?? planned.dotabot;
       const valveTeam = dotabot === "radiant" ? DIRE : RADIANT;
-      writeFileSync(VALVE_TEAM_FILE, `-- written by tools/bench/orquestador.mjs for one match; deleted once the bots load\nreturn ${valveTeam}\n`);
+      // The variant the custom game must find in the log: one per match, or "a-vs-b" when both teams are dota-bot.
+      const variant = rival ? rivalName(planned.radiant, planned.dire) : planned.variant;
       removeVariantFile();
-      if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
+      if (rival) {
+        writeFileSync(VARIANT_FILE, rivalVariantLua(planned.radiant, planned.dire));
+      } else {
+        writeFileSync(VALVE_TEAM_FILE, `-- written by tools/bench/orquestador.mjs for one match; deleted once the bots load\nreturn ${valveTeam}\n`);
+        if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
+      }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
-      if (i % (2 * Math.max(opt.variantes.length, 1)) === 0) heroes = drawHeroes();
+      if (i % opt.block === 0) heroes = drawHeroes();
       writeFileSync(MATCH_FILE, matchConfigLua(heroes, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar)));
       latest = null;
       lastPost = 0;
       const short = heroes.map((h) => h.replace("npc_dota_hero_", "")).join(" ");
-      console.log(`Partida ${i + 1}/${opt.partidas}${variant ? ` (variante ${variant})` : ""}: dota-bot en ${dotabot}, Valve en ${valveTeam === RADIANT ? "radiant" : "dire"}; héroes ${short}.`);
+      console.log(rival
+        ? `Partida ${i + 1}/${opt.partidas}: ${planned.radiant} en radiant contra ${planned.dire} en dire; héroes ${short}.`
+        : `Partida ${i + 1}/${opt.partidas}${variant ? ` (variante ${variant})` : ""}: dota-bot en ${dotabot}, Valve en ${valveTeam === RADIANT ? "radiant" : "dire"}; héroes ${short}.`);
       const cpu = cpuSampler();
       const cpuSamples = [];
       let nextSample = Date.now() + 30_000;
@@ -488,7 +523,7 @@ async function main(argv) {
       }
       const s = latest ?? {};
       const row = {
-        fecha, etiqueta: opt.etiqueta, partida: i + 1, bloque: block + 1, variante: variant,
+        fecha, etiqueta: opt.etiqueta, partida: i + 1, bloque: block + 1, variante: rival ? planned.variant : variant,
         valida: motivo ? "no" : "si", motivo, dificultad: opt.dificultad,
         dotabot, ganador: outcome === "final" ? s.winner : "", resultado: outcome,
         minutos: s.clock ? Math.round(s.clock / 60) : "", kills_radiant: s.radiantKills ?? "",
@@ -506,7 +541,11 @@ async function main(argv) {
       if (outcome === "sin-gsi") { console.log("Dota no envió datos por GSI; paro."); break; }
       await sleep(8000);
     }
-    for (const s of summarize(results, opt.variantes)) {
+    if (opt.rival === "dotabot") {
+      // Rows are written from the first variant's side: its wins are the matches it won against the second.
+      const [s] = summarize(results, [opt.variantes[0]]);
+      console.log(`${opt.variantes[0]} ganó ${s.ganadas} de ${s.validas} partidas válidas contra ${opt.variantes[1]} (jugó ${s.jugadas}). Detalle en bench/series.csv.`);
+    } else for (const s of summarize(results, opt.variantes)) {
       console.log(`${s.variante ? `Variante ${s.variante}: ` : ""}dota-bot ganó ${s.ganadas} de ${s.validas} partidas válidas de bloques completos (jugó ${s.jugadas}). Detalle en bench/series.csv.`);
     }
   } finally {

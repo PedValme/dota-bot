@@ -78,7 +78,7 @@ export function getGlobalGameState(): GlobalGameState {
     const gameMode = GetGameMode();
 
     // Adjust time for turbo mode
-    const adjustedTime = gameMode === 23 ? currentTime * 2 : currentTime;
+    const adjustedTime = gameMode === 23 || jmz.IsModeTurbo() ? currentTime * 2 : currentTime;
 
     const [teamNetworth, enemyNetworth] = jmz.GetInventoryNetworth();
     globalGameStateCache = {
