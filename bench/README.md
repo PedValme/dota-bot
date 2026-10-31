@@ -2,7 +2,7 @@
 
 Partidas de bots contra bots sin clics, en un custom game local (`tools/bench/addon`, «dotabench»): dota-bot en un
 equipo y los bots de Valve en el otro, cinco héroes sorteados por partida (uno por posición; se piden para los dos
-lados, pero solo Radiant los recibe y Dire elige los suyos: no son espejo), misma dificultad, tu usuario fuera de los equipos,
+lados: espejo desde el 2026-10-31, ver «Héroes»), misma dificultad, tu usuario fuera de los equipos,
 cambiando de lado en cada partida y acelerado. El ganador lo dice el propio Dota por Game State Integration (GSI).
 
 ```
@@ -42,9 +42,11 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   inválidas, funciones lentas, edificios), queda por partida en `observaciones/<etiqueta>-<fecha>-<n>.log` (ignorado por
   git: pesan varios MB). `node tools/bench/analizar.mjs observaciones/<archivo>.log` lo resume: zonas, agrupación,
   farm, couriers, modos de dota-bot según su ventaja, empuje en grupo y errores.
-- Héroes (visto el 2026-10-30 en 7 de 7 partidas): Radiant recibe los cinco sorteados y **Dire elige los suyos**, la
-  controle quien la controle (cuando es dota-bot, con el draft de OHA). Las series A/B siguen equilibradas entre
-  variantes porque cada una juega los dos lados, pero los dos equipos no llevan los mismos héroes.
+- Héroes: espejo en los dos equipos desde el 2026-10-31. En este custom game la selección, la estrategia y la previa
+  pasan en el mismo segundo: `AddBot` da a Radiant los sorteados y el motor da a Dire **héroes al azar**. Así fueron
+  todas las partidas anteriores a esa fecha, y por eso rendía peor quien jugaba en Dire. Ahora el custom game cambia
+  cada héroe de Dire por el sorteado de su posición medio segundo después de aparecer (`ReplaceHeroWith`; los scripts
+  del bot se reinician con el héroe nuevo, comprobado) y lo anota como `[dotabench] mirror`. `--espejo no` lo apaga.
 - Validez (decisión de Pedro, DECISIONES 2026-10-29: no se acepta contaminación): cada partida va a `series.csv` con
   `valida` y `motivo`. Cuenta solo si terminó, hubo 5 bots por lado, tu usuario quedó fuera, el log confirma la
   variante y el modo, y Dota no cambió de versión (`dota_version`, de `steam.inf`). También se anotan la CPU de la máquina
@@ -77,6 +79,57 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
 - Si una partida acaba en `sin-gsi`, mira `game/dota/console.log`: «No usable DX11 adapters» significa que Dota no
   tuvo pantalla ni GPU (monitor apagado, sesión bloqueada o remota). Deja la pantalla encendida durante la serie.
 - Mide la máquina antes de una serie y anótalo con los resultados (regla del entorno): CPU, memoria libre y procesos.
+
+## Cómo se avanza (DECISIONES 2026-10-31)
+| Nivel | Para qué | Tamaño | Puerta |
+|---|---|---|---|
+| 0. Banco | Que la medición no mienta | Partida de humo y una serie A contra A (`--variantes base,base_b`); se repite cuando cambia el banco | La tabla de abajo se comprueba sola; revisor adversarial; ruido y ventaja de lado medidos |
+| 1. Mecanismo | Que un arreglo hace lo que dice | 1-2 partidas con `--observar` | La métrica del arreglo se mueve en el log; sin eso no se pasa al nivel 2 |
+| 2. Resultado | Que un paquete de cambios gana más | Calculado antes según la diferencia buscada y el ruido del nivel 0 | Pregunta y métrica principal por escrito antes; análisis fijo, sin cortar por lado o héroe después |
+
+En todos: cada partida anota su commit (`codigo`; con `+cambios` no vale y si cambia a mitad de serie tampoco), tope de
+60 min de juego (`tope`, no válida, se cuenta aparte), la serie se para sola con más del 20 % de partidas no válidas
+(desde la quinta), y de vez en cuando una prueba en el entorno real (lobby Local Host, Turbo real).
+
+## Protocolo de medición
+Una serie mide solo si cada condición de esta tabla se comprueba sola, en cada partida. Una condición que nadie
+comprueba es una suposición: va a «Sin comprobar» y se resuelve antes de sacar conclusiones, no después. Una asimetría
+conocida entre los lados bloquea la serie hasta arreglarla. Lección del 2026-10-31: los héroes al azar de Dire estaban
+anotados como un hecho del banco y no como contaminación, y se midieron horas encima.
+
+| Condición | Cómo se comprueba | Si falla |
+|---|---|---|
+| La partida terminó | GSI da ganador | `sin final` |
+| 5 bots por lado, humano fuera | `[dotabench] roster` | `reparto`, `humano` |
+| Mismos cinco héroes en los dos lados | `roster` + `mirror ok=true` y, cuando están los 10, `[dotabench] start` (héroe de la entidad) | `héroes distintos por lado`, `sin registro de inicio` |
+| Mismo patrimonio inicial (±300 por equipo, ±100 por héroe) | `start ... nw=`; el espejo da el patrimonio del héroe quitado (`gold=`) y devuelve guardianes y humo al stock (`restock=`) | `patrimonio inicial R-D`, `patrimonio inicial de un héroe` |
+| Ningún héroe reemplazado queda en el mapa | `[dotabench] mirror_old removed=true` por cada cambio | `héroe reemplazado sin borrar` |
+| 5 couriers vivos por lado en el minuto 1, Turbo (1100) en `--modo turbo` | `[dotabench] couriers team= n= speeds=` | `couriers R-D`, `couriers lentos` |
+| Espejo encendido | `--espejo no` es solo para depurar | `espejo apagado` |
+| Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |
+| Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |
+| Mismo código, con commit, en toda la serie | `git rev-parse` y `git status` de `bots/` y del custom game antes y después de cada partida | `código sin commit`, `el código cambió en la serie` |
+| La partida termina en tiempo razonable | reloj de GSI | `tope de 60 min` |
+| Lado, héroes y orden repartidos igual entre variantes | calendario por bloques (pruebas) | solo cuentan bloques completos |
+| Máquina libre | CPU y memoria por partida en `series.csv` | se anota; con carga alta, no se corre |
+
+Puerta antes de cada serie (DECISIONES 2026-10-31), sin excepción:
+1. Una partida de humo con `--observar`: su log se coteja fila por fila contra esta tabla (no el código).
+2. Un revisor adversarial (Opus, esfuerzo medio) lee ese log y la tabla con una sola pregunta, «¿qué hace mentir a
+   esta medición?», sin la conclusión del agente.
+3. Por escrito, antes de lanzar: la pregunta que responde la serie, qué cambió desde la anterior y qué queda sin
+   comprobar. Si algo de esa lista puede tumbar el resultado, no se lanza.
+Mientras corre una serie, el trabajo en paralelo va en otro worktree, en su propia rama.
+
+Sin comprobar (supuestos a la vista):
+- El sorteo de héroes sale de una lista recordada de los que saben jugar los bots de Valve, no de `BotImplemented`.
+- El Turbo imitado (couriers, oro y experiencia ×2, reaparición) no es el Turbo real: torres y runas son las normales.
+- La velocidad ×4: si a esa escala los bots de Lua piensan menos veces por segundo de juego que los de Valve (C++),
+  sesga siempre hacia el mismo lado. Comprobación barata pendiente: comparar la cadencia de `[bench] mode` a ×1 y ×4.
+- El ruido entre dos brazos iguales y la ventaja del lado: los mide la serie A contra A (nivel 0).
+
+Los defectos conocidos sin resolver del banco están en ESTADO.md («Problemas conocidos»): mientras sigan abiertos, no
+se mide sobre ellos. Los sesgos de cada serie ya corrida, en [MEDICIONES.md](../MEDICIONES.md).
 
 ## Cómo leerlo
 - 10 partidas solo distinguen diferencias grandes (por ejemplo 8 de 10); un 6 de 10 puede ser suerte. Con 20 por
