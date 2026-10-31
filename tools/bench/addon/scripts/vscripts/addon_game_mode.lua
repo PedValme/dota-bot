@@ -53,7 +53,6 @@ local function ApplyTurbo()
 end
 
 local botsAdded = {}
-local radiantScheduled = false
 
 -- Only Radiant gets the asked heroes here: hero selection, strategy and pre-game happen in the same second, so no
 -- draft script runs and the engine gives Dire's bots random heroes, only if they join at once (added a second
@@ -254,20 +253,14 @@ local function OnStateChange()
 	local state = GameRules:State_Get()
 	KeepHumansOut("state " .. tostring(state))
 	if state == DOTA_GAMERULES_STATE_HERO_SELECTION or state == DOTA_GAMERULES_STATE_STRATEGY_TIME then
-		-- Dire at once (it needs the engine's random heroes). Radiant one second after the human is moved out of it
-		-- (KeepHumansOut above): with the human still in a Radiant slot, Radiant's first bot spawned after the horn,
-		-- and with the delay it spawned on time (2026-10-31). Pre-game still adds whichever has not been added.
-		AddBots(cfg, DOTA_TEAM_BADGUYS)
-		if not radiantScheduled then
-			radiantScheduled = true
-			GameRules:GetGameModeEntity():SetThink(function()
-				AddBots(cfg, DOTA_TEAM_GOODGUYS)
-				return nil
-			end, "dotabench_addbots", 1)
-		end
-	elseif state == DOTA_GAMERULES_STATE_PRE_GAME then
-		AddBots(cfg, DOTA_TEAM_BADGUYS)
+		-- Both teams in the same instant, Radiant first. Tried 2026-10-31: a team added a second later got no heroes
+		-- at all, and the team added first gets the asked heroes while the other gets random ones (the mirror swaps
+		-- those). The first bot added spawns later than the rest whichever team it is; pre-game is long enough for it.
 		AddBots(cfg, DOTA_TEAM_GOODGUYS)
+		AddBots(cfg, DOTA_TEAM_BADGUYS)
+	elseif state == DOTA_GAMERULES_STATE_PRE_GAME then
+		AddBots(cfg, DOTA_TEAM_GOODGUYS)
+		AddBots(cfg, DOTA_TEAM_BADGUYS)
 		PrintRoster()
 		PrintVariant()
 		SendToServerConsole("sv_cheats 1")
@@ -532,7 +525,9 @@ function Activate()
 	GameRules:SetHeroSelectionTime(5)
 	GameRules:SetStrategyTime(0)
 	GameRules:SetShowcaseTime(0)
-	GameRules:SetPreGameTime(30)
+	-- 90 s, as in normal Dota (it was 30): the first bot added spawns 15-50 s after the rest, and with 30 s it often
+	-- missed the horn and its lane time (2026-10-31). No gold ticks before the horn, so it changes nothing else.
+	GameRules:SetPreGameTime(90)
 	GameRules:SetSameHeroSelectionEnabled(true)
 	GameRules:GetGameModeEntity():SetBotThinkingEnabled(true)
 	-- One courier per player, as in normal Dota; custom games give none unless this is on.
