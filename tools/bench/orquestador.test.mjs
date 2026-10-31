@@ -45,7 +45,7 @@ test("the variant file is plain Lua data with the variant's fields", () => {
 
 test("a match counts only if it ended, 5v5 bots, human out, the right variant and the same Dota", () => {
   const start = { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005, heroGap: 20 };
-  const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true }, variant: "base",
+  const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true, viejos: 0 }, variant: "base",
     loggedVariant: "base", version: "6969", firstVersion: "6969", modo: "normal", loggedModo: "normal", start,
     codigo: "abc123", firstCodigo: "abc123" };
   assert.match(validity({ ...ok, outcome: "tope" }), /tope de 60 min/);
@@ -64,6 +64,8 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
   assert.match(validity({ ...ok, start: { ...start, heroGap: undefined } }), /de un héroe/);
   assert.equal(validity({ ...ok, start: { ...start, nwDire: 2800 } }), "");
   assert.match(validity({ ...ok, espejo: "no" }), /espejo apagado/);
+  assert.match(validity({ ...ok, roster: { ...ok.roster, viejos: 1 } }), /sin borrar \(1\)/);
+  assert.match(validity({ ...ok, roster: { ...ok.roster, viejos: undefined } }), /sin borrar/);
   assert.equal(validity({ ...ok, roster: { ...ok.roster, humano: "heroe-quitado" } }), "");
   assert.match(validity({ ...ok, outcome: "timeout" }), /final/);
   assert.match(validity({ ...ok, roster: { ...ok.roster, radiant: 6 } }), /reparto 6-5/);
@@ -139,7 +141,7 @@ test("the mode the custom game applied is read from the log and must match the s
   assert.equal(parseModo("[VScript] [dotabench] turbo on gold=2 xp=2 respawn=0.75 couriers=turbo"), "turbo");
   assert.equal(parseModo("[VScript] [dotabench] turbo off"), "normal");
   assert.equal(parseModo("nothing"), "");
-  const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true }, variant: "", loggedVariant: "",
+  const ok = { outcome: "final", roster: { radiant: 5, dire: 5, humano: "fuera", mismos: true, viejos: 0 }, variant: "", loggedVariant: "",
     version: "1", firstVersion: "1", start: { radiant: 5, dire: 5, mismos: true, nwRadiant: 3005, nwDire: 3005, heroGap: 0 },
     codigo: "a", firstCodigo: "a" };
   assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo" }), "");
@@ -198,7 +200,7 @@ const roster = (team, pid, bot, hero) =>
 
 test("the roster tells the real heroes, the team sizes and whether the human played a slot", () => {
   const clean = [roster(2, 1, 1, "luna"), roster(2, 2, 1, "razor"), roster(3, 6, 1, "viper")].join("\r\n");
-  assert.deepEqual(parseRoster(clean), { humano: "fuera", heroes: "luna razor / viper", radiant: 2, dire: 1, mismos: false });
+  assert.deepEqual(parseRoster(clean), { humano: "fuera", heroes: "luna razor / viper", radiant: 2, dire: 1, mismos: false, viejos: 0 });
   const removed = ["[VScript] [dotabench] human hero removed pid=0 team=2 npc_dota_hero_phantom_assassin", clean].join("\n");
   assert.equal(parseRoster(removed).humano, "heroe-quitado");
   assert.equal(parseRoster([clean, roster(2, 0, 0, "phantom_assassin")].join("\n")).humano, "en-equipo");
@@ -231,8 +233,13 @@ test("the mirror replaces Dire's random heroes; only the same five per side coun
   const mirror = (pid, from, to, ok = "true") =>
     `[VScript] [dotabench] mirror slot=1 pid=${pid} npc_dota_hero_${from} -> npc_dota_hero_${to} ok=${ok}  now=npc_dota_hero_${to} refund=145 gold=601 restock=-`;
   const base = [roster(2, 1, 1, "luna"), roster(2, 2, 1, "razor"), roster(3, 6, 1, "viper"), roster(3, 7, 1, "lina")];
-  const both = [...base, mirror(6, "viper", "razor"), mirror(7, "lina", "luna")].join("\n");
-  assert.deepEqual(parseRoster(both), { humano: "fuera", heroes: "luna razor / razor luna", radiant: 2, dire: 2, mismos: true });
+  const gone = (pid) => `[VScript] [dotabench] mirror_old pid=${pid} removed=true`;
+  const both = [...base, mirror(6, "viper", "razor"), mirror(7, "lina", "luna"), gone(6), gone(7)].join("\n");
+  assert.deepEqual(parseRoster(both), { humano: "fuera", heroes: "luna razor / razor luna", radiant: 2, dire: 2, mismos: true,
+    viejos: 0 });
+  const stayed = [...base, mirror(6, "viper", "razor"), mirror(7, "lina", "luna"), gone(6),
+    "[VScript] [dotabench] mirror_old pid=7 removed=false"].join("\n");
+  assert.equal(parseRoster(stayed).viejos, 1);
   const half = [...base, mirror(6, "viper", "razor")].join("\n");
   assert.equal(parseRoster(half).mismos, false);
   const failed = [...base, mirror(6, "viper", "razor"), mirror(7, "lina", "luna", "false")].join("\n");

@@ -142,6 +142,17 @@ local function MirrorOnSpawn(unit, pid)
 				print(string.format("[dotabench] mirror slot=%d pid=%d %s -> %s ok=%s %s now=%s", slot, pid, unit:GetUnitName(),
 					hero, tostring(ok), tostring(err or ""), tostring(PlayerResource:GetSelectedHeroName(pid))) .. " refund=" .. refund .. " gold=" .. gold
 					.. " restock=" .. (#restocked > 0 and table.concat(restocked, ",") or "-"))
+				-- ReplaceHeroWith does not remove the old hero: it stayed in the world (seen acting at 0:13 and 0:17 after
+				-- the swap), and Dota closed itself with an access violation in 3 of 11 mirrored matches (none before the
+				-- mirror). It is removed once the new hero is the player's.
+				GameRules:GetGameModeEntity():SetThink(function()
+					local removed = false
+					if IsValidEntity(unit) and unit ~= PlayerResource:GetSelectedHeroEntity(pid) then
+						removed = pcall(function() UTIL_Remove(unit) end)
+					end
+					print(string.format("[dotabench] mirror_old pid=%d removed=%s", pid, tostring(removed)))
+					return nil
+				end, "dotabench_mirror_old_" .. pid, 0.1)
 				return nil
 			end, "dotabench_mirror_" .. pid, 0.5)
 			return

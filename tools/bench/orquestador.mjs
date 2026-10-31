@@ -158,6 +158,7 @@ export function validity({ outcome, roster, variant, loggedVariant, version, fir
   if (espejo === "no") return "espejo apagado";
   if (!start || start.radiant !== 5 || start.dire !== 5) return "sin registro de inicio";
   if (roster.mismos !== true || start.mismos !== true) return "héroes distintos por lado";
+  if (roster.viejos !== 0) return `héroe reemplazado sin borrar (${roster.viejos ?? "?"})`;
   if (Math.abs(start.nwRadiant - start.nwDire) > START_NW_GAP) return `patrimonio inicial ${start.nwRadiant}-${start.nwDire}`;
   if ((start.heroGap ?? Infinity) > START_HERO_GAP) return `patrimonio inicial de un héroe (diferencia ${start.heroGap})`;
   if (roster.humano !== "fuera" && roster.humano !== "heroe-quitado") return `humano ${roster.humano || "?"}`;
@@ -296,16 +297,20 @@ export function summarizeTimeline(rows, dotabot) {
 // whether the human got a hero it had to remove. humano: "fuera" (clean), "heroe-quitado" (removed, the match still
 // counts) or "en-equipo" (a human slot played the match: discard it). heroes: the real ones, Radiant / Dire, after
 // the mirror ("[dotabench] mirror ... pid=6 ... ok=true  now=npc_dota_hero_x" replaces that player's hero).
-// mismos: both teams play the same five heroes.
+// mismos: both teams play the same five heroes. viejos: swapped heroes whose old unit was not removed
+// ("[dotabench] mirror_old pid=6 removed=true"); left in the world they crashed Dota (2026-10-31).
 export function parseRoster(text) {
   const teams = { 2: [], 3: [] };
   const mirrored = {};
+  const oldGone = new Set();
   let humanInTeam = false;
   let removed = false;
   for (const line of text.split(/\r?\n/)) {
     if (line.includes("[dotabench] human hero removed")) removed = true;
     const mm = line.match(/\[dotabench\] mirror .*pid=(\d+) .*ok=true\s+now=(\S+)/);
     if (mm) mirrored[mm[1]] = mm[2].replace("npc_dota_hero_", "");
+    const mo = line.match(/\[dotabench\] mirror_old pid=(\d+) removed=true/);
+    if (mo) oldGone.add(mo[1]);
     const m = line.match(/\[dotabench\] roster team=(\d) pid=(\d+) bot=(\d) hero=(\S+)/);
     if (!m) continue;
     if (m[3] === "0") humanInTeam = true;
@@ -320,6 +325,7 @@ export function parseRoster(text) {
     radiant: teams[2].length,
     dire: teams[3].length,
     mismos: teams[2].length > 0 && set(2) === set(3),
+    viejos: Object.keys(mirrored).filter((pid) => !oldGone.has(pid)).length,
   };
 }
 
