@@ -1247,7 +1247,7 @@ end
 -- winnable and the team is not regrouping (no one avenges alone), and hit the team's focus target when it is at hand.
 -- Without the variant it returns the same as before: the enemy hero, true.
 function X.BrainHelpTarget(ally, enemyHero)
-    if not TeamBrain.Enabled() then return enemyHero, true end
+    if not TeamBrain.FightHooks() then return enemyHero, true end
     if not TeamBrain.ShouldHelpAlly(bot, ally) then return nil, false end
     return TeamBrain.Focus(bot) or enemyHero, true
 end

@@ -107,3 +107,9 @@ fecha,etiqueta,partida,bloque,variante,valida,motivo,dificultad,dotabot,ganador,
 2026-10-31T04:14,v2-dire,6,3,cerebro_builds,si,,4,dire,radiant,final,29,34,17,fuera,luna viper sand_king skywrath_mage witch_doctor / oracle bounty_hunter lich phantom_assassin axe,2258,,10-4,6969,22,28,49,turbo
 2026-10-31T04:41,base-espejo,1,1,,si,,4,radiant,radiant,final,53,82,27,fuera,skeleton_king death_prophet kunkka skywrath_mage dazzle / drow_ranger axe earthshaker tiny viper,68018,9,3-0,6969,21,26,49,turbo
 2026-10-31T04:52,base-espejo,2,1,,si,,4,dire,radiant,final,28,37,15,fuera,skeleton_king death_prophet kunkka skywrath_mage dazzle / lina tiny lion sven necrolyte,4494,,9-2,6969,22,26,49,turbo
+2026-10-31T06:02,dire-fix,1,1,base,si,,4,dire,dire,final,31,14,62,fuera,phantom_assassin zuus sand_king jakiro oracle / bristleback tiny lion pudge lina,69528,10,2-8,6969,35,79,41,turbo
+2026-10-31T06:17,dire-fix,2,1,cerebro_def,si,,4,dire,dire,final,31,18,31,fuera,phantom_assassin zuus sand_king jakiro oracle / viper drow_ranger bane death_prophet sniper,32261,23,1-8,6969,36,65,39,turbo
+2026-10-31T06:35,dire-fix,3,1,cerebro_prud,si,,4,dire,dire,final,36,26,61,fuera,phantom_assassin zuus sand_king jakiro oracle / windrunner dazzle necrolyte lina dragon_knight,44006,9,2-4,6969,36,49,42,turbo
+2026-10-31T06:53,dire-fix,4,1,base,si,,4,dire,dire,final,36,10,33,fuera,phantom_assassin zuus sand_king jakiro oracle / chaos_knight windrunner kunkka tidehunter skywrath_mage,45502,10,2-5,6969,36,50,44,turbo
+2026-10-31T07:09,dire-fix,5,1,cerebro_def,si,,4,dire,dire,final,33,29,42,fuera,phantom_assassin zuus sand_king jakiro oracle / bloodseeker skeleton_king death_prophet luna drow_ranger,23149,27,2-4,6969,37,49,43,turbo
+2026-10-31T07:22,dire-fix,6,1,cerebro_prud,si,,4,dire,radiant,final,29,33,30,fuera,phantom_assassin zuus sand_king jakiro oracle / skywrath_mage death_prophet bristleback vengefulspirit bounty_hunter,12392,8,9-3,6969,36,50,43,turbo

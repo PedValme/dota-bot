@@ -520,6 +520,12 @@ local function Enabled()
 	return enabled
 end
 B.Enabled = Enabled
+-- The brain's fight-level pieces (disable chaining, engage for initiators, help-ally filter, focus): on with the brain
+-- unless the variant "sin_pelea" turns them off, to tell their effect apart from the team plan's (2026-10-31: every
+-- brain variant died about 2.5 times as often as the base bot, most of it outside the plan's own states).
+function B.FightHooks()
+	return Enabled() and not Flag('sin_pelea')
+end
 
 function B.IsDefender(bot)
 	local pid = bot:GetPlayerID()

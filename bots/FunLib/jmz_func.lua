@@ -1424,7 +1424,7 @@ function J.IsDisabled( npcTarget )
 				or J.IsTaunted( npcTarget )
 		-- dota-bot team brain (variant "cerebro"): chain disables instead of waiting for one to end. With 0.5 s or
 		-- less left, the target counts as free so the next ally's disable lands as this one ends, without overlap.
-		if bDisabled and J.TeamBrain().Enabled()
+		if bDisabled and J.TeamBrain().FightHooks()
 		then
 			local remain = J.GetDisableRemaining( npcTarget )
 			if remain ~= nil and remain <= 0.5 then return false end
@@ -1496,7 +1496,7 @@ function J.IsInTeamFight( bot, nRadius )
 
 	-- dota-bot team brain (variant "cerebro"): a fight the brain called counts, so initiator ultimates start it instead
 	-- of waiting for 2 allies already in ATTACK mode, which Valve drives (FunLib/team_brain.lua).
-	if J.TeamBrain().Enabled() and J.TeamBrain().InEngage( bot ) then return true end
+	if J.TeamBrain().FightHooks() and J.TeamBrain().InEngage( bot ) then return true end
 
 	local attackModeAllyList = J.GetNearbyHeroes(bot, nRadius, false, BOT_MODE_ATTACK )
 
@@ -3283,7 +3283,7 @@ function J.GetTeamFightLocation( bot )
 			targetLocation = J.GetCenterOfUnits( allyList )
 			-- dota-bot team brain (variant "cerebro"): a fight the brain called may start before anyone is in ATTACK
 			-- mode; the center of no units is (0, 0), the middle of the map, so use the brain's engage point instead.
-			if #allyList == 0 and J.TeamBrain().Enabled() and J.TeamBrain().plan.engage ~= nil
+			if #allyList == 0 and J.TeamBrain().FightHooks() and J.TeamBrain().plan.engage ~= nil
 			then
 				targetLocation = J.TeamBrain().plan.engage.loc
 			end

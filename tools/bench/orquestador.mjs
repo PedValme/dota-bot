@@ -70,6 +70,10 @@ export const VARIANTS = {
   cerebro_def: { cerebro: true, builds: true, defensa_total: true, thinkless: 1 },
   // ...and also groups to push only with the fight around the team clearly in favour.
   cerebro_prud: { cerebro: true, builds: true, defensa_total: true, prudente: true, thinkless: 1 },
+  // Finding where the brain's extra deaths come from (2026-10-31), one piece off in each:
+  cerebro_sinbuilds: { cerebro: true, defensa_total: true, thinkless: 1 },
+  cerebro_sinpelea: { cerebro: true, builds: true, defensa_total: true, sin_pelea: true, thinkless: 1 },
+  builds: { builds: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
