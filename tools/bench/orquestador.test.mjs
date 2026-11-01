@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
-  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, sideGroups, parseCouriers, valveIntruders, lateSpawns, codeState, codeTree, tooManyInvalid, variantLua,
+  parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, sideGroups, parseCouriers, valveIntruders, lateSpawns, codeState, codeTree, tooManyInvalid, killsBeforeHorn, variantLua,
   VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
@@ -80,6 +80,10 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
   assert.match(validity({ ...ok, start: undefined }), /inicio/);
   assert.match(validity({ ...ok, start: { ...start, dire: 4 } }), /inicio/);
   assert.match(validity({ ...ok, start: { ...start, nwDire: 1030 } }), /patrimonio inicial 3005-1030/);
+  // A kill before the horn makes a real gold gap: not a bias.
+  assert.equal(validity({ ...ok, start: { ...start, nwRadiant: 3781 }, killsAtStart: 1 }), "");
+  assert.equal(killsBeforeHorn([{ event: "minute", min: 0, rk: 1, dk: 0 }, { event: "minute", min: 1, rk: 3, dk: 2 }]), 1);
+  assert.equal(killsBeforeHorn([]), 0);
   assert.equal(validity({ ...ok, start: { ...start, nwDire: 2800 } }), "");
   assert.match(validity({ ...ok, espejo: "no" }), /espejo apagado/);
   assert.equal(validity({ ...ok, roster: { ...ok.roster, humano: "heroe-quitado" } }), "");
