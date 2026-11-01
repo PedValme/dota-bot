@@ -174,3 +174,19 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Decisión: corregir el control de patrimonio inicial; para el nivel 2, métricas principales sensibles (minuto de
   +10.000, cierre desde +10.000, ventaja máxima, muertes) con victorias como métrica secundaria. Tamaño y pregunta, en
   su entrada antes de lanzar.
+
+### 2026-11-01 · `humo-n1` (nivel 1, variante `nivel1`, 2 partidas con observador, commit `39f4b1d`)
+- Pregunta: ¿se mueven las métricas de los dos arreglos (filtro de ultis y defensa de T1/T2) sin romper nada?
+- Máquina: CPU 15-23 %, memoria libre 54 %.
+- Resultado:
+  - variante aplicada en las dos (`filtro_ultis=true defensa_t12=true` en el log), ningún `ult_gate error`;
+  - ultis de dota-bot: 40, ninguna sin un enemigo a 1.200 (antes, el 10 %); el filtro no tuvo que rechazar ninguna
+    con estos héroes (Chaos Knight, Necrophos, Kunkka, Lion, Witch Doctor), así que el rechazo y que el héroe no se
+    quede quieto **siguen sin comprobarse en partida**;
+  - defensa: 45 y 51 decisiones; con 1-2 atacantes y aliados a tiempo, «defiende», y los elegidos pasan a
+    `DEFEND_TOWER_*` con deseo 0,95; cuando los defensores mueren y no llegan bastantes, «concede». Las torres que
+    cayeron sin defensores cayeron tras peleas perdidas, no por abandono;
+  - las dos partidas las ganó Valve (2 partidas no dicen nada).
+- Validez: puerta del nivel 1, no comparación.
+- Decisión: el nivel 1 pasa; el rechazo de ultis se comprobará cuando salgan héroes con ultis de riesgo (Skywrath,
+  DK). Fusionar y pasar al nivel 2.
