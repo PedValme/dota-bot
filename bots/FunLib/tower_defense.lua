@@ -2,8 +2,8 @@
 -- undefended because each hero goes its own way, «con cabeza». Measured in the observer logs: of ~65 towers dota-bot
 -- lost, most fell with no ally within 1500; 8 outer towers fell to only two attackers with nobody coming (defendable),
 -- while 23 fell to three or more (better conceded than fed one by one).
--- For the outermost standing tier 1 or 2 tower of a lane, when enemy heroes are hitting it (it was damaged by a hero
--- in the last DAMAGE_WINDOW seconds and real enemy heroes stand within ATTACK_RADIUS), once a second:
+-- For the outermost standing tier 1 or 2 tower of a lane, when enemy heroes are hitting it (real enemy heroes stand
+-- within ATTACK_RADIUS and one targets it, or its health dropped in the last DAMAGE_WINDOW seconds), once a second:
 --   defend if at least as many allies as attackers can be there within ARRIVE_SECONDS; up to attackers + 1 of them,
 --   nearest first, get a high defend desire for that lane (a hero defends one lane at a time);
 --   concede if they cannot: allies that are not already near the tower get no defend desire for it.
@@ -66,19 +66,39 @@ local function AncientThreatened()
 	return false
 end
 
+local lastHealth = {} -- tower handle -> { hp, at }
+
+-- The tower is really being hit: an enemy hero near it targets it, or its health dropped within DAMAGE_WINDOW while
+-- enemy heroes stand near. Not WasRecentlyDamagedByAnyHero: OHA's override returns nil for non-heroes (review
+-- 2026-10-31), so it never fired on a tower.
+local function UnderAttack(tower, near)
+	for _, enemy in ipairs(near) do
+		if enemy:GetAttackTarget() == tower then return true end
+	end
+	local now, hp = DotaTime(), tower:OriginalGetHealth()
+	local last = lastHealth[tower]
+	if last == nil or hp > last.hp then
+		lastHealth[tower] = { hp = hp, at = now, droppedAt = -99 }
+		return false
+	end
+	if hp < last.hp then last.droppedAt = now end
+	last.hp = hp
+	return now - last.droppedAt <= DAMAGE_WINDOW
+end
+
 local function AttackedTower(lane)
 	for _, which in ipairs(TOWERS[lane] or {}) do
 		local tower = GetTower(GetTeam(), which)
 		if tower and tower:IsAlive() then
 			-- The outermost standing tower is the one that matters on this lane; it must really be hit by heroes.
-			if not tower:WasRecentlyDamagedByAnyHero(DAMAGE_WINDOW) then return nil, 0 end
-			local attackers = 0
+			local near = {}
 			for _, enemy in pairs(GetUnitList(UNIT_LIST_ENEMY_HEROES) or {}) do
 				if RealEnemyHero(enemy) and GetUnitToUnitDistance(enemy, tower) <= ATTACK_RADIUS then
-					attackers = attackers + 1
+					table.insert(near, enemy)
 				end
 			end
-			if attackers > 0 then return tower, attackers end
+			local hit = UnderAttack(tower, near)
+			if #near > 0 and hit then return tower, #near end
 			return nil, 0
 		end
 	end

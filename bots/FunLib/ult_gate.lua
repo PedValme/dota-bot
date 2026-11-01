@@ -35,8 +35,18 @@ local ALWAYS = {
 	alchemist_chemical_rage = true, broodmother_insatiable_hunger = true, lone_druid_true_form = true,
 	lycan_shapeshift = true, keeper_of_the_light_spirit_form = true, life_stealer_infest = true,
 	life_stealer_consume = true, morphling_replicate = true, morphling_morph_replicate = true,
-	tinker_rearm = true, invoker_invoke = true,
+	tinker_rearm = true, invoker_invoke = true, kunkka_ghostship = true, abyssal_underlord_dark_portal = true,
+	-- heroes whose script clears its orders itself (bot:Action_ClearActions) right before the ultimate: a refusal would
+	-- halt them every frame, and these are cast at enemy heroes anyway (review 2026-10-31)
+	earthshaker_echo_slam = true, magnataur_reverse_polarity = true, treant_overgrowth = true,
+	enigma_black_hole = true, disruptor_static_storm = true, dark_seer_wall_of_replica = true,
+	huskar_life_break = true, pudge_dismember = true, primal_beast_pulverize = true,
 }
+
+local function BigNeutral(unit)
+	local name = unit and unit:GetUnitName() or ""
+	return name:find("roshan") ~= nil or name:find("miniboss") ~= nil
+end
 
 local J -- jmz_func, loaded lazily: it is not loaded yet when this file runs
 
@@ -66,27 +76,50 @@ local function Allowed(bot, ability, kind, target)
 	if ALWAYS[ability:GetName()] then return true end
 	if kind == 'none' then
 		local here = bot:GetLocation()
-		return EnemyHeroNear(here, SELF_RADIUS) or EnemyBuildingNear(here, BUILDING_RADIUS)
+		if EnemyHeroNear(here, SELF_RADIUS) or EnemyBuildingNear(here, BUILDING_RADIUS) then return true end
+		-- Roshan or a Tormentor next to the hero (Dragon Knight, Sven fight them with their ultimate).
+		for _, creep in pairs(bot:GetNearbyNeutralCreeps(BUILDING_RADIUS) or {}) do
+			if BigNeutral(creep) then return true end
+		end
+		return false
 	end
 	if kind == 'unit' then
 		if target == nil or target:GetTeam() == bot:GetTeam() then return true end
-		return RealEnemyHero(target) or target:IsBuilding()
+		return RealEnemyHero(target) or target:IsBuilding() or BigNeutral(target)
 	end
 	return target == nil or EnemyHeroNear(target, POINT_RADIUS) or EnemyBuildingNear(target, BUILDING_RADIUS)
 end
 
 -- The clear and the power treads switch that J.SetQueuePtToINT deferred, done right before an allowed cast.
+-- A clear from an earlier frame (a script that never cast after it) is dropped, not applied to a later cast.
 local function Flush(bot)
 	local pending = bot.__ultGatePt
 	if pending == nil then return end
 	bot.__ultGatePt = nil
+	if pending.at ~= DotaTime() then return end
 	J = J or require(GetScriptDirectory()..'/FunLib/jmz_func')
 	J.SetQueuePtToINTNow(bot, pending.soul)
+end
+
+-- A refused ultimate reports not castable for REFUSED_SECONDS, so the hero's script, which checks its abilities in
+-- order and returns after the first cast, goes on to the next spell instead of asking for the ultimate every frame.
+local REFUSED_SECONDS = 2
+local function Rest(ability)
+	ability.__ultGateUntil = DotaTime() + REFUSED_SECONDS
+	if ability.__ultGateWrapped then return end
+	ability.__ultGateWrapped = true
+	local original = ability.IsFullyCastable
+	ability.IsFullyCastable = function(self)
+		if DotaTime() < (self.__ultGateUntil or -1) then return false end
+		return original(self)
+	end
 end
 
 local refusedAt = {}
 local function Refuse(bot, ability)
 	bot.__ultGatePt = nil -- the mode's orders stay
+	pcall(Rest, ability) -- best effort: if the handle takes no fields, the hero only asks again
+
 	if observe then
 		-- One line per hero and ultimate every 5 s at most: a hero that keeps asking shows as repeated lines.
 		local key = bot:GetPlayerID() .. ability:GetName()
