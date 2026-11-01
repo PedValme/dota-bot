@@ -4,17 +4,15 @@
 ## Próxima sesión
 - **2026-10-31. Todo lo medido hasta hoy está contaminado** (MEDICIONES.md, sesgos S1-S6). Se construye el nivel 0
   del protocolo nuevo (DECISIONES 2026-10-31: puerta de medición y avance en tres niveles).
-- En `main` (#22): commit por partida, tope de 60 min, parada con más del 20 % inválidas, junctions comprobadas,
-  couriers, `rojas` en `.fabrica.json`, MEDICIONES.md.
-- Rama `claude/banco-s6` (revisada, falta humo y PR):
-  - S6 corregido: el archivo de equipo dura toda la partida y una línea de carga por bot lo comprueba;
-  - fase previa de 90 s: todos los héroes antes del inicio;
-  - una partida que llega al tope es válida, sin ganador;
-  - **mismo enfrentamiento en los dos lados** (decisión de Pedro): dos sorteos sin héroes en común, dota-bot siempre
-    el primero, y la validez exige a cada equipo su grupo. El espejo y la creación de héroes, que cerraban Dota, se
-    quitaron.
-- Siguiente: dos partidas de humo válidas, PR y fusión; la pregunta en MEDICIONES.md y la serie A contra A
-  (`--variantes base,base_b`, 12 partidas).
+- El banco completo está en `main` (#22 y #24) y pasó la puerta del nivel 0: humo 2 de 2 válidas. Mismo
+  enfrentamiento en los dos lados, S6 corregido, fase previa de 90 s, tope válido, código por árboles.
+- **Corriendo: serie A contra A** (`aa`, `--variantes base,base_b`, 12 partidas, lanzada el 2026-10-31 con la
+  máquina libre). Pregunta y métricas fijadas antes en MEDICIONES.md. No tocar `bots/` ni `tools/bench/` mientras
+  corre.
+- Siguiente: analizarla contra esas métricas y anotarla en MEDICIONES; después, nivel 1 (filtro de ultis, defensa
+  de T1/T2).
+- Rama `claude/preferencia-todo` (sin PR): la lista de hecho y pendiente en cada avance, en AGENTS.md; se fusiona con
+  los datos de la serie.
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Sin cambios de juego activos por
