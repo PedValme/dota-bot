@@ -110,6 +110,9 @@ export const VARIANTS = {
   base_sinturbo: { sin_turbo_oha: true, thinkless: 1 },
   // Phases and "how far the game is" by the state of the match instead of the clock (Pedro, 2026-10-31).
   base_estado: { fase_estado: true, thinkless: 1 },
+  // Level 1 (DECISIONES 2026-10-31): ultimates need a reason (an enemy hero in reach, an ally to save, a building to
+  // push), FunLib/ult_gate.lua.
+  filtro_ultis: { filtro_ultis: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
