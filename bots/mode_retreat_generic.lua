@@ -3,6 +3,8 @@ local X = {}
 
 local J = require(GetScriptDirectory()..'/FunLib/jmz_func')
 local Customize = require(GetScriptDirectory()..'/Customize/general')
+local RetreatEarly = require(GetScriptDirectory()..'/FunLib/retreat_early')
+local earlyRetreatDesire = 0
 
 local bot = GetBot()
 
@@ -122,7 +124,11 @@ function GetDesire()
     -- local cacheKey = 'GetRetreatDesire'..tostring(bot:GetPlayerID())
     -- local cachedVar = J.Utils.GetCachedVars(cacheKey, 0.35 * (1 + Customize.ThinkLess))
     -- if DotaTime() > 30 and cachedVar ~= nil then return cachedVar end
+    earlyRetreatDesire = 0
     local res = GetDesireHelper()
+    -- Benchmark variant retirada_temprana (FunLib/retreat_early.lua): only ever raises the desire, and is computed
+    -- only past the states where OHA rules retreat out (GetDesireHelper sets it after that check).
+    if earlyRetreatDesire > res then res = earlyRetreatDesire end
     -- J.Utils.SetCachedVars(cacheKey, res)
     return res
 end
@@ -143,6 +149,11 @@ function GetDesireHelper()
     or J.GetModifierTime(bot, 'modifier_oracle_false_promise_timer') > 3
     then
         return BOT_MODE_DESIRE_NONE
+    end
+
+    if RetreatEarly.Enabled() then
+        local ok, desire = pcall(RetreatEarly.Desire, bot)
+        if ok and desire then earlyRetreatDesire = desire end
     end
 
     -- cache bot state
