@@ -151,11 +151,6 @@ function GetDesireHelper()
         return BOT_MODE_DESIRE_NONE
     end
 
-    if RetreatEarly.Enabled() then
-        local ok, desire = pcall(RetreatEarly.Desire, bot)
-        if ok and desire then earlyRetreatDesire = desire end
-    end
-
     -- cache bot state
     botHP          = J.GetHP(bot)
     botMP          = J.GetMP(bot)
@@ -254,6 +249,18 @@ function GetDesireHelper()
         if hAbility and hAbility:IsTrained() and hAbility:GetLevel() >= 3 then
             if botHP > 0.2 and botHealthRegen > 30 then botHP = 1 end
             if botHP < 0.3 and (#nEnemyHeroes == 0 and J.HasItem(bot, 'item_armlet')) then botHP = 1 end
+        end
+    end
+
+    -- Benchmark variant retirada_temprana: asked only here, past the places above where OHA deliberately keeps the
+    -- hero in (Wraith King with reincarnation ready, LowChanceToRun's "finish the kill"), which return first.
+    if RetreatEarly.Enabled() then
+        local ok, desire = pcall(RetreatEarly.Desire, bot)
+        if ok and desire then earlyRetreatDesire = desire end
+        -- An error must not pass in silence (the ultimate gate once did nothing unnoticed): once, in the log.
+        if not ok and not bot.__retreatEarlyReported then
+            bot.__retreatEarlyReported = true
+            print('[bench] retreat_early error: ' .. tostring(desire))
         end
     end
 
