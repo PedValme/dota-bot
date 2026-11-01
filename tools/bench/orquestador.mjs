@@ -113,6 +113,11 @@ export const VARIANTS = {
   // Level 1 (DECISIONES 2026-10-31): ultimates need a reason (an enemy hero in reach, an ally to save, a building to
   // push), FunLib/ult_gate.lua.
   filtro_ultis: { filtro_ultis: true, thinkless: 1 },
+  // Level 1: an attacked tier 1/2 tower is defended only by enough allies arriving in time, else conceded,
+  // FunLib/tower_defense.lua.
+  defensa_t12: { defensa_t12: true, thinkless: 1 },
+  // Both level 1 fixes together, for the level 2 series.
+  nivel1: { filtro_ultis: true, defensa_t12: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
