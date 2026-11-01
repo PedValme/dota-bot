@@ -21,6 +21,8 @@ local THREAT = 1.0
 local KEEP_THREAT = 0.7
 local LOW_HP = 0.6
 local RADIUS = 1200
+-- 0.9 on purpose: OHA's attack mode at 0.95 (a target about to fall) still wins, and in the smoke 20 of the 21 heroes
+-- it kept in survived (review 2026-11-01). It works as the "this fight is won" filter.
 local DESIRE = 0.9
 local HOLD_SECONDS = 2.5
 
@@ -41,7 +43,12 @@ function R.Desire(bot)
 	end
 	local threat = J.GetTotalEstimatedDamageToTarget(enemies, bot) / math.max(bot:GetHealth(), 1)
 	local now = DotaTime()
-	if bot.__retreatEarlyUntil and now < bot.__retreatEarlyUntil and threat >= KEEP_THREAT then return DESIRE end
+	-- Held while the threat stays: renewed, not a fixed time (review 2026-11-01: a Razor let go at threat 0.82 turned
+	-- back and died).
+	if bot.__retreatEarlyUntil and now < bot.__retreatEarlyUntil and threat >= KEEP_THREAT then
+		bot.__retreatEarlyUntil = now + HOLD_SECONDS
+		return DESIRE
+	end
 	if threat < THREAT then return 0 end
 	local allies = #J.GetAlliesNearLoc(here, RADIUS) -- includes the bot itself
 	local hit = bot:WasRecentlyDamagedByAnyHero(1) == true
