@@ -5,17 +5,21 @@
 -- more 1 to 10 s before (half of them 7 s or more), and 6 of those heroes were still attacking. The threat sums every
 -- enemy as if all hit this hero, so in an even fight it is high for everyone; it must not pull heroes out of fights
 -- they are winning (review 2026-11-01). The rule:
---   threat >= THREAT and (more enemies than allies near, or health below LOW_HP with no more allies than enemies)
---   -> retreat desire DESIRE, held HOLD_SECONDS while the threat stays >= KEEP_THREAT (enemies spending their spells
---   drop the estimate mid-escape, and the hero must not turn back into them).
+--   threat >= THREAT and (more enemies than allies near, or health below LOW_HP while taking hero damage now with no
+--   more allies than enemies) -> retreat desire DESIRE, held HOLD_SECONDS while the threat stays >= KEEP_THREAT
+--   (enemies spending their spells drop the estimate mid-escape, and the hero must not turn back into them).
+-- Version 2 (smoke humo-rt, 2026-11-01): with 1.5, more enemies than allies and 50 %, the retreat started no earlier
+-- than without the variant (median 4 s after the threat passed 1, both) and 9 heroes died without retreating: the
+-- threshold came late and team fights are rarely outnumbered. Now 1.0, 60 % and "taking hero damage now".
 -- It only raises OHA's retreat desire (mode_retreat_generic.lua keeps the higher), is asked only past OHA's deliberate
 -- "stay" cases, and never for Huskar, whose low health is his strength.
 local R = {}
 local variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
+local observe = dofile(GetScriptDirectory()..'/FunLib/bench_observe')
 
-local THREAT = 1.5
-local KEEP_THREAT = 1.0
-local LOW_HP = 0.5
+local THREAT = 1.0
+local KEEP_THREAT = 0.7
+local LOW_HP = 0.6
 local RADIUS = 1200
 local DESIRE = 0.9
 local HOLD_SECONDS = 2.5
@@ -40,8 +44,13 @@ function R.Desire(bot)
 	if bot.__retreatEarlyUntil and now < bot.__retreatEarlyUntil and threat >= KEEP_THREAT then return DESIRE end
 	if threat < THREAT then return 0 end
 	local allies = #J.GetAlliesNearLoc(here, RADIUS) -- includes the bot itself
-	if #enemies > allies or (J.GetHP(bot) < LOW_HP and allies <= #enemies) then
+	local hit = bot:WasRecentlyDamagedByAnyHero(1) == true
+	if #enemies > allies or (J.GetHP(bot) < LOW_HP and hit and allies <= #enemies) then
 		bot.__retreatEarlyUntil = now + HOLD_SECONDS
+		if observe then
+			print(string.format('[bench] retirada_temprana t=%d pid=%d amenaza=%.2f enemigos=%d aliados=%d hp=%.2f',
+				math.floor(now), bot:GetPlayerID(), threat, #enemies, allies, J.GetHP(bot)))
+		end
 		return DESIRE
 	end
 	return 0
