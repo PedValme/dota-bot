@@ -402,7 +402,10 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Potencia (simulación del revisor, 40.000 series): α real ≈ 0,05; frente a `base` ≈ 50 %: +10 puntos ≈ 20 %, +20 ≈
     50-55 %, +30 ≈ 85 %. La mirada de 16 casi nunca para por eficacia (4 % con +20); la inutilidad a 28 para el 55 %
     de las series sin efecto.
-  - Máquina medida antes de cada tanda (regla global); con carga, no se lanza sin el sí de Pedro.
+  - Máquina medida antes de cada tanda (regla global); con carga, no se lanza sin el sí de Pedro. Tanda a: CPU 24 %,
+    memoria libre 54 %.
+  - Parada por perjuicio, no vinculante, en la primera mirada: z ≤ −1 corta la serie (Pedro, DECISIONES 2026-11-02;
+    añadida con la tanda a en curso, antes de mirar sus victorias).
   - Sin comprobar: el Turbo imitado no es el Turbo real (torres y runas normales); el primer bot aparece tarde
     (lo rechaza la validez); la velocidad real varía (×1,6-3,4) sin saber si distinto por lado; la lista de héroes del
     sorteo es recordada, no de `BotImplemented`.

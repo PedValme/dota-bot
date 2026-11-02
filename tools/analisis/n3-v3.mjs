@@ -81,6 +81,7 @@ console.log(`n3-v3: ${all.length} filas, ${blocks.length} bloques completos y v�
 console.log(`  victorias: ${V3} ${winsV3}/${blocks.length * 2}, ${BASE} ${winsBase}/${blocks.length * 2}; CMH z = ${z.toFixed(3)}`);
 if (BOUNDS[look]) {
   const verdict = z >= BOUNDS[look].z ? "PARA: v3 gana más (frontera de eficacia)"
+    : look === 1 && z <= -1 ? "PARA por perjuicio (no vinculante, Pedro 2026-11-02): v3 va claramente peor que base"
     : look === 2 && z <= 0 ? "PARA por inutilidad (no vinculante): v3 no gana más que base"
     : look === 3 ? "final: sin diferencia demostrada" : "sigue";
   console.log(`  frontera z ≥ ${BOUNDS[look].z}: ${verdict}`);
