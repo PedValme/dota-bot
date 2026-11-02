@@ -347,3 +347,38 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Validez: partida de mecanismo, no comparación.
 - Decisión: el gancho del ataque se quita; la capa 4 forma e inicia con deseos de otros modos por encima de 0,95. La
   capa 1 usa `IsFullyCastable` de la ulti enemiga visible y cuenta los TP enemigos hacia la pelea.
+
+### 2026-11-02 · `v3-sombra` (cerebro v3, capas observadas con la evaluación de la capa 1 en sombra)
+- Pregunta: ¿actúa cada capa en partida (farm, glifo, recompra, fases) y separa la evaluación de pelea las peleas
+  ganadas de las perdidas, para fijar sus umbrales?
+- Qué cambió: variante `cerebro_v3_sombra`, código `4959dd1` (antes de los arreglos de la capa 4 de la segunda
+  revisión: la capa 4 de estas partidas no vale para juzgarla).
+- Configuración: `--variantes cerebro_v3_sombra --partidas 2 --modo turbo --observar`; Valve en Injusto, ×4.
+- Resultado: 1 de 2 (gana como Dire). Sin `plan error`. Capa 5: 2 glifos (T3 al 38 % con 2 héroes, cuartel al 33 % con
+  3) y 3 recompras para la base. Capa 3: líneas `[bench] farm` de los núcleos con el objeto que les falta (`farm=true`
+  todo el tiempo: «falta» cuenta el objeto entero, componentes comprados o no). Capa 1, 106 peleas, valor al empezar
+  frente a muertes en 10 s a 2.500: con ≥ 1,6, 10 ganadas y 1 perdida (41 peleas); con < 0,5, 2 ganadas y 1 perdida
+  (24); entre 0,5 y 1,6, 2 y 2 (41, casi todas sin muertes). Coincide con «somos más fuertes» de OHA en el 68 % de
+  las decisiones (2.752 iguales, 1.319 distintas, por segundo y bot).
+- Validez: mecanismo, no comparación; dos partidas cortas (11 min reales).
+- Decisión: los umbrales 1,1 y 0,8 se quedan (la franja media no tiene datos para moverlos); partida activa por lado
+  con la capa 4 arreglada (`v3-activo`).
+
+### 2026-11-02 · `n3-v3` (serie final única: `cerebro_v3` frente a `base`) — pregunta escrita antes de lanzarla
+- Pregunta: ¿gana más dota-bot con el cerebro v3 completo (paquete firmado: v2, `builds`, `defensa_total`,
+  `fase_estado`, `retirada_temprana`, `farm_sin_reloj` y las 5 capas) que con `base`? Firmada por Pedro (DECISIONES
+  2026-11-01).
+- Qué cambió: todo el cerebro v3; el banco, `--repetir-invalidas` (una partida inválida se repite con los mismos
+  héroes, lado y variante).
+- Configuración: `--variantes cerebro_v3,base --modo turbo --repetir-invalidas 2`, Valve en Injusto, ×4, sin
+  `--observar` salvo la primera tanda (para el registro de mecanismo); en tandas de bloques de 4 con la misma etiqueta.
+- Tamaño: secuencial, máximo 40 por brazo (80 partidas, unas 40 h); miradas a 16 y 28 por brazo.
+- Métrica principal: victorias (un tope de 60 min cuenta como no ganada).
+- Análisis fijo: por bloques (mismo sorteo en los dos brazos), Cochran-Mantel-Haenszel a una cola sobre bloques
+  completos y válidos (con repeticiones). Fronteras Lan-DeMets tipo O'Brien-Fleming, α = 0,05 a una cola (calculadas
+  con 400.000 simulaciones): z ≥ 2,81 a 16 por brazo, ≥ 2,04 a 28, ≥ 1,70 a 40 (p nominal 0,0025, 0,0205, 0,044).
+  Parada por inutilidad, no vinculante, en la mirada de 28 si v3 no gana más que `base` (z ≤ 0).
+- Secundarias de mecanismo, fijadas antes: patrimonio por minuto de dota-bot menos el de Valve en el min 18-26;
+  estructuras propias perdidas yendo por encima de +5.000; torres enemigas en pie al llegar a +10.000; derrotas tras
+  +10.000; muertes por partida; inválidas por brazo (una asimetría ahí es contaminación y para la serie).
+- Lo que vale la conclusión: para el paquete entero, no para cada capa.
