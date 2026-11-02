@@ -451,3 +451,8 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Relanzamiento `n3-v3r`: mismo diseño, fronteras, paradas (eficacia, perjuicio a 16, inutilidad a 28), umbral de
   inválidas y análisis (`tools/analisis/n3-v3.mjs <mirada>`, prefijo `n3-v3r-`). Tandas `n3-v3r-a` (32, observada),
   `-b` y `-c` (24). Código `f447404` (con humo `v3-humo4` antes).
+- Humo `v3-humo4` (código de `f447404`, árbol `9c6b553.2e6ca87`, 1 partida por lado): las 2 válidas, sin errores del
+  plan, líneas `[bench] think` presentes. Pasa.
+- Tanda `n3-v3r-a` lanzada el 2026-11-02 con la máquina cargada (una pestaña de Chrome al 96 % de un núcleo; CPU total
+  23-65 %), con el sí de Pedro (DECISIONES 2026-11-02); la carga va por partida en `series.csv` y el Think se compara
+  entre brazos en esta tanda.
