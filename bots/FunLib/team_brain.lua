@@ -200,11 +200,30 @@ local function TowerNear(team, loc, r)
 	return false
 end
 
+local ultCache = {} -- enemy unit name -> its ultimate ability (found once)
+local function EnemyUltimate(e)
+	local key = e:GetUnitName()
+	if ultCache[key] == nil then
+		ultCache[key] = false
+		for i = 0, 23 do
+			local a = e:GetAbilityInSlot(i)
+			if a ~= nil and not a:IsHidden() and a:IsUltimate() then ultCache[key] = a; break end
+		end
+	end
+	return ultCache[key] or nil
+end
+
 function B.EvaluateFightV3(loc, now, hasAegis)
 	now = now or DotaTime()
-	local tpTo = {}
+	-- Teleports toward the fight, ours and theirs (game 0: GetIncomingTeleports lists the enemy's too).
+	local tpTo, enemyTp = {}, 0
+	local enemyPids = {}
+	for _, pid in ipairs(GetTeamPlayers(GetOpposingTeam())) do enemyPids[pid] = true end
 	for _, tp in ipairs(GetIncomingTeleports() or {}) do
-		if tp.location ~= nil and Dist(tp.location, loc) <= 1500 then tpTo[tp.playerid] = true end
+		if tp.location ~= nil and Dist(tp.location, loc) <= 1500 then
+			tpTo[tp.playerid] = true
+			if enemyPids[tp.playerid] then enemyTp = enemyTp + 1 end
+		end
 	end
 	local allyPower, allyCount = 0, 0
 	for _, a in ipairs(Allies()) do
@@ -220,13 +239,19 @@ function B.EvaluateFightV3(loc, now, hasAegis)
 	local enemyPower, enemyCount, seen = 0, 0, {}
 	for _, e in ipairs(VisibleEnemies()) do
 		if Dist(e:GetLocation(), loc) <= 1800 then
+			-- Game 0: an enemy ultimate's cooldown reads -1, but IsFullyCastable answers (false after it is cast).
 			local ultUsed = enemyUltSeen[e:GetUnitName()] ~= nil and now - enemyUltSeen[e:GetUnitName()] < 60
+			local ult = EnemyUltimate(e)
+			if ult ~= nil and ult:GetLevel() >= 1 then ultUsed = not ult:IsFullyCastable() end
 			enemyPower = enemyPower + Power(e, true) * (ultUsed and 0.8 or 1)
 			enemyCount = enemyCount + 1
 		end
 		seen[e:GetPlayerID()] = true
 	end
 	local avgAlly = allyCount > 0 and allyPower / allyCount or 1
+	-- Enemies teleporting to the fight, unseen there yet, count as an average ally each.
+	enemyPower = enemyPower + enemyTp * avgAlly
+	enemyCount = enemyCount + enemyTp
 	for _, pid in ipairs(GetTeamPlayers(GetOpposingTeam())) do
 		if IsHeroAlive(pid) and not seen[pid] then
 			local info = GetHeroLastSeenInfo(pid)

@@ -132,6 +132,10 @@ export const VARIANTS = {
   // fix its thresholds in an observed game.
   cerebro_v3_sombra: { cerebro: true, cerebro_v3: true, v3_sombra: true, builds: true, defensa_total: true,
     fase_estado: true, retirada_temprana: true, farm_sin_reloj: true, thinkless: 1 },
+  // Brain v3, game 0 (trabajo/cerebro-v3.md; MEDICIONES v3-partida0): FunLib/api_probe.lua logs what the API answers
+  // about enemies; "farm" (no 6k-lead cut) and "farm_sin_reloj" keep the farm going past minute 18 (Pedro, 2026-11-01).
+  // Its ATTACK hook (nil for Valve's desire) was removed: nil counts as 0.
+  sonda_api: { api_sonda: true, farm: true, farm_sin_reloj: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
