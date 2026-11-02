@@ -10,13 +10,15 @@
   - Partida 0 hecha y en `main` (#42; MEDICIONES `v3-partida0`): `nil` en el deseo de ataque vale 0, así que el plan
     prohíbe pelear con otro modo por encima de 0,95; la ulti enemiga se lee con `IsFullyCastable`.
   - Las 5 capas escritas en el worktree `../dota-bot-v3` (rama `claude/cerebro-v3-capas`, variantes `cerebro_v3` y
-    `cerebro_v3_sombra`), revisadas dos veces por Opus y arregladas (último commit 05cf09d). Recortado: retener ultis
-    de daño de área (ult_gate no puede frenar esas ultis sin congelar al héroe).
-  - En curso (2026-11-02): 2 partidas `v3-sombra` con el código 4959dd1 (antes de los arreglos de la capa 4); la carpeta
-    principal está en HEAD desconectado en ese commit porque Dota lee su `bots/`. Al acabar: volver a `main`
-    (`git checkout main`), leer `[bench] eval`/`eval_fin`/`fuerte`/`farm`/`fase`/`glifo`/`recompra_base`, fijar
-    umbrales, una partida por lado con `cerebro_v3` (humo), repetición de inválidas en el orquestador (control,
-    revisado antes), pregunta en MEDICIONES y la serie final.
+    `cerebro_v3_sombra`), revisadas por Opus y arregladas; humo pasado (`v3-humo2`) y revisión adversarial de la
+    medición aplicada (MEDICIONES, `n3-v3`). PR #43 en borrador. Recortado: retener ultis de daño de área.
+  - **En curso: serie final `n3-v3`**, tanda `n3-v3-a` (32 partidas, observada) lanzada el 2026-11-02 desde la carpeta
+    principal en HEAD desconectado `1162c9c` (Dota lee su `bots/`; no tocar `bots/` ni `tools/bench/` de esa carpeta
+    hasta acabar la serie). A las 20 partidas: Think igual en los dos brazos (~30/s), sin inválidas.
+  - Siguiente: al acabar la tanda a, `node tools/analisis/n3-v3.mjs 1` (primera mirada: eficacia z ≥ 2,81, perjuicio
+    z ≤ −1); si sigue, tandas b y c de 24 sin `--observar` con el mismo commit; miradas 2 y 3. Al final, el resultado
+    en MEDICIONES y, si mejora, proponer a Pedro activarlo por defecto. Hay un `stash@{0}` en la carpeta principal con
+    datos ya commiteados (copia, se puede dejar).
   - Pedro critica, con razón, que en 4 días el bot por defecto sigue igual: se dedicó casi todo a hacer fiable el banco
     y luego a reglas sueltas, contra su regla del 2026-10-30. No repetirlo.
 - **2026-11-01. Niveles 0 y 1 hechos y en `main`** (#22-#26):
