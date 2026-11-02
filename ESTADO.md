@@ -12,13 +12,14 @@
   - Las 5 capas escritas en el worktree `../dota-bot-v3` (rama `claude/cerebro-v3-capas`, variantes `cerebro_v3` y
     `cerebro_v3_sombra`), revisadas por Opus y arregladas; humo pasado (`v3-humo2`) y revisión adversarial de la
     medición aplicada (MEDICIONES, `n3-v3`). PR #43 en borrador. Recortado: retener ultis de daño de área.
-  - **En curso: serie final `n3-v3`**, tanda `n3-v3-a` (32 partidas, observada) lanzada el 2026-11-02 desde la carpeta
-    principal en HEAD desconectado `1162c9c` (Dota lee su `bots/`; no tocar `bots/` ni `tools/bench/` de esa carpeta
-    hasta acabar la serie). A las 20 partidas: Think igual en los dos brazos (~30/s), sin inválidas.
-  - Siguiente: al acabar la tanda a, `node tools/analisis/n3-v3.mjs 1` (primera mirada: eficacia z ≥ 2,81, perjuicio
-    z ≤ −1); si sigue, tandas b y c de 24 sin `--observar` con el mismo commit; miradas 2 y 3. Al final, el resultado
-    en MEDICIONES y, si mejora, proponer a Pedro activarlo por defecto. Hay un `stash@{0}` en la carpeta principal con
-    datos ya commiteados (copia, se puede dejar).
+  - `n3-v3` cortada por Pedro tras la primera mirada (8-8): v3 se frenaba en la fase de líneas. Arreglado (`f447404`,
+    revisado; humo `v3-humo3` bien). MEDICIONES, «`n3-v3` cortada…; relanzada como `n3-v3r`».
+  - **En curso: humo `v3-humo4`** del código `f447404`, desde la carpeta principal en HEAD desconectado (Dota lee su
+    `bots/`; no tocar `bots/` ni `tools/bench/` allí mientras corre). Siguiente: si pasa, tanda `n3-v3r-a` (32,
+    `--observar --repetir-invalidas 2`, máquina medida antes), luego `node tools/analisis/n3-v3.mjs 1` (eficacia
+    z ≥ 2,81, perjuicio z ≤ −1); tandas b y c de 24 sin observar; miradas 2 y 3; resultado en MEDICIONES y, si mejora,
+    proponer a Pedro activarlo por defecto. Los datos se copian de la carpeta principal al worktree para el commit;
+    hay `stash@{0..}` en la principal con copias de datos ya commiteados (se pueden dejar).
   - Pedro critica, con razón, que en 4 días el bot por defecto sigue igual: se dedicó casi todo a hacer fiable el banco
     y luego a reglas sueltas, contra su regla del 2026-10-30. No repetirlo.
 - **2026-11-01. Niveles 0 y 1 hechos y en `main`** (#22-#26):
