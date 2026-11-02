@@ -371,7 +371,8 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Qué cambió: todo el cerebro v3; el banco, `--repetir-invalidas` (una partida inválida se repite con los mismos
   héroes, lado y variante).
 - Configuración: `--variantes cerebro_v3,base --modo turbo --repetir-invalidas 2`, Valve en Injusto, ×4, sin
-  `--observar` salvo la primera tanda (para el registro de mecanismo); en tandas de bloques de 4 con la misma etiqueta.
+  `--observar` salvo la primera tanda (para el registro de mecanismo); en tandas de bloques de 4, cada tanda con su
+  etiqueta (`n3-v3-a`, `n3-v3-b`…: el orquestador numera las partidas desde 1 en cada ejecución).
 - Tamaño: secuencial, máximo 40 por brazo (80 partidas, unas 40 h); miradas a 16 y 28 por brazo.
 - Métrica principal: victorias (un tope de 60 min cuenta como no ganada).
 - Análisis fijo: por bloques (mismo sorteo en los dos brazos), Cochran-Mantel-Haenszel a una cola sobre bloques
