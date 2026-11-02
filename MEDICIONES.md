@@ -433,3 +433,21 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   en 4.
 - Decisión: tandas `n3-v3-b` y `n3-v3-c` (24 partidas cada una, sin observar), mismo commit `1162c9c`. Máquina antes
   de la tanda b: CPU 27 %, memoria libre 53 %.
+
+### 2026-11-02 · `n3-v3` cortada tras la primera mirada; relanzada como `n3-v3r`
+- Pedro cortó la serie (DECISIONES 2026-11-02) tras la primera mirada (8-8) y la partida 1 de la tanda b, que no
+  cuentan para la serie relanzada. Causa, leída en la tanda a observada (16 partidas por brazo), en la fase de líneas:
+  - ventaja media en el min 5, 10 y 18: v3 +1.100, +5.000 y +7.200; `base` +2.100, +7.100 y +13.500; kills en el
+    min 5: 1,2 frente a 2,6;
+  - la retirada v3 (0,97) se disparó 739 veces antes del min 10 (unas 46 por partida); el plan mandó a objetivos
+    de equipo 63 veces y hubo 473 entradas en INICIAR antes del min 10.
+- Arreglo (`646e767`, `f447404`, revisados por Opus): en la fase de líneas (hasta que el nivel medio de los diez llega a
+  9,2 o cae una T1) v3 no actúa: sin retirada temprana, plan en LINEA salvo defender la base, sin fases de pelea salvo
+  contrainiciación, y «somos más fuertes» de OHA.
+- Humo `v3-humo3` (`646e767`, 1 bloque observado, v3 contra `base`): antes del min 10, retirada temprana 1,5 por
+  partida; modos de línea como `base`; ventaja en el min 5 +3.400 y +3.400, en el min 10 +8.400 y +9.200. Mecanismo,
+  no comparación. Queda, después de las líneas, menos farm en v3 (7 % frente a 16 % en el min 10-18): es el diseño de
+  asaltos firmado y lo mide la serie.
+- Relanzamiento `n3-v3r`: mismo diseño, fronteras, paradas (eficacia, perjuicio a 16, inutilidad a 28), umbral de
+  inválidas y análisis (`tools/analisis/n3-v3.mjs <mirada>`, prefijo `n3-v3r-`). Tandas `n3-v3r-a` (32, observada),
+  `-b` y `-c` (24). Código `f447404` (con humo `v3-humo4` antes).

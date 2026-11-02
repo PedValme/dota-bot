@@ -1,7 +1,7 @@
 // Fixed analysis of the final series n3-v3 (MEDICIONES.md, «n3-v3», written before it ran): cerebro_v3 against base.
 // Outside tools/bench/ on purpose: that tree is part of every match's code check, and this file may be read or fixed
 // while the series runs.
-//   node tools/analisis/n3-v3.mjs [mirada]      mirada: 1 (8 blocks = 16 per arm), 2 (14), 3 (20); default: all blocks
+//   node tools/analisis/n3-v3.mjs [mirada] [prefijo]   prefijo: n3-v3r- (default; the first launch was n3-v3-); mirada: 1 (8 blocks = 16 per arm), 2 (14), 3 (20); default: all blocks
 // Rows: bench/series.csv with etiqueta n3-v3-*; per (etiqueta, partida) the last row counts (--repetir-invalidas).
 // A block counts when its 4 matches (2 per arm, one per side) are valid. Primary: wins (a capped match is not a win),
 // Cochran-Mantel-Haenszel over blocks, one-sided; Lan-DeMets O'Brien-Fleming bounds (z 2.81 / 2.04 / 1.70).
@@ -17,7 +17,7 @@ const BASE = "base";
 const [header, ...lines] = readFileSync(join(root, "bench", "series.csv"), "utf8").trim().split(/\r?\n/);
 const cols = header.split(",");
 const all = lines.map((l) => Object.fromEntries(l.split(",").map((v, i) => [cols[i], v])))
-  .filter((r) => /^n3-v3-/.test(r.etiqueta));
+  .filter((r) => r.etiqueta.startsWith(process.argv[3] || "n3-v3r-")); // relaunch 2026-11-02: n3-v3r-a, -b, -c
 
 // Invalid matches per arm, every attempt included (MEDICIONES: the stop rule).
 const invalid = { [V3]: 0, [BASE]: 0 };
