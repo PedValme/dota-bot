@@ -10,6 +10,7 @@ local EVERY = 10          -- seconds of game time between periodic checks
 local nextTick = -1000
 local seenTp = {}         -- "pid:x:y" -> true, so each enemy teleport prints once
 local lastActive = {}     -- enemy unit name -> name of the ability it was casting at the last frame
+local watchUlt = {}       -- enemy unit name -> { ability, at }: an ultimate just seen cast, re-read 3 s later
 
 local function Fmt(v)
 	if v == nil then return 'nil' end
@@ -54,6 +55,7 @@ local function CheckCasting(t)
 			if name ~= nil and name ~= lastActive[key] then
 				print(string.format('[bench] api cast t=%d %s %s ult=%s', t, string.gsub(key, 'npc_dota_hero_', ''), name,
 					Fmt(a:IsUltimate())))
+				if a:IsUltimate() then watchUlt[key] = { ability = a, at = DotaTime() } end
 			end
 			lastActive[key] = name
 		end
@@ -83,11 +85,13 @@ local function CheckPeriodic(t)
 			if e:IsAlive() and e:CanBeSeen() and shown < 2 then
 				local n = e:NumModifiers()
 				local parts = {}
-				for i = 0, math.min(n, 6) - 1 do
-					local name = e:GetModifierName(i)
+				-- Every modifier with time left (stuns, BKB, saves), not just the first ones (passives come first).
+				-- GetModifierSourceAbility does not exist (game 0).
+				for i = 0, n - 1 do
 					local rem = e:GetModifierRemainingDuration(i)
-					local src = e:GetModifierSourceAbility(i)
-					table.insert(parts, string.format('%s=%s/%s', tostring(name), Fmt(rem), src ~= nil and src:GetName() or 'nil'))
+					if rem ~= nil and rem > 0 and #parts < 8 then
+						table.insert(parts, string.format('%s=%s', tostring(e:GetModifierName(i)), Fmt(rem)))
+					end
 				end
 				print(string.format('[bench] api mod t=%d %s n=%s %s', t, string.gsub(e:GetUnitName(), 'npc_dota_hero_', ''),
 					Fmt(n), table.concat(parts, ' ')))
@@ -134,6 +138,18 @@ end
 function P.Tick()
 	local t = math.floor(DotaTime())
 	Try('cast', function() CheckCasting(t) end)
+	-- 3 s after an enemy ultimate was seen cast: does the API show it on cooldown (castable false, cooldown fields)?
+	Try('ult_tras', function()
+		for key, w in pairs(watchUlt) do
+			if DotaTime() - w.at >= 3 then
+				watchUlt[key] = nil
+				local a = w.ability
+				print(string.format('[bench] api ult_tras t=%d %s %s cd=%s cdrest=%s lista=%s', t,
+					string.gsub(key, 'npc_dota_hero_', ''), a:GetName(), Fmt(a:GetCooldown()), Fmt(a:GetCooldownTimeRemaining()),
+					Fmt(a:IsFullyCastable())))
+			end
+		end
+	end)
 	Try('tp', function() CheckTeleports(t) end)
 	if DotaTime() >= nextTick then
 		nextTick = DotaTime() + EVERY
@@ -141,19 +157,7 @@ function P.Tick()
 	end
 end
 
--- The ATTACK hook for every hero (mode_attack_generic.lua): may a plan forbid attacking (desire 0) and otherwise hand
--- the mode back to Valve (nil)? In game 0 the team's first bot is forbidden between minutes 6 and 9; the mode log
--- shows whether it still enters ATTACK there (it must not) and outside (it must).
-function P.AttackDesire(bot)
-	local t = DotaTime()
-	if GetTeamPlayers(GetTeam())[1] == bot:GetPlayerID() and t >= 6 * 60 and t < 9 * 60 then
-		if (bot.probeAttackLog or -1000) + 30 <= t then
-			bot.probeAttackLog = t
-			print(string.format('[bench] api ataque t=%d pid=%d prohibido', math.floor(t), bot:GetPlayerID()))
-		end
-		return 0
-	end
-	return nil
-end
+-- Game 0 (2026-11-02, MEDICIONES v3-partida0) also tried an ATTACK GetDesire returning nil for Valve's desire: nil
+-- counts as 0 (no bot attacked all game). Removed; see mode_attack_generic.lua.
 
 return P

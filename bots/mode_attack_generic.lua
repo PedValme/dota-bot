@@ -14,13 +14,9 @@ if Utils.BuggyHeroesDueToValveTooLazy[botName] then
 	local_mode_attack_generic = dofile( GetScriptDirectory().."/FunLib/override_generic/mode_attack_generic" )
 end
 
--- dota-bot brain v3, game 0 (benchmark variant "api_sonda" only): every other hero gets a GetDesire that a plan can
--- set to 0 and otherwise returns nil (Valve's own desire); Think stays Valve's. FunLib/api_probe.lua.
-local Customize = require(GetScriptDirectory()..'/Customize/general')
-if local_mode_attack_generic == nil and Customize.BenchVariant.api_sonda == true then
-	local Probe = require(GetScriptDirectory()..'/FunLib/api_probe')
-	function GetDesire() return Probe.AttackDesire(bot) end
-end
+-- dota-bot: do not define GetDesire here to "hand the mode back to Valve" with nil. Checked in game 2026-11-02
+-- (MEDICIONES, v3-partida0): nil counts as 0 and no bot ever attacked. To keep a bot out of a fight, give another mode
+-- more than Valve's usual 0.95 instead.
 
 if local_mode_attack_generic ~= nil then
 	function GetDesire() return local_mode_attack_generic.GetDesire() end
