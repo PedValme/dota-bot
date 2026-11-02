@@ -424,3 +424,12 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - `v3-humo2` (`9284050`, 2 partidas, 2 ganadas): válidas, sin errores del plan, 3 y 5 fases de preparar.
 - Validez: humo, no comparación; las victorias de estas partidas no cuentan para nada.
 - Decisión: el humo pasa con `9284050`; revisor adversarial de la medición antes de lanzar `n3-v3`.
+
+### 2026-11-02 · `n3-v3`, primera mirada (tanda `n3-v3-a`, 8 bloques)
+- Resultado: `cerebro_v3` 8 de 16, `base` 8 de 16; CMH z = 0,00. Ni eficacia (z ≥ 2,81) ni perjuicio (z ≤ −1): la
+  serie sigue. Sin inválidas (0 y 0). Think igual en los dos brazos (~30 llamadas por segundo de juego).
+- Descriptivo, sin prueba: llegó a +10.000 en 11 (v3) y 14 (`base`) partidas, y perdió tras ir +10.000 en 3 y 6;
+  minutos medios 32,5 y 35,7. Secundaria fijada (patrimonio por minuto, min 18-26, por bloque): v3 mejor en 3, peor
+  en 4.
+- Decisión: tandas `n3-v3-b` y `n3-v3-c` (24 partidas cada una, sin observar), mismo commit `1162c9c`. Máquina antes
+  de la tanda b: CPU 27 %, memoria libre 53 %.
