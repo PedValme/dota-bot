@@ -349,7 +349,12 @@ local function UpdateFights(allies, enemies, now, hasAegis)
 		local need = math.min(f.allies, f.enemies + 1)
 		-- Forming is for real team fights: two or more enemies, past the laning phase (review 2026-11-02: against a lone
 		-- laner it made the core walk off its lane and let low enemies escape).
-		local laning = J ~= nil and J.IsInLaningPhase ~= nil and J.IsInLaningPhase()
+		-- Team-level laning phase: J.IsInLaningPhase() reads GetBot(), which is nil in the team's think (34 plan errors
+		-- in the v3-activo smoke, 2026-11-02). The same rule without the per-bot part: average level under 6.4 (minute
+		-- 10 of a normal game) with fase_estado, else the clock (8 min in Turbo, 12 normal).
+		local laning
+		if J ~= nil and J.StatePhases() then laning = J.GamePhaseLevel() < 6.4
+		else laning = now < ((J ~= nil and J.IsModeTurbo()) and 8 or 12) * 60 end
 		local canForm = f.enemies >= 2 and not laning
 		local formedOut = l.formStart ~= nil and now - l.formStart > FORM_MAX
 		local phase = nil
