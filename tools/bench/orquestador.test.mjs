@@ -2,7 +2,27 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
   parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, sideGroups, parseCouriers, valveIntruders, lateSpawns, codeState, codeTree, tooManyInvalid, killsBeforeHorn, variantLua,
-  VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName } from "./orquestador.mjs";
+  VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName, shouldRepeat } from "./orquestador.mjs";
+
+test("an invalid match is repeated up to the limit, never a valid one or after sin-gsi", () => {
+  assert.equal(shouldRepeat("", "final", 0, 2), false);
+  assert.equal(shouldRepeat("tardio", "final", 0, 0), false);
+  assert.equal(shouldRepeat("tardio", "final", 0, 2), true);
+  assert.equal(shouldRepeat("tardio", "final", 2, 2), false);
+  assert.equal(shouldRepeat("dota-cerrado", "dota-cerrado", 1, 2), true);
+  assert.equal(shouldRepeat("sin gsi", "sin-gsi", 0, 2), false);
+});
+
+test("the brain v3 variants keep the package Pedro signed", () => {
+  for (const name of ["cerebro_v3", "cerebro_v3_sombra"]) {
+    const v = VARIANTS[name];
+    for (const k of ["cerebro", "cerebro_v3", "builds", "defensa_total", "fase_estado", "retirada_temprana", "farm_sin_reloj"]) {
+      assert.equal(v[k], true, `${name}.${k}`);
+    }
+  }
+  assert.equal(VARIANTS.cerebro_v3.v3_sombra, undefined);
+  assert.equal(VARIANTS.cerebro_v3_sombra.v3_sombra, true);
+});
 
 const post = (map, token = TOKEN) => ({ auth: { token }, map, player: { team_name: "radiant" } });
 

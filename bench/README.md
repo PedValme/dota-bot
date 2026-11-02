@@ -112,7 +112,7 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 | Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |
 | Mismo código, con commit, en toda la serie | árbol de git de `bots/` y `tools/bench/` y `git status` antes y después de cada partida (`codigo` = commit@árboles; un commit solo de documentos no la invalida) | `código sin commit`, `el código cambió en la serie` |
 | La partida termina en tiempo razonable | reloj de GSI: a los 60 min se corta (`resultado=tope`, válida, sin ganador) | no la invalida |
-| Lado, héroes y orden repartidos igual entre variantes | calendario por bloques (pruebas) | solo cuentan bloques completos |
+| Lado, héroes y orden repartidos igual entre variantes | calendario por bloques (pruebas) | solo cuentan bloques completos; con `--repetir-invalidas N` una partida inválida se repite con los mismos héroes, lado y variante (hasta N veces): en `series.csv` es la fila inválida seguida de otra con el mismo número de partida |
 | Máquina libre | CPU y memoria por partida en `series.csv` | se anota; con carga alta, no se corre |
 
 Puerta antes de cada serie (DECISIONES 2026-10-31), sin excepción:

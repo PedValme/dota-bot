@@ -7,7 +7,7 @@
 //   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--velocidad 4] [--etiqueta texto]
 //                                    [--variantes base,empuje] [--modo turbo] [--observar] [--lado dire]
 //                                    [--dota "<dota 2 beta>"]
-//                                    [--muestra-gsi <file>]
+//                                    [--muestra-gsi <file>] [--repetir-invalidas 0-3]
 // --variantes interleaves versions of dota-bot (VARIANTS) in one series: per block of heroes, every variant plays
 // both sides, and the order flips every block, so heroes, side, Dota's version and the PC's load hit every variant
 // alike. Each match is a row of bench/series.csv; "valida" says whether it can be counted.
@@ -73,6 +73,14 @@ export function codeState(sha, porcelain, trees = "") {
 // The part of a code state that must stay the same through a series: the trees.
 export function codeTree(codigo) {
   return String(codigo ?? "").split("@")[1]?.replace("+cambios", "") ?? "";
+}
+
+// --repetir-invalidas N (brain v3's final series, 2026-11-02): an invalid match is played again with the same heroes,
+// side and variant, up to N times, so one bad match does not throw its whole block away (n2-nivel1 fell from 8 to 4
+// per arm that way). Not after "sin-gsi" (the series stops). Both rows stay in series.csv: an invalid row followed by
+// a row with the same "partida" is a repeat; the summary counts the repeat, and the stop rule counts every row.
+export function shouldRepeat(motivo, outcome, tries, max) {
+  return Boolean(motivo) && outcome !== "sin-gsi" && tries < max;
 }
 
 // Whether the series must stop: from the fifth match on, more than MAX_INVALID_SHARE of them not valid.
@@ -520,6 +528,7 @@ function parseArgs(argv) {
     else if (k === "--lado") opt.lado = v; // debugging one side: dota-bot always plays it (no side balance)
     else if (k === "--espejo") opt.espejo = v; // "no", debugging only: Dire keeps the random heroes the engine gives it
     else if (k === "--rival") opt.rival = v; // "valve" (default) or "dotabot": both teams dota-bot, one variant each
+    else if (k === "--repetir-invalidas") opt.repetir = Number(v); // replay an invalid match, same heroes and side
     else throw new Error(`Opción desconocida: ${k}`);
   }
   if (!Number.isInteger(opt.partidas) || opt.partidas < 1 || opt.partidas > 50) throw new Error("--partidas: 1 a 50");
@@ -530,6 +539,8 @@ function parseArgs(argv) {
   opt.modo ??= "normal";
   if (!["normal", "turbo"].includes(opt.modo)) throw new Error("--modo: normal o turbo");
   if (opt.lado !== undefined && !["radiant", "dire"].includes(opt.lado)) throw new Error("--lado: radiant o dire");
+  opt.repetir ??= 0;
+  if (!Number.isInteger(opt.repetir) || opt.repetir < 0 || opt.repetir > 3) throw new Error("--repetir-invalidas: 0 a 3");
   opt.rival ??= "valve";
   if (!["valve", "dotabot"].includes(opt.rival)) throw new Error("--rival: valve o dotabot");
   if (opt.rival === "dotabot" && ((opt.variantes ?? []).length !== 2 || opt.lado !== undefined)) {
@@ -671,6 +682,8 @@ async function main(argv) {
       throw new Error(`El código de bots/, del custom game o del orquestador no tiene commit (${firstCodigo}); ninguna partida valdría. Paro.`);
     }
     const results = [];
+    const allRows = []; // repeated invalid matches included, for the stop rule
+    let tries = 0; // repeats of the current match (--repetir-invalidas)
     let heroes = [];
     let rivals = [];
     for (let i = 0; i < opt.partidas; i++) {
@@ -691,7 +704,8 @@ async function main(argv) {
         if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
       }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
-      if (i % opt.block === 0) { heroes = drawHeroes(); rivals = drawHeroes(Math.random, heroes); }
+      // A repeat keeps the block's heroes even when it is the block's first match.
+      if (i % opt.block === 0 && tries === 0) { heroes = drawHeroes(); rivals = drawHeroes(Math.random, heroes); }
       const groups = sideGroups(dotabot, heroes, rivals, opt.espejo ?? "");
       const esperado = { radiant: groups.radiant, dire: groups.dire ?? [] };
       writeFileSync(MATCH_FILE, matchConfigLua(groups.radiant, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), groups.dire));
@@ -795,13 +809,22 @@ async function main(argv) {
         rival: opt.rival,
       };
       appendFileSync(CSV, csvRow(row) + "\n");
-      results.push(row);
+      allRows.push(row);
       console.log(`  ${outcome}${row.ganador ? `: gana ${row.ganador} (${row.ganador === dotabot ? "dota-bot" : "Valve"})` : ""}${motivo ? ` · NO VÁLIDA: ${motivo}` : ""}`);
       if (outcome === "sin-gsi") { console.log("Dota no envió datos por GSI; paro."); break; }
-      if (tooManyInvalid(results)) {
+      if (tooManyInvalid(allRows)) {
         console.log(`Más del ${MAX_INVALID_SHARE * 100} % de las partidas no son válidas; paro para investigar.`);
         break;
       }
+      if (shouldRepeat(motivo, outcome, tries, opt.repetir)) {
+        tries += 1;
+        console.log(`  repito la partida ${i + 1} con los mismos héroes, lado y variante (${tries} de ${opt.repetir})`);
+        i -= 1;
+        await sleep(8000);
+        continue;
+      }
+      tries = 0;
+      results.push(row);
       await sleep(8000);
     }
     if (opt.rival === "dotabot") {
