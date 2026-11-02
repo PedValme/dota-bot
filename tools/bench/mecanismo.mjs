@@ -24,7 +24,8 @@ const ownHalf = (team, x, y) => (team === "2" ? x + y < 0 : x + y > 0);
 
 const agg = {};
 for (const m of matches) {
-  const file = obsFiles.find((f) => f.startsWith(`${m.etiqueta}-`) && f.endsWith(`-${m.partida}.log`));
+  // By date and match number: a repeated match (--repetir-invalidas) has the same number as the invalid one.
+  const file = obsFiles.find((f) => f === `${m.etiqueta}-${String(m.fecha).replace(/[-:T]/g, "")}-${m.partida}.log`);
   if (!file) continue;
   const lines = readFileSync(join(obsDir, file), "latin1").split(/\r?\n/);
   const team = m.dotabot === "radiant" ? "2" : "3";

@@ -4,13 +4,22 @@ import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroe
   parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, sideGroups, parseCouriers, valveIntruders, lateSpawns, codeState, codeTree, tooManyInvalid, killsBeforeHorn, variantLua,
   VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName, shouldRepeat } from "./orquestador.mjs";
 
-test("an invalid match is repeated up to the limit, never a valid one or after sin-gsi", () => {
+test("only a set-up failure is repeated, up to the limit; never a valid match, one broken in play, or after sin-gsi", () => {
+  const late = "héroe aparecido tras el inicio (npc_dota_hero_axe)";
   assert.equal(shouldRepeat("", "final", 0, 2), false);
-  assert.equal(shouldRepeat("tardio", "final", 0, 0), false);
-  assert.equal(shouldRepeat("tardio", "final", 0, 2), true);
-  assert.equal(shouldRepeat("tardio", "final", 2, 2), false);
-  assert.equal(shouldRepeat("dota-cerrado", "dota-cerrado", 1, 2), true);
-  assert.equal(shouldRepeat("sin gsi", "sin-gsi", 0, 2), false);
+  assert.equal(shouldRepeat(late, "final", 0, 0), false);
+  assert.equal(shouldRepeat(late, "final", 0, 2), true);
+  assert.equal(shouldRepeat(late, "final", 2, 2), false);
+  assert.equal(shouldRepeat("couriers 4-5", "final", 0, 2), true);
+  assert.equal(shouldRepeat("patrimonio inicial 3000-1200", "final", 0, 2), true);
+  assert.equal(shouldRepeat("variante base en el log", "final", 0, 2), true);
+  // broken while being played, or a reason a replay cannot fix: not repeated (one arm would lose only its bad ones)
+  assert.equal(shouldRepeat("sin final", "dota-cerrado", 0, 2), false);
+  assert.equal(shouldRepeat("sin final", "timeout", 0, 2), false);
+  assert.equal(shouldRepeat("dota-bot jugó en el equipo de Valve (pid 5)", "final", 0, 2), false);
+  assert.equal(shouldRepeat("código sin commit", "final", 0, 2), false);
+  assert.equal(shouldRepeat("Dota cambió de versión (a -> b)", "final", 0, 2), false);
+  assert.equal(shouldRepeat("sin final", "sin-gsi", 0, 2), false);
 });
 
 test("the brain v3 variants keep the package Pedro signed", () => {

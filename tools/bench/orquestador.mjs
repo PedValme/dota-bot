@@ -53,7 +53,7 @@ const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", 
 const CSV = join(root, "bench", "series.csv");
 const COLUMNS = ["fecha", "etiqueta", "partida", "bloque", "variante", "valida", "motivo", "dificultad", "dotabot",
   "ganador", "resultado", "minutos", "kills_radiant", "kills_dire", "humano", "heroes", "ventaja_oro_max",
-  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo", "codigo", "rival"];
+  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo", "codigo", "rival", "intento"];
 
 // Measurement protocol (DECISIONES 2026-10-31): a match that reaches this game minute stops as "tope" (valid, with no
 // winner, so dota-bot did not win it; counted apart in the summary), and a series stops once more than this share of
@@ -77,10 +77,17 @@ export function codeTree(codigo) {
 
 // --repetir-invalidas N (brain v3's final series, 2026-11-02): an invalid match is played again with the same heroes,
 // side and variant, up to N times, so one bad match does not throw its whole block away (n2-nivel1 fell from 8 to 4
-// per arm that way). Not after "sin-gsi" (the series stops). Both rows stay in series.csv: an invalid row followed by
-// a row with the same "partida" is a repeat; the summary counts the repeat, and the stop rule counts every row.
+// per arm that way). Only for reasons fixed before the match is played (the set-up: teams, heroes, spawns, couriers,
+// starting net worth, the human, variant and mode in the log): a match that broke while being played ("sin final",
+// a Dota that closed) may depend on the variant's own code, and replaying it would drop one arm's bad matches only
+// (review 2026-11-02). Never after "sin-gsi" (the series stops). Both rows stay in series.csv, with "intento" 0, 1...:
+// per (etiqueta, partida) the last row counts; the stop rule and the per-variant count of invalid ones see every row.
+const REPEATABLE = ["reparto ", "sin registro de inicio", "héroes distintos de los sorteados", "sin registro de carga",
+  "sin registro de aparición", "héroe aparecido tras el inicio", "couriers ", "patrimonio inicial", "humano ",
+  "variante sin registro", "variante ", "modo "];
 export function shouldRepeat(motivo, outcome, tries, max) {
-  return Boolean(motivo) && outcome !== "sin-gsi" && tries < max;
+  if (!motivo || outcome === "sin-gsi" || tries >= max) return false;
+  return REPEATABLE.some((p) => motivo.startsWith(p));
 }
 
 // Whether the series must stop: from the fifth match on, more than MAX_INVALID_SHARE of them not valid.
@@ -807,16 +814,19 @@ async function main(argv) {
         modo: opt.modo,
         codigo,
         rival: opt.rival,
+        intento: tries,
       };
       appendFileSync(CSV, csvRow(row) + "\n");
       allRows.push(row);
+      const repetir = shouldRepeat(motivo, outcome, tries, opt.repetir);
+      if (!repetir) results.push(row); // with N = 0 exactly as before: the row counts even when the series stops here
       console.log(`  ${outcome}${row.ganador ? `: gana ${row.ganador} (${row.ganador === dotabot ? "dota-bot" : "Valve"})` : ""}${motivo ? ` · NO VÁLIDA: ${motivo}` : ""}`);
       if (outcome === "sin-gsi") { console.log("Dota no envió datos por GSI; paro."); break; }
       if (tooManyInvalid(allRows)) {
         console.log(`Más del ${MAX_INVALID_SHARE * 100} % de las partidas no son válidas; paro para investigar.`);
         break;
       }
-      if (shouldRepeat(motivo, outcome, tries, opt.repetir)) {
+      if (repetir) {
         tries += 1;
         console.log(`  repito la partida ${i + 1} con los mismos héroes, lado y variante (${tries} de ${opt.repetir})`);
         i -= 1;
@@ -824,8 +834,14 @@ async function main(argv) {
         continue;
       }
       tries = 0;
-      results.push(row);
       await sleep(8000);
+    }
+    // Invalid matches per variant, repeated ones included: a different rate between arms is a finding (a variant that
+    // breaks matches), not noise (review 2026-11-02).
+    const invalidBy = {};
+    for (const r of allRows) if (r.valida !== "si") invalidBy[r.variante || "-"] = (invalidBy[r.variante || "-"] ?? 0) + 1;
+    if (Object.keys(invalidBy).length) {
+      console.log(`Inválidas por variante (con las repetidas): ${Object.entries(invalidBy).map(([v, n]) => `${v} ${n}`).join(", ")}.`);
     }
     if (opt.rival === "dotabot") {
       // Rows are written from the first variant's side: its wins are the matches it won against the second.

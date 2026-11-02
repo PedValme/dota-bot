@@ -36,6 +36,10 @@ function groupedPush(file) {
   return n ? grouped / n : null;
 }
 
+// The observation file of one row: by date and match number, so a repeated match (--repetir-invalidas, same number)
+// gets its own file and not the invalid one's.
+const obsFileOf = (m) => `${m.etiqueta}-${String(m.fecha).replace(/[-:T]/g, "")}-${m.partida}.log`;
+
 const median = (xs) => { const s = [...xs].sort((a, b) => a - b); return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : null; };
 console.log(`Serie ${tag}: ${matches.length} partidas`);
 for (const v of [...new Set(matches.map((m) => m.variante))]) {
@@ -43,7 +47,7 @@ for (const v of [...new Set(matches.map((m) => m.variante))]) {
   const wins = ms.filter((m) => m.ganador === m.dotabot).length;
   const closes = ms.filter((m) => m.ganador === m.dotabot && m.minuto_10k !== "").map((m) => +m.minutos - +m.minuto_10k);
   const lostAfter10k = ms.filter((m) => m.ganador !== m.dotabot && m.minuto_10k !== "").length;
-  const groups = ms.map((m) => obsFiles.find((f) => f.endsWith(`-${m.partida}.log`))).filter(Boolean).map(groupedPush).filter((x) => x !== null);
+  const groups = ms.map((m) => obsFiles.find((f) => f === obsFileOf(m))).filter(Boolean).map(groupedPush).filter((x) => x !== null);
   console.log(`  ${v.padEnd(11)} ganó ${wins}/${ms.length} válidas · cierre desde +10k: mediana ${median(closes) ?? "-"} min (${closes.join(", ") || "-"}) · perdió tras +10k: ${lostAfter10k}` +
     ` · minutos de partida: mediana ${median(ms.map((m) => +m.minutos)) ?? "-"} · 4-5 bots empujando juntos: ${groups.length ? (100 * groups.reduce((a, b) => a + b, 0) / groups.length).toFixed(0) + "%" : "-"}`);
 }
