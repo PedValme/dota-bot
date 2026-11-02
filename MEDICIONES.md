@@ -456,3 +456,23 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Tanda `n3-v3r-a` lanzada el 2026-11-02 con la máquina cargada (una pestaña de Chrome al 96 % de un núcleo; CPU total
   23-65 %), con el sí de Pedro (DECISIONES 2026-11-02); la carga va por partida en `series.csv` y el Think se compara
   entre brazos en esta tanda.
+
+### 2026-11-02 · Diagnóstico de la fase de líneas: dota-bot (OHA en líneas) frente a Valve, sin partidas nuevas
+- Pregunta (Pedro: «¿no tenemos una métrica de todo lo que sacamos que nos permita tomar decisiones útiles para la fase
+  de líneas?»): ¿dónde pierde o gana dota-bot frente a Valve hasta el min 10, para decidir si hace falta una capa de
+  líneas?
+- Datos: registros observados ya existentes, 18 partidas válidas en las que dota-bot juega las líneas como OHA
+  (`n3-v3-a` brazo `base` y `n3-v3r-a` hasta ese momento); mismos héroes por bloque en los dos lados. Rol aproximado
+  por patrimonio en el min 10 dentro del equipo (r1 = el más rico); mid = el más cercano a la diagonal en el min 2-5.
+  Script: `scratchpad/lanes.mjs` de la sesión (lectura).
+- Resultado, dota-bot frente a Valve, medias por partida en el min 10:
+  - patrimonio del equipo 25.200 frente a 17.500 (+44 %); kills 9,7 frente a 6,2; muertes 6,5 frente a 9,7;
+  - últimos golpes por rol (r1-r5): 48/35/31/17/13 frente a 21/20/12/14/6 (más del doble en los núcleos);
+  - el mid de Valve pasa el 49 % del tiempo fuera de su línea desde el nivel 6 (el de dota-bot, el 9 %), pero mata
+    menos (1,2 frente a 2,9 kills hasta el min 10);
+  - los soportes de dota-bot pasan el 64 % del tiempo a 1.500 o menos de un núcleo (Valve, 35 %).
+- Validez: descriptivo; 18 partidas; rol y mid aproximados; los últimos golpes incluyen neutrales.
+- Lectura: contra Valve, dota-bot gana la fase de líneas con holgura (unos +7.700 en el min 10). Lo que pierde
+  partidas está después (regalar ventajas, no cerrar), que es lo que mide `n3-v3r`. Una capa de líneas contra Valve
+  tendría poco margen; contra humanos puede ser distinto (rotaciones del mid, por ejemplo): se mira con el resultado
+  de la serie y con la prueba con amigos.
