@@ -241,7 +241,7 @@ test("a finished match needs post-game and a winner", () => {
 
 test("CSV rows keep their columns", () => {
   const row = csvRow({ fecha: "2026-10-28T19:00", etiqueta: "a,b", partida: 1, dotabot: "radiant", ganador: "dire" });
-  assert.equal(row.split(",").length, 26);
+  assert.equal(row.split(",").length, 27); // 27th: "intento" (--repetir-invalidas, 2026-11-02)
   assert.ok(row.includes("a;b"));
 });
 
