@@ -8431,6 +8431,20 @@ end
 
 function BuybackUsageThink()
 	if RefreshBotHandle() then return end
+	-- How often the engine lets this bot think, per minute of game time (observer only): at x4 a heavier variant could
+	-- think less per game second than the other arm, a bias against it (MEDICIONES n3-v3, review 2026-11-02). The
+	-- engine calls BuybackUsageThink once per bot frame, before any throttle.
+	if benchObserve then
+		bot.benchThinkN = (bot.benchThinkN or 0) + 1
+		local t = DotaTime()
+		if t - (bot.benchThinkTime or 0) >= 60 then
+			if bot.benchThinkTime ~= nil then
+				print(string.format('[bench] think t=%d pid=%d llamadas=%d por_s=%.1f', math.floor(t), bot:GetPlayerID(),
+					bot.benchThinkN, bot.benchThinkN / (t - bot.benchThinkTime)))
+			end
+			bot.benchThinkTime, bot.benchThinkN = t, 0
+		end
+	end
 	if benchObserve and DotaTime() - (bot.benchObserveTime or -1000) >= 2 then
 		bot.benchObserveTime = DotaTime()
 		local mode = bot:GetActiveMode()

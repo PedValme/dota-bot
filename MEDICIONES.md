@@ -383,6 +383,29 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   estructuras propias perdidas yendo por encima de +5.000; torres enemigas en pie al llegar a +10.000; derrotas tras
   +10.000; muertes por partida; inválidas por brazo (una asimetría ahí es contaminación y para la serie).
 - Lo que vale la conclusión: para el paquete entero, no para cada capa.
+- Completado tras la revisión adversarial de la medición (2026-11-02), antes de lanzarla:
+  - Tandas: `n3-v3-a` de 32 partidas (8 bloques, con `--observar`), `n3-v3-b` y `n3-v3-c` de 24 (6 bloques), sin
+    observar. Cada mirada es por bloques completos y válidos, con clave (etiqueta, bloque): 8, 14 y 20 bloques. Si
+    faltan bloques, se juega otra tanda corta hasta llegar; si una mirada no cae justa, la frontera se recalcula con
+    la misma función de gasto en la fracción real.
+  - Todas las filas `n3-v3-*` deben tener los mismos árboles de `bots/` y `tools/bench/` (el commit de la tanda a) y
+    la misma `dota_version`; si no, la serie para. Se lanza desde el clon principal (las junctions de Dota apuntan
+    ahí) con el commit en `HEAD`.
+  - Inválidas: la serie para e investiga si `cerebro_v3` tiene más `sin final` que `base`, o si un brazo tiene 3
+    inválidas más que el otro (todas las filas, repetidas incluidas).
+  - Llamadas a Think por segundo de juego (`[bench] think`, solo con observador, una línea por bot y minuto): se
+    comparan entre brazos en la tanda a. Si v3 piensa claramente menos (más de un 10 % por debajo de `base`), la
+    serie para: el banco a ×4 lo castigaría por un artefacto.
+  - Análisis con `tools/analisis/n3-v3.mjs <mirada>` (fuera de `tools/bench/`, que entra en la comprobación de
+    código). Secundaria con prueba fijada: patrimonio por minuto en el min 18-26, diferencia por bloque, prueba de
+    signos; el resto de secundarias se describen, sin prueba.
+  - Potencia (simulación del revisor, 40.000 series): α real ≈ 0,05; frente a `base` ≈ 50 %: +10 puntos ≈ 20 %, +20 ≈
+    50-55 %, +30 ≈ 85 %. La mirada de 16 casi nunca para por eficacia (4 % con +20); la inutilidad a 28 para el 55 %
+    de las series sin efecto.
+  - Máquina medida antes de cada tanda (regla global); con carga, no se lanza sin el sí de Pedro.
+  - Sin comprobar: el Turbo imitado no es el Turbo real (torres y runas normales); el primer bot aparece tarde
+    (lo rechaza la validez); la velocidad real varía (×1,6-3,4) sin saber si distinto por lado; la lista de héroes del
+    sorteo es recordada, no de `BotImplemented`.
 
 ### 2026-11-02 · Humo del cerebro v3 activo (`v3-activo`, `v3-humo`, `v3-humo2`)
 - Pregunta: puerta de medición (DECISIONES 2026-10-31): ¿son válidas las partidas con `cerebro_v3`, actúa cada capa y
