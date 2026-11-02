@@ -45,6 +45,10 @@ function R.Desire(bot)
 	local now = DotaTime()
 	-- Held while the threat stays: renewed, not a fixed time (review 2026-11-01: a Razor let go at threat 0.82 turned
 	-- back and died).
+	-- v3: a fight that turned ours (the verdict) ends the hold.
+	local TBh = J.TeamBrain()
+	local heldOurs = TBh.Enabled() and TBh.V3() and not TBh.Shadow() and TBh.FightVerdict(bot) == true
+	if heldOurs then bot.__retreatEarlyUntil = nil end
 	if bot.__retreatEarlyUntil and now < bot.__retreatEarlyUntil and threat >= KEEP_THREAT then
 		bot.__retreatEarlyUntil = now + HOLD_SECONDS
 		return bot.__retreatEarlyDesire or DESIRE

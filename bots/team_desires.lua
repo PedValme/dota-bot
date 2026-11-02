@@ -8,5 +8,8 @@ local Brain = require(GetScriptDirectory()..'/FunLib/team_brain')
 
 function TeamThink()
 	local ok, err = pcall(Brain.Update)
-	if not ok then print('[bench] plan error ' .. tostring(err)) end
+	if not ok then
+		print('[bench] plan error ' .. tostring(err))
+		pcall(Brain.OnError)
+	end
 end

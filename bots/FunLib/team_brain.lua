@@ -72,11 +72,20 @@ local function Centroid(units)
 end
 
 -- Deaths in the last FIGHT_WINDOW seconds, from alive -> dead transitions.
+-- Where each hero was last seen alive (allies always, enemies when visible): where it died, for the v3 fight log.
+local lastLoc = {}
+local deathLocs = { ally = {}, enemy = {} }
 local function TrackDeaths(now)
+	for _, u in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if u:IsAlive() and not u:IsIllusion() then lastLoc[u:GetPlayerID()] = u:GetLocation() end
+	end
+	for _, u in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES) or {}) do
+		if u:CanBeSeen() and u:IsAlive() and not u:IsIllusion() then lastLoc[u:GetPlayerID()] = u:GetLocation() end
+	end
 	for side, team in pairs({ ally = GetTeam(), enemy = GetOpposingTeam() }) do
 		for _, pid in ipairs(GetTeamPlayers(team)) do
 			local alive = IsHeroAlive(pid)
-			if wasAlive[pid] == true and not alive then deathTimes[side][pid] = now end
+			if wasAlive[pid] == true and not alive then deathTimes[side][pid] = now; deathLocs[side][pid] = lastLoc[pid] end
 			wasAlive[pid] = alive
 		end
 	end
@@ -265,29 +274,34 @@ local function UpdateFights(allies, enemies, now, hasAegis)
 	fights = FindFights(allies, enemies, now, hasAegis)
 	-- Same fight as a recent one (within 1500 of where it was, seen in the last 15 s): keep its id for the log.
 	for _, f in ipairs(fights) do
+		local bestD = 1500
 		for id, l in pairs(fightLog) do
-			if now - l.seen <= 15 and Dist(l.loc, f.loc) <= 1500 then f.id = id end
+			local d = Dist(l.loc, f.loc)
+			if now - l.seen <= 15 and d <= bestD then f.id, bestD = id, d end
 		end
 		if f.id == nil then
 			f.id = nextFightId
 			nextFightId = nextFightId + 1
-			fightLog[f.id] = { start = now, loc = f.loc, value = f.value, a0 = 0, e0 = 0 }
-			local entry = fightLog[f.id]
-			for _, t in pairs(deathTimes.ally) do if t <= now then entry.a0 = entry.a0 + 1 end end
-			for _, t in pairs(deathTimes.enemy) do if t <= now then entry.e0 = entry.e0 + 1 end end
+			fightLog[f.id] = { start = now, loc = f.loc, value = f.value }
 			print(string.format('[bench] eval t=%d team=%d id=%d valor=%.2f aliados=%d enemigos=%d visibles=%d', math.floor(now),
 				GetTeam(), f.id, f.value, f.allies, f.enemies, f.size))
 		end
 		fightLog[f.id].seen = now
 		fightLog[f.id].loc = f.loc
 	end
-	-- 10 s after a fight starts: who died near it since (deaths of the last 10 s, by side).
+	-- 10 s after a fight starts: who died near it (within 2500 of where it was) since it started, by side.
 	for id, l in pairs(fightLog) do
 		if not l.logged and now - l.start >= 10 then
 			l.logged = true
-			local a, e = 0, 0
-			for _, t in pairs(deathTimes.ally) do if t >= l.start and t <= now then a = a + 1 end end
-			for _, t in pairs(deathTimes.enemy) do if t >= l.start and t <= now then e = e + 1 end end
+			local function Near(side)
+				local n = 0
+				for pid, t in pairs(deathTimes[side]) do
+					local where = deathLocs[side][pid]
+					if t >= l.start and t <= now and where ~= nil and Dist(where, l.loc) <= 2500 then n = n + 1 end
+				end
+				return n
+			end
+			local a, e = Near('ally'), Near('enemy')
 			print(string.format('[bench] eval_fin t=%d team=%d id=%d valor=%.2f muertos_aliados=%d muertos_enemigos=%d',
 				math.floor(now), GetTeam(), id, l.value, a, e))
 		end
@@ -307,12 +321,24 @@ local function UpdateFights(allies, enemies, now, hasAegis)
 			verdict[pid] = nil
 		else
 			local prev = verdict[pid]
-			local strong = prev ~= nil and prev.strong
+			-- The hysteresis belongs to one fight: coming from a won fight does not make a new one "ours".
+			local strong = prev ~= nil and prev.fight == best.id and prev.strong
 			if strong and best.value < FIGHT_EXIT then strong = false
 			elseif not strong and best.value >= FIGHT_ENTER then strong = true end
 			verdict[pid] = { strong = strong, value = best.value, time = now, fight = best.id }
 		end
 	end
+end
+
+-- v3: an error in Update must not leave the five on a stale plan. Back to LINEA (OHA's own behaviour), no fight
+-- verdicts, and the plan off for 10 s (team_desires.lua calls this; B.Update checks errorUntil).
+local errorUntil = -1000
+function B.OnError()
+	if not B.V3() then return end -- B.V3: the local V3 is defined further down
+	errorUntil = DotaTime() + 10
+	fights, verdict = {}, {}
+	B.plan.state, B.plan.lane, B.plan.rally, B.plan.engage = 'LINEA', nil, nil, nil
+	B.plan.defenders, B.plan.creepDefense = {}, nil
 end
 
 -- The v3 verdict for a bot (true / false), or nil when there is no fight near it or v3 is off.
@@ -496,6 +522,7 @@ function B.Update()
 	local now = DotaTime()
 	if now < nextUpdate then return end
 	nextUpdate = now + UPDATE_EVERY
+	if now < errorUntil and V3() then return end
 	if J == nil then
 		local ok, mod = pcall(require, GetScriptDirectory()..'/FunLib/jmz_func')
 		if ok then J = mod end
@@ -771,10 +798,15 @@ function B.FarmV3(bot)
 	if not (Enabled() and V3()) then return nil end
 	local s = B.plan.state
 	if s == 'REAGRUPAR' then return true end
-	if s ~= 'LINEA' then return false end
+	-- Objectives that use the whole team stop farming; while defending, only the assigned defenders stop.
+	if s == 'TOMAR' or s == 'AGRUPAR' or s == 'EMPUJAR' or s == 'CERRAR' or s == 'ROSHAN' then return false end
+	if B.IsDefender(bot) then return false end
 	if J == nil or J.GetPosition(bot) > 3 then return nil end
 	local need, item = B.KeyItemGoldNeeded(bot)
-	local farm = need == nil or need > 0
+	-- A core with nothing big left to buy (or the gold for it in hand) is left to OHA's rules: there is no pressure
+	-- order yet for it to go to instead (review 2026-11-01). "falta" counts the whole item's cost, components bought
+	-- or not, so it overstates what is missing.
+	local farm = (need == nil or need > 0) and true or nil
 	local pid = bot:GetPlayerID()
 	if DotaTime() - (farmLog[pid] or -1000) >= 60 then
 		farmLog[pid] = DotaTime()
@@ -837,10 +869,18 @@ function B.GlyphNow()
 	if not (Enabled() and V3()) or B.plan.baseThreats == nil then return nil end
 	for lane, t in pairs(B.plan.baseThreats) do
 		if t.heroes >= 1 or t.creeps >= 5 then
+			-- The siege must be at that same structure (an old wound next to a besieged T3 does not count).
+			local enemyCreeps = GetUnitList(UNIT_LIST_ENEMY_CREEPS) or {}
+			local enemies = VisibleEnemies()
 			for _, s in ipairs(LaneStructures(lane)) do
 				local hp = s:GetHealth() / math.max(1, s:GetMaxHealth())
-				if hp < 0.45 and Dist(s:GetLocation(), t.loc) <= 1200 then
-					return string.format('lane=%d %s hp=%.2f heroes=%d creeps=%d', lane, s:GetUnitName(), hp, t.heroes, t.creeps)
+				if hp < 0.45 then
+					local loc, h, c = s:GetLocation(), 0, 0
+					for _, e in ipairs(enemies) do if Dist(e:GetLocation(), loc) <= 900 then h = h + 1 end end
+					for _, cr in ipairs(enemyCreeps) do if cr:IsAlive() and Dist(cr:GetLocation(), loc) <= 900 then c = c + 1 end end
+					if h >= 1 or c >= 5 then
+						return string.format('lane=%d %s hp=%.2f heroes=%d creeps=%d', lane, s:GetUnitName(), hp, h, c)
+					end
 				end
 			end
 		end
@@ -854,9 +894,21 @@ function B.BuybackForBase(bot)
 	local w = B.plan.worstThreat
 	if not (Enabled() and V3()) or B.plan.state ~= 'DEFENDER' or w == nil then return false end
 	if not (w.heroes >= 2 or (w.heroes >= 1 and w.inner)) then return false end
-	local near = 0
-	for _, a in ipairs(Allies()) do if a:IsAlive() and Dist(a:GetLocation(), w.loc) <= 3000 then near = near + 1 end end
-	return near < w.heroes
+	-- Allies alive near the threat or at our fountain (one who just bought back counts), plus buybacks of the last
+	-- 15 s: no cascade of the five buying back for two heroes (review 2026-11-01).
+	local now, near = DotaTime(), 0
+	for _, a in ipairs(Allies()) do
+		if a:IsAlive() and (Dist(a:GetLocation(), w.loc) <= 3000 or a:DistanceFromFountain() <= 1500) then near = near + 1 end
+	end
+	B.recentBuybacks = B.recentBuybacks or {}
+	for pid, t in pairs(B.recentBuybacks) do
+		if now - t <= 15 then near = near + 1 else B.recentBuybacks[pid] = nil end
+	end
+	if near < w.heroes then
+		B.recentBuybacks[bot:GetPlayerID()] = now
+		return true
+	end
+	return false
 end
 
 function B.Focus(bot)

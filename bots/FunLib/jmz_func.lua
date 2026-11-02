@@ -4875,13 +4875,20 @@ local OhaWeAreStronger = J.WeAreStronger
 function J.WeAreStronger(bot, nRadius)
 	local TB = J.TeamBrain()
 	if not (TB.Enabled() and TB.V3()) then return OhaWeAreStronger(bot, nRadius) end
+	-- Small radii (a spell's or an attack's range, a lane trade) ask a local question the fight's evaluation does not
+	-- answer: OHA keeps them (review 2026-11-01).
+	if nRadius ~= nil and nRadius < 1000 then return OhaWeAreStronger(bot, nRadius) end
 	local strong = TB.FightVerdict(bot)
 	if strong == nil then return OhaWeAreStronger(bot, nRadius) end
 	if TB.Shadow() then
 		local oha = OhaWeAreStronger(bot, nRadius)
 		local c = bot.v3Strong or { t = DotaTime(), same = 0, diff = 0 }
 		bot.v3Strong = c
-		if oha == strong then c.same = c.same + 1 else c.diff = c.diff + 1 end
+		-- Counted once per second per bot (a decision), not per call.
+		if DotaTime() - (c.last or -1000) >= 1 then
+			c.last = DotaTime()
+			if oha == strong then c.same = c.same + 1 else c.diff = c.diff + 1 end
+		end
 		if DotaTime() - c.t >= 60 then
 			print(string.format('[bench] fuerte t=%d pid=%d iguales=%d distintos=%d', math.floor(DotaTime()), bot:GetPlayerID(), c.same, c.diff))
 			bot.v3Strong = { t = DotaTime(), same = 0, diff = 0 }
