@@ -580,6 +580,18 @@ local function BuybackUsageComplement()
 		end
 	end
 
+	-- Brain v3, layer 5: buy back to save the base when the plan says it cannot be held with who is alive.
+	local TB = J.TeamBrain()
+	if TB.Enabled() and TB.V3() and nRemainingRespawnTime > 15 then
+		local okB, need = pcall(TB.BuybackForBase, bot)
+		if okB and need then
+			print(string.format('[bench] recompra_base t=%d pid=%d resta=%d', math.floor(DotaTime()), bot:GetPlayerID(), math.floor(nRemainingRespawnTime)))
+			J.Role['lastbbtime'] = DotaTime()
+			bot:ActionImmediate_Buyback()
+			return
+		end
+	end
+
 	if nFullRespawnTime < 60 then
 		return
 	end
@@ -8319,6 +8331,17 @@ local function UseGlyph()
 		or not GetTeamMember( 5 ):IsBot()
 	then
 		return
+	end
+
+	-- Brain v3, layer 5: glyph against a real base siege, creeps included (OHA's own checks below need an enemy hero).
+	local TB = J.TeamBrain()
+	if TB.Enabled() and TB.V3() then
+		local okG, why = pcall(TB.GlyphNow)
+		if okG and why ~= nil then
+			print(string.format('[bench] glifo t=%d %s', math.floor(DotaTime()), why))
+			bot:ActionImmediate_Glyph( )
+			return
+		end
 	end
 
 	local T1 = {

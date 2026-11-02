@@ -47,9 +47,26 @@ function R.Desire(bot)
 	-- back and died).
 	if bot.__retreatEarlyUntil and now < bot.__retreatEarlyUntil and threat >= KEEP_THREAT then
 		bot.__retreatEarlyUntil = now + HOLD_SECONDS
-		return DESIRE
+		return bot.__retreatEarlyDesire or DESIRE
 	end
 	if threat < THREAT then return 0 end
+	-- Brain v3, layer 2: the fight's evaluation is the filter instead of the 0.9 below the attack mode. A fight that
+	-- does not hold (value under 0.8) makes the hero run at 0.97, above OHA's attack (0.95); a fight held as ours keeps
+	-- it in (OHA's own retreat rules still apply).
+	local TB = J.TeamBrain()
+	if TB.Enabled() and TB.V3() and not TB.Shadow() then
+		local strong, value = TB.FightVerdict(bot)
+		if strong == true then return 0 end
+		if value ~= nil and value < 0.8 then
+			bot.__retreatEarlyUntil = now + HOLD_SECONDS
+			bot.__retreatEarlyDesire = 0.97
+			if observe then
+				print(string.format('[bench] retirada_temprana t=%d pid=%d amenaza=%.2f valor=%.2f hp=%.2f v3',
+					math.floor(now), bot:GetPlayerID(), threat, value, J.GetHP(bot)))
+			end
+			return 0.97
+		end
+	end
 	local allies = #J.GetAlliesNearLoc(here, RADIUS) -- includes the bot itself
 	local hit = bot:WasRecentlyDamagedByAnyHero(1) == true
 	if #enemies > allies or (J.GetHP(bot) < LOW_HP and hit and allies <= #enemies) then
@@ -58,6 +75,7 @@ function R.Desire(bot)
 			print(string.format('[bench] retirada_temprana t=%d pid=%d amenaza=%.2f enemigos=%d aliados=%d hp=%.2f',
 				math.floor(now), bot:GetPlayerID(), threat, #enemies, allies, J.GetHP(bot)))
 		end
+		bot.__retreatEarlyDesire = DESIRE
 		return DESIRE
 	end
 	return 0

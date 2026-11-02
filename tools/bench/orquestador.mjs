@@ -124,6 +124,14 @@ export const VARIANTS = {
   defensa_t12: { defensa_t12: true, thinkless: 1 },
   // Both level 1 fixes together, for the level 2 series.
   nivel1: { filtro_ultis: true, defensa_t12: true, thinkless: 1 },
+  // Brain v3 (signed by Pedro 2026-11-01, trabajo/cerebro-v3.md): the whole package, v2's brain, builds, whole-team
+  // base defence, phases by the state of the match, the early retreat and farming without the clock, with v3's layers.
+  cerebro_v3: { cerebro: true, cerebro_v3: true, builds: true, defensa_total: true, fase_estado: true,
+    retirada_temprana: true, farm_sin_reloj: true, thinkless: 1 },
+  // The same with layer 1's fight evaluation in shadow (it logs next to OHA's "we are stronger" and does not act), to
+  // fix its thresholds in an observed game.
+  cerebro_v3_sombra: { cerebro: true, cerebro_v3: true, v3_sombra: true, builds: true, defensa_total: true,
+    fase_estado: true, retirada_temprana: true, farm_sin_reloj: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };

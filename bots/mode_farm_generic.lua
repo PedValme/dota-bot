@@ -372,15 +372,21 @@ function GetDesireHelper()
 	local nFarmRampEnd   = bTurboClock and 14 * 60 or 20 * 60
 	local nFarmCap = RemapValClamped(nGameTime, nFarmRampStart, nFarmRampEnd, 0.3, 0.6)
 
+	-- Brain v3, layer 3 (Pedro, 2026-11-01): when the plan has a say (FunLib/team_brain.lua, FarmV3), it replaces OHA's
+	-- "time to farm" (net worth by level), its 6k-lead cut and its minute-18 late-game cut; nil keeps OHA's rules.
+	local bFarmV3 = TeamBrain.FarmV3(bot)
+	if bFarmV3 == false then return BOT_MODE_DESIRE_NONE end
 	if GetGameMode() ~= GAMEMODE_MO
-	and J.Site.IsTimeToFarm(bot)
+	and (bFarmV3 == true or J.Site.IsTimeToFarm(bot))
 	and not J.IsDefending(bot)
 	and (bot:GetUnitName() ~= 'npc_dota_hero_lone_druid_bear' or (bot:HasScepter() and not J.IsValid(LoneDruid.hero)))
 	and (nGameTime > 8 * 60 or bot:GetLevel() >= 8 or ( bot:GetAttackRange() < 220 and bot:GetLevel() >= 6 ))
 	-- dota-bot "remate" (Pedro, 2026-10-30): the benchmark variant "farm = true" keeps farming with a 6k+ lead, and so
 	-- does the team brain (variant "cerebro") when its plan is to farm (FunLib/team_brain.lua).
-	and (networthAdvantage < 6000 or Customize.BenchVariant.farm == true or (TeamBrain.Enabled() and TeamBrain.FarmAllowed()))
-	and not J.IsLateGame()
+	and (bFarmV3 == true or networthAdvantage < 6000 or Customize.BenchVariant.farm == true or (TeamBrain.Enabled() and TeamBrain.FarmAllowed()))
+	-- brain v3 (Pedro, 2026-11-01): farming is decided by the situation, not the clock; "farm_sin_reloj" drops OHA's
+	-- late-game cut (minute 18 of Turbo).
+	and (bFarmV3 == true or not J.IsLateGame() or Customize.BenchVariant.farm_sin_reloj == true)
 	then
 		if J.GetDistanceFromEnemyFountain(bot) > 4000
 		then
