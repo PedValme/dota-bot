@@ -4880,6 +4880,8 @@ function J.WeAreStronger(bot, nRadius)
 	-- Small radii (a spell's or an attack's range, a lane trade) ask a local question the fight's evaluation does not
 	-- answer: OHA keeps them (review 2026-11-01).
 	if nRadius ~= nil and nRadius < 1000 then return OhaWeAreStronger(bot, nRadius) end
+	-- Nor in the laning phase (mode_laning asks at 1200 whether to stay in lane; n3-v3-a, DECISIONES 2026-11-02).
+	if TB.TeamLaning() then return OhaWeAreStronger(bot, nRadius) end
 	local strong = TB.FightVerdict(bot)
 	if strong == nil then return OhaWeAreStronger(bot, nRadius) end
 	if TB.Shadow() then

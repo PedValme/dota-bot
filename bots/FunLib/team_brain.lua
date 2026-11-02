@@ -205,6 +205,24 @@ local function TowerNear(team, loc, r)
 	return false
 end
 
+-- v3: the team's laning phase, by the state of the match (Pedro: not the clock). J.IsInLaningPhase() reads GetBot(),
+-- which is nil in the team's think (34 plan errors in the v3-activo smoke). The laning ends when the average level of
+-- the ten reaches 9.2 (that of a normal game's minute 15, J.IsEarlyGame by state) or a tier 1 tower falls; without
+-- fase_estado, the clock (8 min in Turbo, 15 normal). In n3-v3-a the brain's early retreat and team objectives cost
+-- half the kills by minute 5 and half the lead by minute 18 (DECISIONES 2026-11-02): in this phase OHA plays.
+function B.TeamLaning(now)
+	now = now or DotaTime()
+	if now < 0 then return true end
+	for _, team in ipairs({ GetTeam(), GetOpposingTeam() }) do
+		for _, t in ipairs({ TOWER_TOP_1, TOWER_MID_1, TOWER_BOT_1 }) do
+			local u = GetTower(team, t)
+			if u == nil or not u:IsAlive() then return false end
+		end
+	end
+	if J ~= nil and J.StatePhases() then return J.GamePhaseLevel() < 9.2 end
+	return now < ((J ~= nil and J.IsModeTurbo()) and 8 or 15) * 60
+end
+
 local ultCache = {} -- enemy unit name -> its ultimate ability (found once)
 local function EnemyUltimate(e)
 	local key = e:GetUnitName()
@@ -351,16 +369,15 @@ local function UpdateFights(allies, enemies, now, hasAegis)
 		local need = math.min(f.allies, f.enemies + 1)
 		-- Forming is for real team fights: two or more enemies, past the laning phase (review 2026-11-02: against a lone
 		-- laner it made the core walk off its lane and let low enemies escape).
-		-- Team-level laning phase: J.IsInLaningPhase() reads GetBot(), which is nil in the team's think (34 plan errors
-		-- in the v3-activo smoke, 2026-11-02). The same rule without the per-bot part: average level under 6.4 (minute
-		-- 10 of a normal game) with fase_estado, else the clock (8 min in Turbo, 12 normal).
-		local laning
-		if J ~= nil and J.StatePhases() then laning = J.GamePhaseLevel() < 6.4
-		else laning = now < ((J ~= nil and J.IsModeTurbo()) and 8 or 12) * 60 end
+		local laning = B.TeamLaning(now)
 		local canForm = f.enemies >= 2 and not laning
 		local formedOut = l.formStart ~= nil and now - l.formStart > FORM_MAX
 		local phase = nil
-		if f.theyInitiated and f.value >= FIGHT_EXIT then
+		-- In the laning phase no phases at all but a counter-initiation: INICIAR made every lane skirmish a team fight
+		-- for the initiators (473 times before minute 10 in n3-v3-a).
+		if laning and not f.theyInitiated then
+			phase = nil
+		elseif f.theyInitiated and f.value >= FIGHT_EXIT then
 			phase = 'INICIAR'
 		elseif (l.phase == 'INICIAR' or l.phase == 'PELEA') and f.value >= FIGHT_EXIT then
 			-- once started, the fight goes on while it holds; the initiators' window closes after INIT_MAX
@@ -698,6 +715,13 @@ function B.Update()
 	elseif worst ~= nil then
 		local k = ((worst.heroes >= 1 and worst.creeps >= 5) or worst.creeps >= 8) and 2 or 1
 		p.creepDefense = { lane = worstLane, defenders = NearestAllies(worst.loc, k) }
+	end
+
+	-- v3: in the laning phase the plan only defends the base (above); no regrouping, taking, grouping, pushing or
+	-- Roshan: those pulled heroes off their lanes (63 times before minute 10 in n3-v3-a, DECISIONES 2026-11-02).
+	if V3() and B.TeamLaning(now) then
+		SetState('LINEA', { reason = 'fase de lineas' }, now)
+		return
 	end
 
 	-- Hold the current state a little unless something above overrides it.

@@ -35,6 +35,14 @@ end
 function R.Desire(bot)
 	if not R.Enabled() or not bot:IsAlive() or bot:GetUnitName() == "npc_dota_hero_huskar" then return 0 end
 	J = J or require(GetScriptDirectory()..'/FunLib/jmz_func')
+	-- Brain v3: no early retreat in the laning phase, OHA's own retreat only. In lane a lone hero nearly always has two
+	-- enemies near, and the v3 retreat at 0.97 fired ~46 times per game before minute 10 and cut every trade (n3-v3-a,
+	-- DECISIONES 2026-11-02).
+	local TBl = J.TeamBrain()
+	if TBl.Enabled() and TBl.V3() and TBl.TeamLaning() then
+		bot.__retreatEarlyUntil = nil
+		return 0
+	end
 	local here = bot:GetLocation()
 	local enemies = J.GetEnemiesNearLoc(here, RADIUS)
 	if #enemies == 0 then
