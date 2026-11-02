@@ -185,6 +185,8 @@ end
 -- helps. Computed once per team in Update; each ally keeps a verdict with hysteresis (in above 1.1, out below 0.8),
 -- which J.WeAreStronger returns instead of OHA's (in shadow mode, "v3_sombra", it only logs both).
 local FIGHT_ENTER, FIGHT_EXIT = 1.1, 0.8
+local ASSAULT_MAX, PREPARE_TIME = 60, 45 -- layer 3: seconds of an assault, then of preparing (farming) before the next
+local assaultSince = nil
 local FORM_MAX = 6    -- seconds a fight may stay forming (from its first FORMAR) before it starts anyway
 local INIT_MAX = 10   -- seconds the initiators get "in a team fight" from the start of INICIAR
 local FORM_DIST = 1100 -- forming point: this far from the enemy group, toward our allies
@@ -632,8 +634,10 @@ function B.Update()
 	-- the game grows): +5k of the pros is about 7 % of both teams' net worth around their minute 20, +10k about 12 %.
 	local leadGroup, leadClose = LEAD_GROUP, LEAD_CLOSE
 	if V3() then
-		leadGroup = math.max(3000, 0.07 * totalWorth)
-		leadClose = math.max(6000, 0.12 * totalWorth)
+		-- Never below v2's absolute thresholds: with floors of 3k/6k the team went up the high ground at minute 10 with
+		-- +9.4k and stayed grouped for ten minutes (v3-activo smoke, 2026-11-02); relative only raises them later.
+		leadGroup = math.max(LEAD_GROUP, 0.07 * totalWorth)
+		leadClose = math.max(LEAD_CLOSE, 0.12 * totalWorth)
 	end
 	if now - (B.lastTick or -1000) >= 30 then
 		B.lastTick = now
@@ -741,6 +745,23 @@ function B.Update()
 	-- 4) Clear lead at even or better numbers: Roshan, or group and push one lane; into the base with Aegis or +10k.
 	-- Hysteresis: a group already formed keeps going while the lead stays above 3.5k and at most one hero is down.
 	local grouped = p.state == 'AGRUPAR' or p.state == 'EMPUJAR' or p.state == 'CERRAR'
+	-- Layer 3 (v3), assaults and preparing (criterio §12, signed plan): an assault lasts at most ASSAULT_MAX s, then the
+	-- team PREPARES for PREPARE_TIME s (LINEA: the cores farm by FarmV3, OHA's own laning and pushing). Without it the
+	-- plan kept the five grouped from minute 9 to 20 with the cores' farming off, and the lead went (v3-activo smoke,
+	-- 2026-11-02). Aegis keeps the assault going; a won fight still takes its objective (TOMAR, above).
+	if V3() then
+		if grouped or p.state == 'TOMAR' then
+			assaultSince = assaultSince or now
+			if grouped and not hasAegis and now - assaultSince > ASSAULT_MAX then
+				SetState('LINEA', { reason = string.format('preparar lead=%d', lead) }, now)
+				lineaHoldUntil = now + PREPARE_TIME
+				assaultSince = nil
+				return
+			end
+		else
+			assaultSince = nil
+		end
+	end
 	-- Variant "prudente" (2026-10-31): as Dire, with weaker heroes (random, see the custom game), the brain grouped and
 	-- pushed on a gold lead it could not fight for. With it, a new group push also needs the fight around the team
 	-- clearly ours.
