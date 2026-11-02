@@ -14,9 +14,9 @@
     medición aplicada (MEDICIONES, `n3-v3`). PR #43 en borrador. Recortado: retener ultis de daño de área.
   - `n3-v3` cortada por Pedro tras la primera mirada (8-8): v3 se frenaba en la fase de líneas. Arreglado (`f447404`,
     revisado; humo `v3-humo3` bien). MEDICIONES, «`n3-v3` cortada…; relanzada como `n3-v3r`».
-  - **En curso: humo `v3-humo4`** del código `f447404`, desde la carpeta principal en HEAD desconectado (Dota lee su
-    `bots/`; no tocar `bots/` ni `tools/bench/` allí mientras corre). Siguiente: si pasa, tanda `n3-v3r-a` (32,
-    `--observar --repetir-invalidas 2`, máquina medida antes), luego `node tools/analisis/n3-v3.mjs 1` (eficacia
+  - **En curso: tanda `n3-v3r-a`** (32, observada; humo `v3-humo4` pasado), lanzada el 2026-11-02 desde la carpeta
+    principal en HEAD desconectado `84b2b36` (árbol `9c6b553.2e6ca87`; Dota lee su `bots/`; no tocar `bots/` ni
+    `tools/bench/` allí mientras corre), con carga y el sí de Pedro. Siguiente: `node tools/analisis/n3-v3.mjs 1` (eficacia
     z ≥ 2,81, perjuicio z ≤ −1); tandas b y c de 24 sin observar; miradas 2 y 3; resultado en MEDICIONES y, si mejora,
     proponer a Pedro activarlo por defecto. Los datos se copian de la carpeta principal al worktree para el commit;
     hay `stash@{0..}` en la principal con copias de datos ya commiteados (se pueden dejar).
