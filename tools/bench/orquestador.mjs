@@ -124,6 +124,9 @@ export const VARIANTS = {
   defensa_t12: { defensa_t12: true, thinkless: 1 },
   // Both level 1 fixes together, for the level 2 series.
   nivel1: { filtro_ultis: true, defensa_t12: true, thinkless: 1 },
+  // Brain v3, game 0 (trabajo/cerebro-v3.md): FunLib/api_probe.lua logs what the API answers about enemies, the ATTACK
+  // hook forbids the first bot's attack in minutes 6-9, and the farm keeps going past minute 18 (Pedro, 2026-11-01).
+  sonda_api: { api_sonda: true, farm: true, farm_sin_reloj: true, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
