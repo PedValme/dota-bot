@@ -383,3 +383,18 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   estructuras propias perdidas yendo por encima de +5.000; torres enemigas en pie al llegar a +10.000; derrotas tras
   +10.000; muertes por partida; inválidas por brazo (una asimetría ahí es contaminación y para la serie).
 - Lo que vale la conclusión: para el paquete entero, no para cada capa.
+
+### 2026-11-02 · Humo del cerebro v3 activo (`v3-activo`, `v3-humo`, `v3-humo2`)
+- Pregunta: puerta de medición (DECISIONES 2026-10-31): ¿son válidas las partidas con `cerebro_v3`, actúa cada capa y
+  sale el plan sin errores?
+- `v3-activo` (código `6a0b8c2`, 2 partidas, 0 ganadas): 34 `plan error` (`J.IsInLaningPhase` lee `GetBot()`, nil en el
+  cerebro de equipo; con cada error el plan se apagaba 10 s). No vale como humo. Arreglo `57f4219`.
+- `v3-humo` (`57f4219`, 2 partidas, 0 ganadas): sin errores del plan; todas las capas actúan (fases 6+15 FORMAR,
+  52+86 INICIAR; glifos, recompras para la base, retiradas v3). Pero en las 6 partidas con v3 hasta aquí ganó 1, y en
+  dos fue +20.000 y +29.000 y perdió. Causa leída en el plan: los umbrales relativos con suelos de 3.000/6.000 metían a
+  los cinco en CERRAR en el minuto 10 con +9.400 y los tenían agrupados del min 9 al 20 con el farm de los núcleos
+  prohibido: faltaba la alternancia ASALTO/PREPARAR del plan firmado. Arreglo `9284050`: asaltos de 60 s y 45 s de
+  preparar (farm), umbrales nunca por debajo de los de v2 (+5.000, +10.000).
+- `v3-humo2` (`9284050`, 2 partidas, 2 ganadas): válidas, sin errores del plan, 3 y 5 fases de preparar.
+- Validez: humo, no comparación; las victorias de estas partidas no cuentan para nada.
+- Decisión: el humo pasa con `9284050`; revisor adversarial de la medición antes de lanzar `n3-v3`.
