@@ -210,17 +210,29 @@ end
 -- the ten reaches 9.2 (that of a normal game's minute 15, J.IsEarlyGame by state) or a tier 1 tower falls; without
 -- fase_estado, the clock (8 min in Turbo, 15 normal). In n3-v3-a the brain's early retreat and team objectives cost
 -- half the kills by minute 5 and half the lead by minute 18 (DECISIONES 2026-11-02): in this phase OHA plays.
+-- Cached 0.2 s (it is asked per bot and per frame through WeAreStronger), and once over it stays over.
+local T1S = { TOWER_TOP_1, TOWER_MID_1, TOWER_BOT_1 }
+local laningOver, laningAt, laningValue = false, -1000, true
 function B.TeamLaning(now)
 	now = now or DotaTime()
 	if now < 0 then return true end
+	if laningOver then return false end
+	if now - laningAt < UPDATE_EVERY then return laningValue end
+	laningAt = now
+	local value = true
 	for _, team in ipairs({ GetTeam(), GetOpposingTeam() }) do
-		for _, t in ipairs({ TOWER_TOP_1, TOWER_MID_1, TOWER_BOT_1 }) do
+		for _, t in ipairs(T1S) do
 			local u = GetTower(team, t)
-			if u == nil or not u:IsAlive() then return false end
+			if u == nil or not u:IsAlive() then value = false end
 		end
 	end
-	if J ~= nil and J.StatePhases() then return J.GamePhaseLevel() < 9.2 end
-	return now < ((J ~= nil and J.IsModeTurbo()) and 8 or 15) * 60
+	if value then
+		if J ~= nil and J.StatePhases() then value = J.GamePhaseLevel() < 9.2
+		else value = now < ((J ~= nil and J.IsModeTurbo()) and 8 or 15) * 60 end
+	end
+	laningValue = value
+	if not value then laningOver = true end
+	return value
 end
 
 local ultCache = {} -- enemy unit name -> its ultimate ability (found once)
@@ -376,7 +388,8 @@ local function UpdateFights(allies, enemies, now, hasAegis)
 		-- In the laning phase no phases at all but a counter-initiation: INICIAR made every lane skirmish a team fight
 		-- for the initiators (473 times before minute 10 in n3-v3-a).
 		if laning and not f.theyInitiated then
-			phase = nil
+			-- a counter-initiation already started keeps its INIT_MAX window (review 2026-11-02), then ends
+			phase = (l.phase == 'INICIAR' and now - l.phaseSince <= INIT_MAX and f.value >= FIGHT_EXIT) and 'INICIAR' or nil
 		elseif f.theyInitiated and f.value >= FIGHT_EXIT then
 			phase = 'INICIAR'
 		elseif (l.phase == 'INICIAR' or l.phase == 'PELEA') and f.value >= FIGHT_EXIT then
