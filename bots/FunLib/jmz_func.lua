@@ -1499,6 +1499,8 @@ function J.IsInTeamFight( bot, nRadius )
 	-- v3 takes it out: IsInTeamFight has ~300 uses (the retreat's included), so the hook changed every spell; v3's
 	-- initiation goes through its own phases (layer 4) instead (review 2026-11-01).
 	if J.TeamBrain().FightHooks() and not J.TeamBrain().V3() and J.TeamBrain().InEngage( bot ) then return true end
+	-- v3: only the initiators, and only in the INICIAR phase of their fight.
+	if J.TeamBrain().FightHooks() and J.TeamBrain().V3() and J.TeamBrain().InitiateNow( bot ) then return true end
 
 	local attackModeAllyList = J.GetNearbyHeroes(bot, nRadius, false, BOT_MODE_ATTACK )
 

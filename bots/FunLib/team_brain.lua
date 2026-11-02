@@ -185,6 +185,7 @@ end
 -- helps. Computed once per team in Update; each ally keeps a verdict with hysteresis (in above 1.1, out below 0.8),
 -- which J.WeAreStronger returns instead of OHA's (in shadow mode, "v3_sombra", it only logs both).
 local FIGHT_ENTER, FIGHT_EXIT = 1.1, 0.8
+local FORM_MAX = 6 -- seconds a fight may stay forming before it starts anyway
 local ARRIVE_SECONDS = 8
 local fights = {}          -- current fights: { loc, value, allies, enemies, id }
 local verdict = {}         -- ally pid -> { strong = bool, value, time, fight }
@@ -288,7 +289,20 @@ local function FindFights(allies, enemies, now, hasAegis)
 			for _, a in ipairs(allies) do if a:IsAlive() and Dist(a:GetLocation(), loc) <= 2500 then near = true end end
 			if loc ~= nil and near then
 				local value, nA, nE = B.EvaluateFightV3(loc, now, hasAegis)
-				table.insert(list, { loc = loc, value = value, allies = nA, enemies = nE, size = #group })
+				-- Allies already there (1200), allies' centre, and whether an enemy of the group just cast its ultimate
+				-- (they initiated on us: counter-initiation).
+				local present, here = 0, {}
+				for _, a in ipairs(allies) do
+					if a:IsAlive() and Dist(a:GetLocation(), loc) <= 1200 then present = present + 1 end
+					if a:IsAlive() and Dist(a:GetLocation(), loc) <= 3000 then table.insert(here, a) end
+				end
+				local theyInitiated = false
+				for _, g in ipairs(group) do
+					local t = enemyUltSeen[g:GetUnitName()]
+					if t ~= nil and now - t <= 1.5 then theyInitiated = true end
+				end
+				table.insert(list, { loc = loc, value = value, allies = nA, enemies = nE, size = #group, present = present,
+					allyCenter = Centroid(here), theyInitiated = theyInitiated })
 			end
 		end
 	end
@@ -313,6 +327,34 @@ local function UpdateFights(allies, enemies, now, hasAegis)
 		end
 		fightLog[f.id].seen = now
 		fightLog[f.id].loc = f.loc
+		-- Layer 4 (v3), initiation by phases (criterio §6). FORMAR: the fight is ours with the allies who can arrive,
+		-- but fewer are there than needed; those present hold 1300 from the enemy until the rest come (at most
+		-- FORM_MAX s). INICIAR: enough are there (or the form timed out, or they initiated on us): initiators may start
+		-- (J.IsInTeamFight answers yes for them, INIT_MAX s). Below the bar, no phase.
+		local l = fightLog[f.id]
+		local need = math.min(f.allies, f.enemies + 1)
+		local phase = nil
+		if f.theyInitiated then
+			phase = 'INICIAR'
+		elseif l.phase == 'INICIAR' and f.value >= FIGHT_EXIT then
+			phase = 'INICIAR' -- once started, the fight goes on while it holds (no going back to forming)
+		elseif f.value >= FIGHT_ENTER then
+			if f.present >= need then phase = 'INICIAR'
+			elseif l.phase == 'FORMAR' and now - l.phaseSince > FORM_MAX then phase = 'INICIAR'
+			else phase = 'FORMAR' end
+		end
+		if phase ~= l.phase then
+			print(string.format('[bench] fase t=%d team=%d id=%d %s -> %s valor=%.2f presentes=%d/%d enemigos=%d%s', math.floor(now),
+				GetTeam(), f.id, tostring(l.phase), tostring(phase), f.value, f.present, need, f.enemies,
+				(l.phase == 'FORMAR' and now - l.phaseSince > FORM_MAX) and ' caduca' or (f.theyInitiated and ' contra' or '')))
+			l.phase, l.phaseSince = phase, now
+		end
+		f.phase = phase
+		if phase == 'FORMAR' and f.allyCenter ~= nil then
+			local dx, dy = f.allyCenter.x - f.loc.x, f.allyCenter.y - f.loc.y
+			local d = math.max(1, math.sqrt(dx * dx + dy * dy))
+			f.formPoint = Vector(f.loc.x + dx / d * 1300, f.loc.y + dy / d * 1300, 0)
+		end
 	end
 	-- 10 s after a fight starts: who died near it (within 2500 of where it was) since it started, by side.
 	for id, l in pairs(fightLog) do
@@ -785,9 +827,40 @@ function B.DefendDesire(bot, lane)
 	return nil
 end
 
--- Rally point for mode_assemble: gather before a push, or fall back after a lost fight.
+-- The fight a bot's verdict belongs to (v3), or nil.
+local function BotFight(bot)
+	local v = verdict[bot:GetPlayerID()]
+	if v == nil or DotaTime() - v.time > 0.5 then return nil end
+	for _, f in ipairs(fights) do if f.id == v.fight then return f end end
+	return nil
+end
+
+-- Layer 4 (v3): heroes whose ultimate starts a fight (blink or area control). Only they get J.IsInTeamFight from the
+-- INICIAR phase; v2's engage hook changed every spell of every hero (~300 uses).
+local INITIATORS = {
+	npc_dota_hero_enigma = true, npc_dota_hero_magnataur = true, npc_dota_hero_tidehunter = true,
+	npc_dota_hero_earthshaker = true, npc_dota_hero_faceless_void = true, npc_dota_hero_axe = true,
+	npc_dota_hero_sand_king = true, npc_dota_hero_centaur = true, npc_dota_hero_mars = true,
+	npc_dota_hero_primal_beast = true, npc_dota_hero_dark_seer = true, npc_dota_hero_disruptor = true,
+	npc_dota_hero_warlock = true, npc_dota_hero_batrider = true, npc_dota_hero_puck = true,
+	npc_dota_hero_slardar = true, npc_dota_hero_legion_commander = true, npc_dota_hero_beastmaster = true,
+}
+function B.InitiateNow(bot)
+	if not (Enabled() and V3()) or not INITIATORS[bot:GetUnitName()] then return false end
+	local f = BotFight(bot)
+	return f ~= nil and f.phase == 'INICIAR'
+end
+
+-- Rally point for mode_assemble: gather before a push, or fall back after a lost fight; v3, hold at the forming point
+-- of a fight in FORMAR (0.97, above Valve's attack at 0.95, so nobody walks in alone), unless hit right now.
 function B.RallyFor(bot)
 	local p = B.plan
+	if Enabled() and V3() and not B.IsDefender(bot) then
+		local f = BotFight(bot)
+		if f ~= nil and f.phase == 'FORMAR' and f.formPoint ~= nil and not bot:WasRecentlyDamagedByAnyHero(1.5) then
+			return f.formPoint, 0.97
+		end
+	end
 	if p.rally == nil or B.IsDefender(bot) then return nil end
 	local d = Dist(bot:GetLocation(), p.rally)
 	if p.state == 'AGRUPAR' and d > 700 then return p.rally, 0.8 end
@@ -826,6 +899,22 @@ function B.FarmV3(bot)
 	-- Objectives that use the whole team stop farming; while defending, only the assigned defenders stop.
 	if s == 'TOMAR' or s == 'AGRUPAR' or s == 'EMPUJAR' or s == 'CERRAR' or s == 'ROSHAN' then return false end
 	if B.IsDefender(bot) then return false end
+	-- Layer 2 (DECISIONES 2026-10-31): with 3+ enemies missing from the map (alive, unseen for 10 s), nobody farms in
+	-- the enemy half.
+	local missing = 0
+	for _, pid in ipairs(GetTeamPlayers(GetOpposingTeam())) do
+		if IsHeroAlive(pid) then
+			local info = GetHeroLastSeenInfo(pid)
+			local last = info and info[1] or info
+			if last == nil or last.time_since_seen == nil or last.time_since_seen >= 10 then missing = missing + 1 end
+		end
+	end
+	if missing >= 3 then
+		local here = bot:GetLocation()
+		if Dist(here, GetAncient(GetOpposingTeam()):GetLocation()) < Dist(here, GetAncient(GetTeam()):GetLocation()) then
+			return false
+		end
+	end
 	if J == nil or J.GetPosition(bot) > 3 then return nil end
 	local need, item = B.KeyItemGoldNeeded(bot)
 	-- A core with nothing big left to buy (or the gold for it in hand) is left to OHA's rules: there is no pressure
