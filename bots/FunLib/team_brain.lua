@@ -185,7 +185,9 @@ end
 -- helps. Computed once per team in Update; each ally keeps a verdict with hysteresis (in above 1.1, out below 0.8),
 -- which J.WeAreStronger returns instead of OHA's (in shadow mode, "v3_sombra", it only logs both).
 local FIGHT_ENTER, FIGHT_EXIT = 1.1, 0.8
-local FORM_MAX = 6 -- seconds a fight may stay forming before it starts anyway
+local FORM_MAX = 6    -- seconds a fight may stay forming (from its first FORMAR) before it starts anyway
+local INIT_MAX = 10   -- seconds the initiators get "in a team fight" from the start of INICIAR
+local FORM_DIST = 1100 -- forming point: this far from the enemy group, toward our allies
 local ARRIVE_SECONDS = 8
 local fights = {}          -- current fights: { loc, value, allies, enemies, id }
 local verdict = {}         -- ally pid -> { strong = bool, value, time, fight }
@@ -289,12 +291,21 @@ local function FindFights(allies, enemies, now, hasAegis)
 			for _, a in ipairs(allies) do if a:IsAlive() and Dist(a:GetLocation(), loc) <= 2500 then near = true end end
 			if loc ~= nil and near then
 				local value, nA, nE = B.EvaluateFightV3(loc, now, hasAegis)
-				-- Allies already there (1200), allies' centre, and whether an enemy of the group just cast its ultimate
-				-- (they initiated on us: counter-initiation).
-				local present, here = 0, {}
+				-- Allies already there (within FORM_DIST + 600: those holding at the forming point count, review
+				-- 2026-11-02), the ones that can arrive in 8 s (they get the forming point too), whether one of them
+				-- was hit in the last 1.5 s (then nobody holds), the allies' centre, and whether an enemy of the group
+				-- just cast its ultimate (they initiated on us: counter-initiation).
+				local present, here, members, allyHit = 0, {}, {}, false
 				for _, a in ipairs(allies) do
-					if a:IsAlive() and Dist(a:GetLocation(), loc) <= 1200 then present = present + 1 end
-					if a:IsAlive() and Dist(a:GetLocation(), loc) <= 3000 then table.insert(here, a) end
+					if a:IsAlive() then
+						local d = Dist(a:GetLocation(), loc)
+						if d <= FORM_DIST + 600 then present = present + 1 end
+						if d <= 3000 then table.insert(here, a) end
+						if d <= 1200 or d / math.max(250, a:GetCurrentMovementSpeed() or 300) <= ARRIVE_SECONDS then
+							members[a:GetPlayerID()] = true
+							if a:WasRecentlyDamagedByAnyHero(1.5) then allyHit = true end
+						end
+					end
 				end
 				local theyInitiated = false
 				for _, g in ipairs(group) do
@@ -302,7 +313,7 @@ local function FindFights(allies, enemies, now, hasAegis)
 					if t ~= nil and now - t <= 1.5 then theyInitiated = true end
 				end
 				table.insert(list, { loc = loc, value = value, allies = nA, enemies = nE, size = #group, present = present,
-					allyCenter = Centroid(here), theyInitiated = theyInitiated })
+					allyCenter = Centroid(here), theyInitiated = theyInitiated, members = members, allyHit = allyHit })
 			end
 		end
 	end
@@ -312,15 +323,18 @@ end
 local function UpdateFights(allies, enemies, now, hasAegis)
 	fights = FindFights(allies, enemies, now, hasAegis)
 	-- Same fight as a recent one (within 1500 of where it was, seen in the last 15 s): keep its id for the log.
+	local usedIds = {} -- two fights of one tick never share an entry (and its phase)
 	for _, f in ipairs(fights) do
 		local bestD = 1500
 		for id, l in pairs(fightLog) do
 			local d = Dist(l.loc, f.loc)
-			if now - l.seen <= 15 and d <= bestD then f.id, bestD = id, d end
+			if not usedIds[id] and now - l.seen <= 15 and d <= bestD then f.id, bestD = id, d end
 		end
+		if f.id ~= nil then usedIds[f.id] = true end
 		if f.id == nil then
 			f.id = nextFightId
 			nextFightId = nextFightId + 1
+			usedIds[f.id] = true
 			fightLog[f.id] = { start = now, loc = f.loc, value = f.value }
 			print(string.format('[bench] eval t=%d team=%d id=%d valor=%.2f aliados=%d enemigos=%d visibles=%d', math.floor(now),
 				GetTeam(), f.id, f.value, f.allies, f.enemies, f.size))
@@ -333,27 +347,34 @@ local function UpdateFights(allies, enemies, now, hasAegis)
 		-- (J.IsInTeamFight answers yes for them, INIT_MAX s). Below the bar, no phase.
 		local l = fightLog[f.id]
 		local need = math.min(f.allies, f.enemies + 1)
+		-- Forming is for real team fights: two or more enemies, past the laning phase (review 2026-11-02: against a lone
+		-- laner it made the core walk off its lane and let low enemies escape).
+		local laning = J ~= nil and J.IsInLaningPhase ~= nil and J.IsInLaningPhase()
+		local canForm = f.enemies >= 2 and not laning
+		local formedOut = l.formStart ~= nil and now - l.formStart > FORM_MAX
 		local phase = nil
-		if f.theyInitiated then
+		if f.theyInitiated and f.value >= FIGHT_EXIT then
 			phase = 'INICIAR'
-		elseif l.phase == 'INICIAR' and f.value >= FIGHT_EXIT then
-			phase = 'INICIAR' -- once started, the fight goes on while it holds (no going back to forming)
+		elseif (l.phase == 'INICIAR' or l.phase == 'PELEA') and f.value >= FIGHT_EXIT then
+			-- once started, the fight goes on while it holds; the initiators' window closes after INIT_MAX
+			phase = (l.phase == 'INICIAR' and now - l.phaseSince <= INIT_MAX) and 'INICIAR' or 'PELEA'
+		elseif l.phase == 'FORMAR' and f.value >= FIGHT_EXIT then
+			phase = (f.present >= need or formedOut) and 'INICIAR' or 'FORMAR'
 		elseif f.value >= FIGHT_ENTER then
-			if f.present >= need then phase = 'INICIAR'
-			elseif l.phase == 'FORMAR' and now - l.phaseSince > FORM_MAX then phase = 'INICIAR'
-			else phase = 'FORMAR' end
+			if f.present >= need or not canForm or formedOut then phase = 'INICIAR' else phase = 'FORMAR' end
 		end
+		if phase == 'FORMAR' and l.formStart == nil then l.formStart = now end
 		if phase ~= l.phase then
 			print(string.format('[bench] fase t=%d team=%d id=%d %s -> %s valor=%.2f presentes=%d/%d enemigos=%d%s', math.floor(now),
 				GetTeam(), f.id, tostring(l.phase), tostring(phase), f.value, f.present, need, f.enemies,
-				(l.phase == 'FORMAR' and now - l.phaseSince > FORM_MAX) and ' caduca' or (f.theyInitiated and ' contra' or '')))
+				(l.phase == 'FORMAR' and formedOut) and ' caduca' or ((f.theyInitiated and phase == 'INICIAR') and ' contra' or '')))
 			l.phase, l.phaseSince = phase, now
 		end
 		f.phase = phase
 		if phase == 'FORMAR' and f.allyCenter ~= nil then
 			local dx, dy = f.allyCenter.x - f.loc.x, f.allyCenter.y - f.loc.y
 			local d = math.max(1, math.sqrt(dx * dx + dy * dy))
-			f.formPoint = Vector(f.loc.x + dx / d * 1300, f.loc.y + dy / d * 1300, 0)
+			f.formPoint = Vector(f.loc.x + dx / d * FORM_DIST, f.loc.y + dy / d * FORM_DIST, 0)
 		end
 	end
 	-- 10 s after a fight starts: who died near it (within 2500 of where it was) since it started, by side.
@@ -855,10 +876,16 @@ end
 -- of a fight in FORMAR (0.97, above Valve's attack at 0.95, so nobody walks in alone), unless hit right now.
 function B.RallyFor(bot)
 	local p = B.plan
+	-- Every ally the fight counts on (there or arriving in 8 s) gets the point; nobody holds while hurt, retreating hard
+	-- or while any ally of that fight is being hit (review 2026-11-02).
 	if Enabled() and V3() and not B.IsDefender(bot) then
-		local f = BotFight(bot)
-		if f ~= nil and f.phase == 'FORMAR' and f.formPoint ~= nil and not bot:WasRecentlyDamagedByAnyHero(1.5) then
-			return f.formPoint, 0.97
+		local pid = bot:GetPlayerID()
+		for _, f in ipairs(fights) do
+			if f.phase == 'FORMAR' and f.formPoint ~= nil and f.members[pid] and not f.allyHit
+				and bot:GetHealth() / math.max(1, bot:GetMaxHealth()) >= 0.5
+				and not (bot:GetActiveMode() == BOT_MODE_RETREAT and bot:GetActiveModeDesire() > 0.9) then
+				return f.formPoint, 0.97
+			end
 		end
 	end
 	if p.rally == nil or B.IsDefender(bot) then return nil end
