@@ -59,6 +59,7 @@ once it exists.
 | A feature that spans sessions | `trabajo/<feature>.md`, deleted when it closes | The agent |
 | What was measured, with its validity and decision (read before measuring) | [MEDICIONES.md](MEDICIONES.md) | The agent, one entry per series, appended |
 | How the bot, the custom game and Dota really behave (seen in game, read in code, assumed) | [docs/mapa.md](docs/mapa.md) | The agent, from the night of 2026-10-29 |
+| What the Bot API really offers (engine dump, Valve's wiki and data files) | [docs/api/README.md](docs/api/README.md) | The agent, regenerated each patch with `tools/datos/api_volcado.mjs` |
 | How OHA's code is organized | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/BOT_API_REFERENCE.md](docs/BOT_API_REFERENCE.md) | Upstream |
 | How to update for a new Dota patch | [docs/PATCH_UPDATE_GUIDE.md](docs/PATCH_UPDATE_GUIDE.md) | Upstream |
 | Why this approach (APIs, rules, alternatives) | [docs/investigacion/](docs/investigacion/2026-10-28-bots-dota2.md) | Research of 2026-10-28 |
