@@ -14,7 +14,11 @@
     medición aplicada (MEDICIONES, `n3-v3`). PR #43 en borrador. Recortado: retener ultis de daño de área.
   - `n3-v3` cortada por Pedro tras la primera mirada (8-8): v3 se frenaba en la fase de líneas. Arreglado (`f447404`,
     revisado; humo `v3-humo3` bien). MEDICIONES, «`n3-v3` cortada…; relanzada como `n3-v3r`».
-  - Espera al dueño: nada (la serie corre; Pedro decide tras el resultado si se activa por defecto).
+  - Espera al dueño: aceptar la parada por perjuicio de `n3-v3r` (3-4 en la primera mirada, z = −1,00) · Recomendado:
+    aceptarla y diagnosticar en los registros de `n3-v3r-a` por qué v3 sigue regalando ventajas (perdió 10 de 13 tras
+    +10.000).
+  - Tanda `n3-v3r-a` terminada (MEDICIONES, «`n3-v3r`, primera mirada»); no se lanzan las tandas b y c hasta su
+    respuesta.
   - **En curso: tanda `n3-v3r-a`** (32, observada; humo `v3-humo4` pasado), lanzada el 2026-11-02 desde la carpeta
     principal en HEAD desconectado `84b2b36` (árbol `9c6b553.2e6ca87`; Dota lee su `bots/`; no tocar `bots/` ni
     `tools/bench/` allí mientras corre), con carga y el sí de Pedro. Siguiente: `node tools/analisis/n3-v3.mjs 1` (eficacia
