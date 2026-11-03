@@ -38,14 +38,20 @@ local K = {
 
 local S = {} -- pid -> state of this bot
 
-local function D2(a, b) local dx, dy = a.x - b.x, a.y - b.y return math.sqrt(dx * dx + dy * dy) end
+-- A missing location (OHA's GetLocation override answers nil for a unit we cannot see) counts as far away: the
+-- 2026-11-03 smoke failed on it 6 and 11 times per match.
+local function D2(a, b)
+	if a == nil or b == nil then return 1e9 end
+	local dx, dy = a.x - b.x, a.y - b.y
+	return math.sqrt(dx * dx + dy * dy)
+end
 local function Toward(from, to, dist)
 	local d = D2(from, to)
 	if d < 1 then return from end
 	return Vector(from.x + (to.x - from.x) * dist / d, from.y + (to.y - from.y) * dist / d, from.z)
 end
 local function Fmt(v) return type(v) == 'number' and string.format('%.2f', v) or tostring(v) end
-local function Valid(u) return u ~= nil and not u:IsNull() and u:IsAlive() end
+local function Valid(u) return u ~= nil and not u:IsNull() and u:IsAlive() and u:CanBeSeen() end
 
 local function Log(s, bot, kind, text)
 	out(string.format('[bench] prop %s t=%.1f pid=%d %s', kind, DotaTime(), bot:GetPlayerID(), text))
@@ -378,7 +384,12 @@ function L.Think()
 	local started = RealTime()
 	local s = State(bot)
 	Registro.Tick(bot)
-	if not bot:IsAlive() then s.pending, s.retreating = nil, false return end
+	if not bot:IsAlive() then
+		-- Dead time counts too, so the calls per second compare with the other bots' (the smoke read 25 against 30).
+		s.pending, s.retreating, s.toFountain = nil, false, false
+		Cost(bot, s, DotaTime(), (RealTime() - started) * 1000)
+		return
+	end
 	local p = Perceive(bot)
 	CheckPending(bot, s, p)
 	WatchAutoAttack(bot, s, p)

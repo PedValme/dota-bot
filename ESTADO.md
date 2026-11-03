@@ -9,27 +9,16 @@
   oro sin edificios (en el pico Valve conserva 7-8 de 11 torres y todos los cuarteles); Valve remonta empujando su
   mitad (6-7 torres y 3-4 cuarteles perdidos, el 65-70 % de las muertes en la mitad propia, en rachas). v3 apenas
   asalta después del pico (89 % del tiempo en línea, reagrupando o defendiendo).
-- **PRÓXIMA SESIÓN: bot propio con control completo** (DECISIONES 2026-11-03).
-  0. Hecho el 2026-11-03: revisión a fondo de la API y de OHA en `docs/investigacion/2026-11-03-api-y-oha.md`
-     (qué toma el control completo, qué puede ver el bot, qué se queda de OHA, lista de 12 comprobaciones). La prueba
-     sigue esa lista y usa `bot_<héroe>.lua` para no tocar a los otros nueve bots. Fuente primaria de Valve (wiki
-     oficial y ejemplos instalados) en `docs/investigacion/2026-11-03-api-valve.md`: la prueba empieza volcando del
-     motor la lista completa de funciones (la página es de 2016-2017) y usa los comandos `dota_bot_debug_*`.
-     Hecho también el volcado del motor (DECISIONES 2026-11-03, «hazlo»): `docs/api/` (README con lo aprendido,
-     `volcado.md` generado por `tools/datos/api_volcado.mjs`, variante `volcado_api`). Datos de creeps y torres de
-     Valve cotejados con el motor. Siguiente acción: escribir el héroe de la prueba con esa referencia.
-  1. Prueba de un día: `Think()` del bot genérico toma el control completo (según la documentación de Valve, sin
-     comprobar aquí) en un héroe y una línea: moverse, últimos golpes, retirarse, con cada decisión registrada con su
-     motivo. Pregunta: ¿el motor de Valve deja de meterse? ¿qué cuesta igualar su creepeo? Medir en el banco contra el
-     mismo héroe en OHA (fase de líneas: patrimonio y últimos golpes en el min 5 y 10, ver MEDICIONES «Diagnóstico de
-     la fase de líneas»).
-  2. Hecho el 2026-11-03: revisión de D2AI y Tinkering ABOt en `docs/investigacion/2026-11-03-d2ai-tinkering.md`.
-     D2AI confirma la vía (`Think()` en `bot_generic.lua`, en 2018) y da el molde observación → acciones; Tinkering
-     no tiene licencia (solo ideas) y deja 8 reglas candidatas, las primeras: torre al pasar, limpiar la oleada metida
-     en casa, amenaza con lo último visto, puerta de defensa viable.
-  3. Con eso, proponer a Pedro el diseño del bot propio (percibir → decidir con motivo → ejecutar; supervisable;
-     pocos héroes al principio; de OHA solo datos) para su firma.
-- Espera al dueño: nada hasta la prueba de control completo.
+- **Bot propio con control completo** (DECISIONES 2026-11-03). Hecho el 2026-11-03:
+  - base de primera mano: `docs/api/` (volcado del motor, datos de Valve cotejados), la wiki de Valve
+    (`docs/investigacion/2026-11-03-api-valve.md`), la API y OHA (`…-api-y-oha.md`), D2AI y Tinkering (`…-d2ai-tinkering.md`);
+  - **prueba de control completo hecha** (MEDICIONES, «Prueba de control completo, humo»): con `Think()` propio el
+    motor no actúa solo y de OHA solo queda `ItemPurchaseThink`, neutralizado; el Sniper propio (`bots/FunLib/propio/`,
+    variante `control_sniper`, `--mid sniper`) creepea en los dos lados y saca en el min 10 el 67-80 % de los
+    últimos golpes de OHA, sin habilidades ni compras. Le falta: peligro por alcance real, responder al acoso, sus
+    habilidades y su build.
+  - Siguiente acción: con la firma de Pedro, fase 1 del diseño (`trabajo/bot-propio.md`).
+- Espera al dueño: firmar el diseño del bot propio (`trabajo/bot-propio.md`: fases y meta de la fase 1) · Recomendado: firmarlo tal cual y empezar la fase 1 con Sniper
 - El código de v3 está en `main` apagado por defecto (variante `cerebro_v3`), con las mejoras del banco
   (`--repetir-invalidas`, contador de Think, `tools/analisis/n3-v3.mjs`). La fase de líneas queda como está
   (DECISIONES 2026-11-02).
@@ -50,7 +39,6 @@
 - Pendientes del banco, menores: que la línea `start` registre las bajas (estrechar el margen de patrimonio inicial);
   contar cuántas veces piensa un bot por segundo de juego. La lista de héroes del sorteo quedó verificada: los 31
   están entre los 39 que Valve sabe llevar (`docs/api/README.md`).
-- Espera a Pedro: nada.
 
 ## Madurez
 Prototipo: OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f. Sin cambios de juego activos por

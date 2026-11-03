@@ -517,3 +517,45 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   de cada muerte (la foto anterior muestra 2-3 aliados y 1 enemigo cerca), así que «pierde las peleas en su mitad
   porque llega en inferioridad» no está comprobado.
 - Decisión: pendiente de Pedro.
+
+### 2026-11-03 · Prueba de control completo, humo (`prueba-control`, 1 bloque, 4 partidas)
+- Pregunta (DECISIONES 2026-11-03; `trabajo/prueba-control.md`): ¿un `Think()` propio controla de verdad a un héroe,
+  sin que Valve ni OHA se metan? ¿Puede hacer lo básico de la línea? ¿Cuánto le falta frente al mismo héroe en OHA?
+- Qué cambió desde la última: `bots/FunLib/propio/` (Sniper con `Think()` propio en `bot_generic.lua`), variantes
+  `control_sniper` y `base_sniper`, `--mid sniper`; revisado por un subagente antes de usarlo.
+- Configuración: `--partidas 4 --variantes control_sniper,base_sniper --mid sniper --modo turbo --observar`, código
+  `7008627` + `15fb014` (correcciones de la revisión). Héroes: sven sniper bristleback skywrath_mage oracle contra
+  drow_ranger death_prophet sand_king bane dazzle (Death Prophet en mid). Lectura fija: `tools/analisis/prueba-control.mjs`.
+- Máquina: CPU 40-77 % al lanzar (Dota, Chrome al 100 % de un núcleo y un script de otra sesión del proyecto
+  `trafico`), 65 % de memoria libre. Humo de mecanismo, no de tiempos.
+- Resultado:
+  1. **Control: sí.** Con el `Think()` propio, el motor solo siguió llamando `ItemPurchaseThink` de OHA (900 veces
+     por 30 s, interceptado: no hizo nada); ni habilidades, ni objetos, ni mensajero, ni recompra, ni subida de
+     nivel, ni el `GetDesire` de línea o retirada. **0 ataques automáticos** en 2 partidas: el motor no actúa solo.
+     `GetActiveMode()` sigue diciendo LANING aunque nadie lo llame (valor viejo, como avisa Valve).
+  2. **Lo básico: sí, en los dos lados.** Compra, sube habilidades con la build de Valve, se coloca, predice y pega
+     una vez. Últimos golpes acertados hasta el min 10: 27 de 44 (Radiant) y 37 de 50 (Dire); denegaciones 22 de 42 y
+     24 de 55. Muchos fallos son creeps que mató otro antes (la predicción subestima el daño que reciben). Ninguna
+     muerte del Sniper propio hasta el min 10.
+  3. **Cuánto falta (min 10):**
+
+     | Lado | Brazo | LH | DN | Patrimonio |
+     |---|---|---|---|---|
+     | Radiant | propio | 32 | 24 | 4.083 |
+     | Radiant | OHA | 48 | 34 | 6.037 |
+     | Dire | propio | 41 | 30 | 4.857 |
+     | Dire | OHA | 51 | 38 | 5.788 |
+
+     En el min 5 la distancia es mayor (10 y 17 frente a 26 y 23). Por qué, leído en el registro: el Sniper propio
+     no lanza habilidades ni responde al acoso; con la vida baja se va (una vez hasta la fuente) y pasa minutos
+     recuperándose; y la regla de peligro huye con el daño que Valve estima para el mid enemigo con todo su
+     arsenal (923-1.043 en 3 s frente a ~600 de vida) aunque esté fuera de su alcance: entre el min 3 y el 5 no sumó
+     ningún último golpe.
+  4. **Peso:** 0,09-0,10 ms por `Think` de media, máximo 10 ms. 25-27 llamadas por segundo frente a 30 de los demás:
+     el contador no contaba el tiempo muerto (corregido).
+  5. Defecto: 6 y 11 errores por partida por una posición nula (el reemplazo de `GetLocation` de OHA devuelve nil
+     para unidades no visibles); el `pcall` los contuvo. Corregido.
+- Validez: humo, un bloque, mismos héroes y lados; la comparación de LH tiene un sesgo conocido y declarado a favor
+  de OHA (compra su build, usa el mensajero, lanza Shrapnel). Sirve para el mecanismo, no para decidir por números.
+  Las cuatro partidas las ganó Valve (no cuenta: el humo no mide victorias).
+- Decisión: el control completo funciona; siguiente paso, el diseño del bot propio para la firma de Pedro.
