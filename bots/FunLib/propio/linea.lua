@@ -162,8 +162,10 @@ local function RuleRetreat(bot, s, p)
 		reason = string.format('daño_enemigo_3s %d > %.0f%% de %d', p.enemyBurst, K.enemyBurst * 100, p.hpAbs)
 	elseif s.retreating and p.hp < K.returnHp then reason = string.format('recuperando %.2f < %.2f', p.hp, K.returnHp) end
 	s.retreating = reason ~= nil
-	if reason == nil then return nil end
-	if p.hp < K.fountainHp and HasItem(bot, 'item_flask') == nil then
+	if reason == nil then s.toFountain = false return nil end
+	-- Once heading for the fountain it keeps going until healed (returnHp), not back and forth with the tower.
+	if s.toFountain or (p.hp < K.fountainHp and HasItem(bot, 'item_flask') == nil) then
+		s.toFountain = true
 		return { intent = 'retirada_fuente', reason = reason .. ', sin salvia', to = Fountain(p.team) }
 	end
 	if p.towerOnMe then
@@ -201,7 +203,9 @@ local function RuleLastHit(bot, s, p)
 				local d = D2(p.loc, c:GetLocation())
 				local walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1)
 				local flight = p.projSpeed > 0 and math.min(d, p.range) / p.projSpeed or 0
-				local tLand = walk + p.point + flight
+				-- Our own attack may still be cooling down: the next swing starts at last attack + seconds per attack.
+				local cooldown = math.max(0, bot:GetLastAttackTime() + bot:GetSecondsPerAttack() - p.now)
+				local tLand = math.max(walk, cooldown) + p.point + flight
 				local attackers = Attackers(c, attackersFrom)
 				local hpAt, nProj, nHits = PredictHealth(c, tLand, attackers, p.now)
 				local dmg = c:GetActualIncomingDamage(p.dmgMin, DAMAGE_TYPE_PHYSICAL)
@@ -251,6 +255,12 @@ end
 local function Decide(bot, s, p)
 	if p.t < -5 and not s.bought then return { intent = 'comprar', reason = 'objetos iniciales' } end
 	local r = RuleRetreat(bot, s, p)
+	-- Retreating for health alone (no tower on us, no enemy burst), healing comes first: RuleHeal itself requires
+	-- no enemy hero near and no recent hero or tower damage.
+	if r and not p.towerOnMe and p.enemyBurst <= K.enemyBurst * p.hpAbs then
+		local h = RuleHeal(bot, s, p)
+		if h then return h end
+	end
 	if r then return r end
 	r = RuleHeal(bot, s, p)
 	if r then return r end
@@ -270,9 +280,9 @@ end
 ----------------------------------------------------------------------------------------------------------------------
 
 local function MoveTo(bot, s, p, to)
-	if to == nil then return end
-	if s.moveTo ~= nil and D2(s.moveTo, to) < 150 and p.now - s.lastMoveAt < K.moveRefresh
-		and bot:GetCurrentActionType() == BOT_ACTION_TYPE_MOVE_TO then return end
+	if to == nil or D2(p.loc, to) < 60 then return end
+	-- The same destination is not ordered again within moveRefresh, whatever the current action.
+	if s.moveTo ~= nil and D2(s.moveTo, to) < 150 and p.now - s.lastMoveAt < K.moveRefresh then return end
 	bot:Action_MoveToLocation(to)
 	s.moveTo, s.lastMoveAt = to, p.now
 end
@@ -308,10 +318,15 @@ end
 
 local function Act(bot, s, p, d)
 	if d.intent == 'comprar' then Buy(bot, s) return end
-	if d.intent == 'curar_salvia' then bot:Action_UseAbilityOnEntity(d.item, bot) return end
-	if d.intent == 'curar_tango' then bot:Action_UseAbilityOnTree(d.item, d.tree) return end
+	-- An item order is not repeated each frame while the healing buff has not appeared yet.
+	if d.intent == 'curar_salvia' then bot:Action_UseAbilityOnEntity(d.item, bot) s.busyUntil = p.now + 0.6 return end
+	if d.intent == 'curar_tango' then bot:Action_UseAbilityOnTree(d.item, d.tree) s.busyUntil = p.now + 1.0 return end
 	if (d.intent == 'ultimo_golpe' or d.intent == 'denegar') then
+		if s.pending ~= nil then
+			Log(s, bot, 'golpe_res', string.format('%s reemplazado', s.pending.deny and 'denegar' or 'ultimo_golpe'))
+		end
 		bot:Action_AttackUnit(d.target, true)
+		s.lastAttackOrder = p.now
 		-- Protect the wind-up only (walk and attack point), not the projectile's flight.
 		s.busyUntil = p.now + d.hit.tLand - d.hit.flight + K.windUp
 		s.pending = { creep = d.target, landAt = p.now + d.hit.tLand, hpAt = d.hit.hpAt, deny = d.hit.deny,
@@ -319,14 +334,23 @@ local function Act(bot, s, p, d)
 		Log(s, bot, 'golpe', d.reason)
 		return
 	end
-	if d.to == nil then
-		if bot:GetCurrentActionType() == BOT_ACTION_TYPE_MOVE_TO then bot:Action_ClearActions(true) end
-		return
-	end
+	-- No destination: no order (clearing the queue would leave the hero idle, free to auto-attack).
 	MoveTo(bot, s, p, d.to)
 end
 
 ----------------------------------------------------------------------------------------------------------------------
+
+-- An attack we did not order (the engine's auto-attack while idle or moving): its target, so the log shows whether the
+-- engine still acts on its own (checklist item 5). Our own orders are marked by lastAttackOrder.
+local function WatchAutoAttack(bot, s, p)
+	local last = bot:GetLastAttackTime()
+	if s.seenAttack ~= nil and last > s.seenAttack + 0.01 and p.now - (s.lastAttackOrder or -1000) > 2.0 then
+		local target = bot:GetAttackTarget()
+		Log(s, bot, 'autoataque', string.format('objetivo=%s intencion=%s accion=%d',
+			Valid(target) and (string.gsub(target:GetUnitName(), 'npc_dota_', '')) or '?', s.intent, bot:GetCurrentActionType()))
+	end
+	s.seenAttack = last
+end
 
 local function Status(bot, s, p)
 	if p.t - s.lastStatus < 2 then return end
@@ -357,15 +381,16 @@ function L.Think()
 	if not bot:IsAlive() then s.pending, s.retreating = nil, false return end
 	local p = Perceive(bot)
 	CheckPending(bot, s, p)
+	WatchAutoAttack(bot, s, p)
 	LevelUp(bot, s)
 	if p.now >= s.busyUntil then
 		local d = Decide(bot, s, p)
-		if d.intent ~= s.intent or (d.reason ~= s.reason and d.intent ~= 'linea' and d.intent ~= 'preparar_golpe') then
-			if d.intent ~= 'ultimo_golpe' and d.intent ~= 'denegar' then
-				Log(s, bot, 'decision', string.format('intencion=%s motivo=%s', d.intent, d.reason))
-			end
+		-- Logged when the intent or the kind of reason changes (its first word), not each time a number in it moves.
+		local kind = string.match(d.reason, '^(%S+)') or ''
+		if (d.intent ~= s.intent or kind ~= s.reasonKind) and d.intent ~= 'ultimo_golpe' and d.intent ~= 'denegar' then
+			Log(s, bot, 'decision', string.format('intencion=%s motivo=%s', d.intent, d.reason))
 		end
-		s.intent, s.reason = d.intent, d.reason
+		s.intent, s.reason, s.reasonKind = d.intent, d.reason, kind
 		Act(bot, s, p, d)
 	end
 	Status(bot, s, p)
@@ -373,9 +398,14 @@ function L.Think()
 end
 
 -- If Think fails, log it and walk to safety, so a bug shows in the log instead of a frozen hero.
+local lastError = {} -- message -> game time it was last printed (at most once per 5 s each)
 function L.OnError(err)
 	local bot = GetBot()
-	out(string.format('[bench] prop error t=%.1f pid=%d %s', DotaTime(), bot:GetPlayerID(), tostring(err)))
+	local msg = tostring(err)
+	if DotaTime() - (lastError[msg] or -1000) >= 5 then
+		lastError[msg] = DotaTime()
+		out(string.format('[bench] prop error t=%.1f pid=%d %s', DotaTime(), bot:GetPlayerID(), msg))
+	end
 	pcall(function() bot:Action_MoveToLocation((SafeSpot(GetTeam()))) end)
 end
 
