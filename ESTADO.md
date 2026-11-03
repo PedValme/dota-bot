@@ -2,31 +2,20 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Cerebro v3 FIRMADO (2026-11-01), en construcción** (`trabajo/cerebro-v3.md`, sección «Versión final
-  tras la revisión adversarial»). Revisión hecha el 2026-11-01 con tres revisores Opus; hallazgo mayor, comprobado en
-  el código: el farm se apaga en el min 18 de Turbo (`mode_farm_generic.lua:382-383`) y el ataque es de Valve, así que
-  partes de v2/v3 no actuarían. Con la firma: partida 0 de API, luego capas 5 → 1 → 3 → 2 → 4, y una serie final
-  secuencial firmada (hasta 40 por brazo, miradas a 16 y 28). Farm y fases sin reloj, por situación (DECISIONES 2026-11-01).
-  - Partida 0 hecha y en `main` (#42; MEDICIONES `v3-partida0`): `nil` en el deseo de ataque vale 0, así que el plan
-    prohíbe pelear con otro modo por encima de 0,95; la ulti enemiga se lee con `IsFullyCastable`.
-  - Las 5 capas escritas en el worktree `../dota-bot-v3` (rama `claude/cerebro-v3-capas`, variantes `cerebro_v3` y
-    `cerebro_v3_sombra`), revisadas por Opus y arregladas; humo pasado (`v3-humo2`) y revisión adversarial de la
-    medición aplicada (MEDICIONES, `n3-v3`). PR #43 en borrador. Recortado: retener ultis de daño de área.
-  - `n3-v3` cortada por Pedro tras la primera mirada (8-8): v3 se frenaba en la fase de líneas. Arreglado (`f447404`,
-    revisado; humo `v3-humo3` bien). MEDICIONES, «`n3-v3` cortada…; relanzada como `n3-v3r`».
-  - Espera al dueño: aceptar la parada por perjuicio de `n3-v3r` (3-4 en la primera mirada, z = −1,00) · Recomendado:
-    aceptarla y diagnosticar en los registros de `n3-v3r-a` por qué v3 sigue regalando ventajas (perdió 10 de 13 tras
-    +10.000).
-  - Tanda `n3-v3r-a` terminada (MEDICIONES, «`n3-v3r`, primera mirada»); no se lanzan las tandas b y c hasta su
-    respuesta.
-  - **En curso: tanda `n3-v3r-a`** (32, observada; humo `v3-humo4` pasado), lanzada el 2026-11-02 desde la carpeta
-    principal en HEAD desconectado `84b2b36` (árbol `9c6b553.2e6ca87`; Dota lee su `bots/`; no tocar `bots/` ni
-    `tools/bench/` allí mientras corre), con carga y el sí de Pedro. Siguiente: `node tools/analisis/n3-v3.mjs 1` (eficacia
-    z ≥ 2,81, perjuicio z ≤ −1); tandas b y c de 24 sin observar; miradas 2 y 3; resultado en MEDICIONES y, si mejora,
-    proponer a Pedro activarlo por defecto. Los datos se copian de la carpeta principal al worktree para el commit;
-    hay `stash@{0..}` en la principal con copias de datos ya commiteados (se pueden dejar).
-  - Pedro critica, con razón, que en 4 días el bot por defecto sigue igual: se dedicó casi todo a hacer fiable el banco
-    y luego a reglas sueltas, contra su regla del 2026-10-30. No repetirlo.
+- **Cerebro v3 (firmado 2026-11-01) construido, medido y parado: no mejora a `base`.** Serie `n3-v3r` parada por
+  perjuicio en la primera mirada (3-4; con la serie cortada antes, 11 de 32 frente a 12 de 32). Corridas paradas hasta
+  corregir (DECISIONES 2026-11-03). Todo en MEDICIONES desde `v3-partida0`.
+- **Diagnóstico hecho** (MEDICIONES, «Diagnóstico de las ventajas regaladas»): dota-bot, con y sin v3, pierde ventajas de
+  oro sin edificios (en el pico Valve conserva 7-8 de 11 torres y todos los cuarteles); Valve remonta empujando su
+  mitad (6-7 torres y 3-4 cuarteles perdidos, el 65-70 % de las muertes en la mitad propia, en rachas). v3 apenas
+  asalta después del pico (89 % del tiempo en línea, reagrupando o defendiendo).
+- Espera al dueño: qué hacer con el diagnóstico · Recomendado: la que se le presentó el 2026-11-03 (ver respuesta de esa
+  sesión; si no está escrita aquí, preguntarle de nuevo con el diagnóstico delante).
+- El código de v3 está en `main` apagado por defecto (variante `cerebro_v3`), con las mejoras del banco
+  (`--repetir-invalidas`, contador de Think, `tools/analisis/n3-v3.mjs`). La fase de líneas queda como está
+  (DECISIONES 2026-11-02).
+- Pedro critica, con razón, que el bot por defecto sigue igual tras días de trabajo. No repetir construcciones grandes
+  sin un diagnóstico que diga dónde se pierde.
 - **2026-11-01. Niveles 0 y 1 hechos y en `main`** (#22-#26):
   - banco completo; serie A contra A (`aa`): brazos parejos, las victorias son demasiado ruidosas para el nivel 2
     (~90 partidas por brazo para 20 puntos) y el minuto de +10.000 apenas varía (~1,4 min);
