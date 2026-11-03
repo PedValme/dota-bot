@@ -151,6 +151,9 @@ export const VARIANTS = {
   // about enemies; "farm" (no 6k-lead cut) and "farm_sin_reloj" keep the farm going past minute 18 (Pedro, 2026-11-01).
   // Its ATTACK hook (nil for Valve's desire) was removed: nil counts as 0.
   sonda_api: { api_sonda: true, farm: true, farm_sin_reloj: true, thinkless: 1 },
+  // First-hand map of the Bot API (DECISIONES 2026-11-03): FunLib/api_dump.lua prints every global, class method and
+  // the stats of each lane unit; the bot itself plays as base. Not a measurement: the match result is not used.
+  volcado_api: { api_volcado: true, empuje: false, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
