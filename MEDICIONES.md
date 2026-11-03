@@ -476,3 +476,14 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   partidas está después (regalar ventajas, no cerrar), que es lo que mide `n3-v3r`. Una capa de líneas contra Valve
   tendría poco margen; contra humanos puede ser distinto (rotaciones del mid, por ejemplo): se mira con el resultado
   de la serie y con la prueba con amigos.
+
+### 2026-11-02 · `n3-v3r`, primera mirada (tanda `n3-v3r-a`, 8 bloques)
+- Resultado: `cerebro_v3` 3 de 16, `base` 4 de 16; CMH z = −1,00: toca la parada por perjuicio (z ≤ −1, no
+  vinculante). Sin inválidas. Think 30,0 y 30,0. CPU media 28 %, máximo 76 %.
+- v3 no arregla el defecto que ataca: llegó a +10.000 en 13 y perdió 10 (`base`: 12 y 8). Secundaria (patrimonio
+  por minuto, min 18-26, por bloque): v3 mejor en 2, peor en 6. Sumando `n3-v3-a` y `n3-v3r-a`: v3 11 de 32,
+  `base` 12 de 32.
+- Validez: en esta tanda los dos brazos ganan mucho menos que en `n3-v3-a` (`base` 4/16 frente a 8/16, mismo
+  código): cae igual sobre los dos (mismo sorteo y lados por bloque); causa sin aislar (sorteo, carga).
+- Decisión: pendiente de Pedro (recomendación: aceptar la parada y diagnosticar en los registros observados por qué v3
+  sigue regalando ventajas antes de diseñar nada).
