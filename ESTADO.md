@@ -10,6 +10,9 @@
   mitad (6-7 torres y 3-4 cuarteles perdidos, el 65-70 % de las muertes en la mitad propia, en rachas). v3 apenas
   asalta después del pico (89 % del tiempo en línea, reagrupando o defendiendo).
 - **PRÓXIMA SESIÓN: bot propio con control completo** (DECISIONES 2026-11-03).
+  0. Hecho el 2026-11-03: revisión a fondo de la API y de OHA en `docs/investigacion/2026-11-03-api-y-oha.md`
+     (qué toma el control completo, qué puede ver el bot, qué se queda de OHA, lista de 12 comprobaciones). La prueba
+     sigue esa lista y usa `bot_<héroe>.lua` para no tocar a los otros nueve bots.
   1. Prueba de un día: `Think()` del bot genérico toma el control completo (según la documentación de Valve, sin
      comprobar aquí) en un héroe y una línea: moverse, últimos golpes, retirarse, con cada decisión registrada con su
      motivo. Pregunta: ¿el motor de Valve deja de meterse? ¿qué cuesta igualar su creepeo? Medir en el banco contra el
