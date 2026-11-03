@@ -350,3 +350,18 @@ test("dota-bot always gets the first draw, on either side; espejo no leaves Dire
   assert.deepEqual(sideGroups("dire", A, B), { radiant: B, dire: A });
   assert.deepEqual(sideGroups("dire", A, B, "no"), { radiant: A, dire: null });
 });
+
+test("--mid fixes dota-bot's position 2 and the rival's draw avoids it (full-control test)", () => {
+  const heroes = drawHeroes(() => 0, [], "sniper");
+  assert.equal(heroes[1], "npc_dota_hero_sniper");
+  assert.equal(heroes[0], "npc_dota_hero_" + HERO_POOL[0][0]);
+  for (let i = 0; i < 50; i++) assert.ok(!drawHeroes(Math.random, heroes).includes("npc_dota_hero_sniper"));
+});
+
+test("string variant fields are written as quoted Lua strings", () => {
+  const lua = variantLua("control_sniper");
+  assert.match(lua, /control_completo = "sniper"/);
+  assert.match(lua, /linea_heroe = "sniper"/);
+  assert.match(lua, /empuje = false/);
+  assert.match(variantLua("base"), /return \{ name = "base", empuje = false, thinkless = 1 \}/);
+});

@@ -120,7 +120,11 @@ end
 
 -- === existing functions, now reusing context ===
 
+-- Full-control test: counts whether the engine still asks this mode for the hero under control (0 without the variant).
+local Control = require(GetScriptDirectory()..'/FunLib/propio/control')
+
 function GetDesire()
+	if Control.Intercept('mode_retreat.GetDesire') then return BOT_MODE_DESIRE_NONE end
     -- local cacheKey = 'GetRetreatDesire'..tostring(bot:GetPlayerID())
     -- local cachedVar = J.Utils.GetCachedVars(cacheKey, 0.35 * (1 + Customize.ThinkLess))
     -- if DotaTime() > 30 and cachedVar ~= nil then return cachedVar end

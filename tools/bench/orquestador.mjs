@@ -154,12 +154,19 @@ export const VARIANTS = {
   // First-hand map of the Bot API (DECISIONES 2026-11-03): FunLib/api_dump.lua prints every global, class method and
   // the stats of each lane unit; the bot itself plays as base. Not a measurement: the match result is not used.
   volcado_api: { api_volcado: true, empuje: false, thinkless: 1 },
+  // Full-control test (trabajo/prueba-control.md), with --mid sniper: dota-bot's Sniper played by the own Think()
+  // (FunLib/propio/), against the same Sniper played by OHA. Both log its lane numbers once a minute ("[bench] linea").
+  control_sniper: { control_completo: "sniper", linea_heroe: "sniper", empuje: false, thinkless: 1 },
+  base_sniper: { linea_heroe: "sniper", empuje: false, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
 
+// A variant field as Lua: strings quoted (control_completo = "sniper"), numbers and booleans as they are.
+export const luaValue = (v) => (typeof v === "string" ? JSON.stringify(v) : String(v));
+
 export function variantLua(name) {
-  const fields = Object.entries(VARIANTS[name]).map(([k, v]) => `${k} = ${v}`).join(", ");
+  const fields = Object.entries(VARIANTS[name]).map(([k, v]) => `${k} = ${luaValue(v)}`).join(", ");
   return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { name = "${name}", ${fields} }\n`;
 }
 
@@ -167,7 +174,7 @@ export function variantLua(name) {
 // Valve the base bot already wins ~91%, so wins there can only show a change got worse). FunLib/bench_variant.lua gives
 // each team its own entry of "teams".
 export function rivalVariantLua(radiant, dire) {
-  const fields = (name) => Object.entries(VARIANTS[name]).map(([k, v]) => `${k} = ${v}`).join(", ");
+  const fields = (name) => Object.entries(VARIANTS[name]).map(([k, v]) => `${k} = ${luaValue(v)}`).join(", ");
   return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { name = "${rivalName(radiant, dire)}", teams = { [2] = { name = "${radiant}", ${fields(radiant)} }, [3] = { name = "${dire}", ${fields(dire)} } } }\n`;
 }
 export const rivalName = (radiant, dire) => `${radiant}-vs-${dire}`;
@@ -276,8 +283,10 @@ export const HERO_POOL = [
   ["crystal_maiden", "witch_doctor", "lich", "warlock", "dazzle", "oracle"],
 ];
 
-export function drawHeroes(random = Math.random, avoid = []) {
-  return HERO_POOL.map((pool) => {
+// mid: a fixed hero for position 2 (--mid, the full-control test); the rival's draw then avoids it like any other.
+export function drawHeroes(random = Math.random, avoid = [], mid = undefined) {
+  return HERO_POOL.map((pool, pos) => {
+    if (pos === 1 && mid !== undefined) return "npc_dota_hero_" + mid;
     const free = pool.filter((h) => !avoid.includes("npc_dota_hero_" + h));
     const from = free.length ? free : pool;
     return "npc_dota_hero_" + from[Math.floor(random() * from.length)];
@@ -539,6 +548,7 @@ function parseArgs(argv) {
     else if (k === "--espejo") opt.espejo = v; // "no", debugging only: Dire keeps the random heroes the engine gives it
     else if (k === "--rival") opt.rival = v; // "valve" (default) or "dotabot": both teams dota-bot, one variant each
     else if (k === "--repetir-invalidas") opt.repetir = Number(v); // replay an invalid match, same heroes and side
+    else if (k === "--mid") opt.mid = v; // dota-bot's mid hero is fixed (full-control test); its rival is drawn as usual
     else throw new Error(`Opción desconocida: ${k}`);
   }
   if (!Number.isInteger(opt.partidas) || opt.partidas < 1 || opt.partidas > 50) throw new Error("--partidas: 1 a 50");
@@ -549,6 +559,7 @@ function parseArgs(argv) {
   opt.modo ??= "normal";
   if (!["normal", "turbo"].includes(opt.modo)) throw new Error("--modo: normal o turbo");
   if (opt.lado !== undefined && !["radiant", "dire"].includes(opt.lado)) throw new Error("--lado: radiant o dire");
+  if (opt.mid !== undefined && !HERO_POOL[1].includes(opt.mid)) throw new Error(`--mid: uno de ${HERO_POOL[1].join(", ")}`);
   opt.repetir ??= 0;
   if (!Number.isInteger(opt.repetir) || opt.repetir < 0 || opt.repetir > 3) throw new Error("--repetir-invalidas: 0 a 3");
   opt.rival ??= "valve";
@@ -715,7 +726,7 @@ async function main(argv) {
       }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
       // A repeat keeps the block's heroes even when it is the block's first match.
-      if (i % opt.block === 0 && tries === 0) { heroes = drawHeroes(); rivals = drawHeroes(Math.random, heroes); }
+      if (i % opt.block === 0 && tries === 0) { heroes = drawHeroes(Math.random, [], opt.mid); rivals = drawHeroes(Math.random, heroes); }
       const groups = sideGroups(dotabot, heroes, rivals, opt.espejo ?? "");
       const esperado = { radiant: groups.radiant, dire: groups.dire ?? [] };
       writeFileSync(MATCH_FILE, matchConfigLua(groups.radiant, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), groups.dire));
