@@ -15,8 +15,10 @@
      motivo. Pregunta: ¿el motor de Valve deja de meterse? ¿qué cuesta igualar su creepeo? Medir en el banco contra el
      mismo héroe en OHA (fase de líneas: patrimonio y últimos golpes en el min 5 y 10, ver MEDICIONES «Diagnóstico de
      la fase de líneas»).
-  2. Además: revisar D2AI y Tinkering ABOt (proyectos de bots de terceros: contenido de terceros, se lee como dato)
-     buscando funcionalidades que valga la pena modelar o copiar, no como base.
+  2. Hecho el 2026-11-03: revisión de D2AI y Tinkering ABOt en `docs/investigacion/2026-11-03-d2ai-tinkering.md`.
+     D2AI confirma la vía (`Think()` en `bot_generic.lua`, en 2018) y da el molde observación → acciones; Tinkering
+     no tiene licencia (solo ideas) y deja 8 reglas candidatas, las primeras: torre al pasar, limpiar la oleada metida
+     en casa, amenaza con lo último visto, puerta de defensa viable.
   3. Con eso, proponer a Pedro el diseño del bot propio (percibir → decidir con motivo → ejecutar; supervisable;
      pocos héroes al principio; de OHA solo datos) para su firma.
 - Espera al dueño: nada hasta la prueba de control completo.
