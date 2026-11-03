@@ -15,6 +15,9 @@
      sigue esa lista y usa `bot_<héroe>.lua` para no tocar a los otros nueve bots. Fuente primaria de Valve (wiki
      oficial y ejemplos instalados) en `docs/investigacion/2026-11-03-api-valve.md`: la prueba empieza volcando del
      motor la lista completa de funciones (la página es de 2016-2017) y usa los comandos `dota_bot_debug_*`.
+     Hecho también el volcado del motor (DECISIONES 2026-11-03, «hazlo»): `docs/api/` (README con lo aprendido,
+     `volcado.md` generado por `tools/datos/api_volcado.mjs`, variante `volcado_api`). Datos de creeps y torres de
+     Valve cotejados con el motor. Siguiente acción: escribir el héroe de la prueba con esa referencia.
   1. Prueba de un día: `Think()` del bot genérico toma el control completo (según la documentación de Valve, sin
      comprobar aquí) en un héroe y una línea: moverse, últimos golpes, retirarse, con cada decisión registrada con su
      motivo. Pregunta: ¿el motor de Valve deja de meterse? ¿qué cuesta igualar su creepeo? Medir en el banco contra el
@@ -45,7 +48,8 @@
 - **Retirada, nivel 1 hecho** (#36, MEDICIONES): `retirada_temprana` v2 adelanta la huida (2 s desde la amenaza ≥ 1,
   antes 4) y ningún bot muere sin huir.
 - Pendientes del banco, menores: que la línea `start` registre las bajas (estrechar el margen de patrimonio inicial);
-  contar cuántas veces piensa un bot por segundo de juego; verificar la lista de héroes del sorteo.
+  contar cuántas veces piensa un bot por segundo de juego. La lista de héroes del sorteo quedó verificada: los 31
+  están entre los 39 que Valve sabe llevar (`docs/api/README.md`).
 - Espera a Pedro: nada.
 
 ## Madurez
@@ -63,8 +67,7 @@ archivo de variante. Ninguna medida aún sin contaminación.
 ## Siguientes pasos
 1. Nivel 2 (arriba).
 2. Contar cuántas veces piensa un bot por segundo de juego, con y sin carga.
-3. Verificar la lista de héroes del sorteo contra el juego.
-4. Una prueba en el entorno real: lobby Local Host con amigos, Turbo real.
+3. Una prueba en el entorno real: lobby Local Host con amigos, Turbo real.
 
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
@@ -76,7 +79,6 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
 - **Banco: velocidad real variable** (×1,6 a ×3,4 con `--velocidad 4`), sin saber si afecta distinto a cada lado.
 - **Banco, sin comprobar:**
   - si a ×4 los bots de Lua piensan menos por segundo de juego que los de Valve;
-  - el sorteo de héroes sale de una lista recordada, no de `BotImplemented`;
   - el Turbo imitado no es el Turbo real: torres y runas son las normales.
 - **Bot:**
   - la defensa se apaga cuando 3 aliados empujan (`FunLib/aba_defend.lua:~915-937`);

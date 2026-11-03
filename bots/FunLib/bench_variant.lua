@@ -11,6 +11,7 @@
 --   builds    true: cores buy what high-level players buy (FunLib/data_builds.lua), item_purchase_generic.lua
 --   farm_sin_reloj true: farming has no minute-18 late-game cut, mode_farm_generic.lua (brain v3)
 --   api_sonda true: brain v3 game 0, FunLib/api_probe.lua via team_desires.lua and mode_attack_generic.lua
+--   api_volcado true: the first-hand map of the Bot API, FunLib/api_dump.lua via team_desires.lua
 --   thinkless number: overrides Customize.ThinkLess, Customize/general.lua
 -- dofile (not require) so a stale answer is never cached between matches.
 -- With "teams" (orquestador.mjs --rival dotabot: dota-bot against dota-bot), each team plays its own entry.
