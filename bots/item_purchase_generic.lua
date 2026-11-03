@@ -4,6 +4,8 @@ local botName = bot:GetUnitName()
 if bot == nil or bot:IsInvulnerable() or not bot:IsHero() or not bot:IsAlive() or not string.find(botName, "hero") or bot:IsIllusion() then return end
 
 if GAMEMODE_ARDM == nil then GAMEMODE_ARDM = 20 end
+-- Full-control test: the hero under control buys for itself (FunLib/propio/linea.lua); no-op without the variant.
+local Control = require( GetScriptDirectory()..'/FunLib/propio/control' )
 local Item = require( GetScriptDirectory()..'/FunLib/aba_item' )
 local Role = require( GetScriptDirectory()..'/FunLib/aba_role' )
 local J = require( GetScriptDirectory()..'/FunLib/jmz_func')
@@ -477,6 +479,7 @@ local function TurboModeGeneralPurchase()
 end
 
 function ItemPurchaseThink()
+	if Control.Intercept('ItemPurchaseThink') then return end
 	currentTime = DotaTime()
 
 	-- ARDM: detect stale hero instance and rebuild purchase list on hero swap

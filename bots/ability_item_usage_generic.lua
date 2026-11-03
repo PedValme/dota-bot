@@ -10,6 +10,10 @@ local bDebugMode = ( 10 == 10 )
 
 local J = require( GetScriptDirectory()..'/FunLib/jmz_func' )
 local Utils = require( GetScriptDirectory()..'/FunLib/utils' )
+-- Full-control test: for the hero under control, each think below counts the call and does nothing (no-op without
+-- the variant). Registro: the per-minute lane line of the test, the same for both arms.
+local Control = require( GetScriptDirectory()..'/FunLib/propio/control' )
+local Registro = require( GetScriptDirectory()..'/FunLib/propio/registro_linea' )
 local BotBuild = dofile( GetScriptDirectory().."/BotLib/"..string.gsub( botName, "npc_dota_", "" ) )
 local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
 local Customize = require(GetScriptDirectory()..'/Customize/general')
@@ -8402,6 +8406,7 @@ local function UseGlyph()
 end
 
 function ItemUsageThink()
+	if Control.Intercept('ItemUsageThink') then return end
 	if RefreshBotHandle() then return end
 	if bot:IsInvulnerable() or not bot:IsHero() or not bot:IsAlive() or not string.find(botName, "hero") or bot:IsIllusion() then return end
 	if bot.lastItemFrameProcessTime == nil then bot.lastItemFrameProcessTime = DotaTime() end
@@ -8411,6 +8416,7 @@ function ItemUsageThink()
 end
 
 function AbilityUsageThink()
+	if Control.Intercept('AbilityUsageThink') then return end
 	if RefreshBotHandle() then return end
 	if bot:IsInvulnerable() or not bot:IsHero() or not bot:IsAlive() or not string.find(botName, "hero") or bot:IsIllusion() then return end
 	if bot.lastAbilityFrameProcessTime == nil then bot.lastAbilityFrameProcessTime = DotaTime() end
@@ -8430,7 +8436,9 @@ for _, name in ipairs({ 'NONE', 'LANING', 'ATTACK', 'ROAM', 'RETREAT', 'SECRET_S
 end
 
 function BuybackUsageThink()
+	if Control.Intercept('BuybackUsageThink') then return end
 	if RefreshBotHandle() then return end
+	pcall(Registro.Tick, bot)
 	-- How often the engine lets this bot think, per minute of game time (observer only): at x4 a heavier variant could
 	-- think less per game second than the other arm, a bias against it (MEDICIONES n3-v3, review 2026-11-02). The
 	-- engine calls BuybackUsageThink once per bot frame, before any throttle.
@@ -8482,6 +8490,7 @@ function BuybackUsageThink()
 end
 
 function CourierUsageThink()
+	if Control.Intercept('CourierUsageThink') then return end
 	if RefreshBotHandle() then return end
 	if bot.lastCourierFrameProcessTime == nil then bot.lastCourierFrameProcessTime = DotaTime() end
 	if DotaTime() > 30 and (DotaTime() - bot.lastCourierFrameProcessTime < 0.5) then return end
@@ -8490,6 +8499,7 @@ function CourierUsageThink()
 end
 
 function AbilityLevelUpThink()
+	if Control.Intercept('AbilityLevelUpThink') then return end
 	if RefreshBotHandle() then return end
 	if bot.lastLevelUpFrameProcessTime == nil then bot.lastLevelUpFrameProcessTime = DotaTime() end
 	if DotaTime() > 30 and (DotaTime() - bot.lastLevelUpFrameProcessTime < 1) then return end

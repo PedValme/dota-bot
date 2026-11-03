@@ -30,7 +30,11 @@ local isChangePosMessageDone     = false
 
 if Utils.BuggyHeroesDueToValveTooLazy[botName] then local_mode_laning_generic = dofile( GetScriptDirectory().."/FunLib/override_generic/mode_laning_generic" ) end
 
+-- Full-control test: counts whether the engine still asks this mode for the hero under control (0 without the variant).
+local Control = require( GetScriptDirectory()..'/FunLib/propio/control' )
+
 function GetDesire()
+	if Control.Intercept('mode_laning.GetDesire') then return BOT_MODE_DESIRE_NONE end
 	PickOneAnnouncer()
 	AnnounceMessages()
 
