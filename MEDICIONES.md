@@ -487,3 +487,33 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   código): cae igual sobre los dos (mismo sorteo y lados por bloque); causa sin aislar (sorteo, carga).
 - Decisión: pendiente de Pedro (recomendación: aceptar la parada y diagnosticar en los registros observados por qué v3
   sigue regalando ventajas antes de diseñar nada).
+
+### 2026-11-03 · Diagnóstico de las ventajas regaladas (lectura de `n3-v3r-a`, los dos brazos observados)
+- Pregunta: ¿por qué dota-bot, con y sin v3, pierde partidas en las que fue +10.000? Pedro aceptó la parada y pidió
+  diagnosticar antes de corregir (DECISIONES 2026-11-03).
+- Datos: las 25 partidas de `n3-v3r-a` que llegaron a +10.000 (v3: 10 perdidas y 3 ganadas; `base`: 8 y 4). Scripts de
+  lectura de la sesión (`scratchpad/throws.mjs`, `numbers.mjs`).
+- Resultado:
+
+  | | v3 perdidas | `base` perdidas | v3 ganadas | `base` ganadas |
+  |---|---|---|---|---|
+  | Pico de ventaja (media) y minuto | +14.300, min 18 | +33.600, min 26 | +39.400, min 25 | +44.600, min 31 |
+  | Torres enemigas en pie en el pico (de 11) / cuarteles (de 6) | 8,4 / 6,0 | 7,1 / 5,4 | 1,3 / 2,7 | 4,3 / 3,5 |
+  | Desde el pico: muertes / kills | 16,9 / 10,5 | 14,8 / 9,4 | 0 / 0 | 3,5 / 3,0 |
+  | Desde el pico: torres / cuarteles propios perdidos | 7,0 / 3,5 | 6,5 / 3,8 | 0 / 0 | 1,3 / 0,5 |
+  | Rachas de 3+ muertes en 20 s desde el pico | 2,4 | 2,9 | 0 | 0,5 |
+  | Muertes en la mitad propia | 65 % | 70 % | — | 41 % |
+
+  - Plan de v3 desde el pico en las perdidas: LINEA 58 %, REAGRUPAR 17 %, DEFENDER 14 %, y los estados de asalto
+    (TOMAR, AGRUPAR, EMPUJAR, CERRAR, ROSHAN) juntos un 11 %.
+- Lectura:
+  1. Las ventajas que se pierden son ventajas de oro sin edificios: en el pico Valve conserva 7-8 de sus 11 torres y
+     todos sus cuarteles; cuando dota-bot gana, en el pico le quedan 1-4 torres.
+  2. Valve remonta empujando la mitad de dota-bot: tras el pico, dota-bot pierde 6-7 torres y 3-4 cuarteles y muere
+     en su propia mitad (65-70 %), a menudo varios a la vez.
+  3. v3 no cambia nada de eso: llega antes a un pico más bajo y luego pasa el 89 % del tiempo en línea, reagrupando o
+     defendiendo. Los asaltos que diseñamos apenas ocurren después del pico.
+- Validez: descriptivo, 25 partidas. Las posiciones son cada 30 s: a esa resolución no se ve la pelea en el momento
+  de cada muerte (la foto anterior muestra 2-3 aliados y 1 enemigo cerca), así que «pierde las peleas en su mitad
+  porque llega en inferioridad» no está comprobado.
+- Decisión: pendiente de Pedro.
