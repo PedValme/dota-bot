@@ -1496,7 +1496,11 @@ function J.IsInTeamFight( bot, nRadius )
 
 	-- dota-bot team brain (variant "cerebro"): a fight the brain called counts, so initiator ultimates start it instead
 	-- of waiting for 2 allies already in ATTACK mode, which Valve drives (FunLib/team_brain.lua).
-	if J.TeamBrain().FightHooks() and J.TeamBrain().InEngage( bot ) then return true end
+	-- v3 takes it out: IsInTeamFight has ~300 uses (the retreat's included), so the hook changed every spell; v3's
+	-- initiation goes through its own phases (layer 4) instead (review 2026-11-01).
+	if J.TeamBrain().FightHooks() and not J.TeamBrain().V3() and J.TeamBrain().InEngage( bot ) then return true end
+	-- v3: only the initiators, and only in the INICIAR phase of their fight.
+	if J.TeamBrain().FightHooks() and J.TeamBrain().V3() and J.TeamBrain().InitiateNow( bot ) then return true end
 
 	local attackModeAllyList = J.GetNearbyHeroes(bot, nRadius, false, BOT_MODE_ATTACK )
 
@@ -4863,6 +4867,39 @@ function J.WeAreStronger(bot, nRadius)
 	local res = ourPowerRaw > enemyPower
 	J.Utils.SetCachedVars(cacheKey, res)
 	return res
+end
+local OhaWeAreStronger = J.WeAreStronger
+
+-- Brain v3, layer 1 (trabajo/cerebro-v3.md): with a fight near the bot, the team's evaluation of that fight (cooldowns,
+-- reinforcements within 8 s, fog, towers, Aegis, with hysteresis) answers instead of OHA's "we are stronger", in all
+-- its uses (retreat, help, defend, push, the heroes' spells). With "v3_sombra" OHA still answers and both are counted
+-- once a minute per bot ("[bench] fuerte"), to fix the thresholds before acting on them.
+function J.WeAreStronger(bot, nRadius)
+	local TB = J.TeamBrain()
+	if not (TB.Enabled() and TB.V3()) then return OhaWeAreStronger(bot, nRadius) end
+	-- Small radii (a spell's or an attack's range, a lane trade) ask a local question the fight's evaluation does not
+	-- answer: OHA keeps them (review 2026-11-01).
+	if nRadius ~= nil and nRadius < 1000 then return OhaWeAreStronger(bot, nRadius) end
+	-- Nor in the laning phase (mode_laning asks at 1200 whether to stay in lane; n3-v3-a, DECISIONES 2026-11-02).
+	if TB.TeamLaning() then return OhaWeAreStronger(bot, nRadius) end
+	local strong = TB.FightVerdict(bot)
+	if strong == nil then return OhaWeAreStronger(bot, nRadius) end
+	if TB.Shadow() then
+		local oha = OhaWeAreStronger(bot, nRadius)
+		local c = bot.v3Strong or { t = DotaTime(), same = 0, diff = 0 }
+		bot.v3Strong = c
+		-- Counted once per second per bot (a decision), not per call.
+		if DotaTime() - (c.last or -1000) >= 1 then
+			c.last = DotaTime()
+			if oha == strong then c.same = c.same + 1 else c.diff = c.diff + 1 end
+		end
+		if DotaTime() - c.t >= 60 then
+			print(string.format('[bench] fuerte t=%d pid=%d iguales=%d distintos=%d', math.floor(DotaTime()), bot:GetPlayerID(), c.same, c.diff))
+			bot.v3Strong = { t = DotaTime(), same = 0, diff = 0 }
+		end
+		return oha
+	end
+	return strong
 end
 
 function J.CanCastAbilitySoon(ability, fTime)

@@ -580,6 +580,18 @@ local function BuybackUsageComplement()
 		end
 	end
 
+	-- Brain v3, layer 5: buy back to save the base when the plan says it cannot be held with who is alive.
+	local TB = J.TeamBrain()
+	if TB.Enabled() and TB.V3() and nRemainingRespawnTime > 15 then
+		local okB, need = pcall(TB.BuybackForBase, bot)
+		if okB and need then
+			print(string.format('[bench] recompra_base t=%d pid=%d resta=%d', math.floor(DotaTime()), bot:GetPlayerID(), math.floor(nRemainingRespawnTime)))
+			J.Role['lastbbtime'] = DotaTime()
+			bot:ActionImmediate_Buyback()
+			return
+		end
+	end
+
 	if nFullRespawnTime < 60 then
 		return
 	end
@@ -8321,6 +8333,17 @@ local function UseGlyph()
 		return
 	end
 
+	-- Brain v3, layer 5: glyph against a real base siege, creeps included (OHA's own checks below need an enemy hero).
+	local TB = J.TeamBrain()
+	if TB.Enabled() and TB.V3() then
+		local okG, why = pcall(TB.GlyphNow)
+		if okG and why ~= nil then
+			print(string.format('[bench] glifo t=%d %s', math.floor(DotaTime()), why))
+			bot:ActionImmediate_Glyph( )
+			return
+		end
+	end
+
 	local T1 = {
 		TOWER_TOP_1,
 		TOWER_MID_1,
@@ -8408,6 +8431,20 @@ end
 
 function BuybackUsageThink()
 	if RefreshBotHandle() then return end
+	-- How often the engine lets this bot think, per minute of game time (observer only): at x4 a heavier variant could
+	-- think less per game second than the other arm, a bias against it (MEDICIONES n3-v3, review 2026-11-02). The
+	-- engine calls BuybackUsageThink once per bot frame, before any throttle.
+	if benchObserve then
+		bot.benchThinkN = (bot.benchThinkN or 0) + 1
+		local t = DotaTime()
+		if t - (bot.benchThinkTime or 0) >= 60 then
+			if bot.benchThinkTime ~= nil then
+				print(string.format('[bench] think t=%d pid=%d llamadas=%d por_s=%.1f', math.floor(t), bot:GetPlayerID(),
+					bot.benchThinkN, bot.benchThinkN / (t - bot.benchThinkTime)))
+			end
+			bot.benchThinkTime, bot.benchThinkN = t, 0
+		end
+	end
 	if benchObserve and DotaTime() - (bot.benchObserveTime or -1000) >= 2 then
 		bot.benchObserveTime = DotaTime()
 		local mode = bot:GetActiveMode()

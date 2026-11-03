@@ -7,7 +7,7 @@
 //   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--velocidad 4] [--etiqueta texto]
 //                                    [--variantes base,empuje] [--modo turbo] [--observar] [--lado dire]
 //                                    [--dota "<dota 2 beta>"]
-//                                    [--muestra-gsi <file>]
+//                                    [--muestra-gsi <file>] [--repetir-invalidas 0-3]
 // --variantes interleaves versions of dota-bot (VARIANTS) in one series: per block of heroes, every variant plays
 // both sides, and the order flips every block, so heroes, side, Dota's version and the PC's load hit every variant
 // alike. Each match is a row of bench/series.csv; "valida" says whether it can be counted.
@@ -53,7 +53,7 @@ const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", 
 const CSV = join(root, "bench", "series.csv");
 const COLUMNS = ["fecha", "etiqueta", "partida", "bloque", "variante", "valida", "motivo", "dificultad", "dotabot",
   "ganador", "resultado", "minutos", "kills_radiant", "kills_dire", "humano", "heroes", "ventaja_oro_max",
-  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo", "codigo", "rival"];
+  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo", "codigo", "rival", "intento"];
 
 // Measurement protocol (DECISIONES 2026-10-31): a match that reaches this game minute stops as "tope" (valid, with no
 // winner, so dota-bot did not win it; counted apart in the summary), and a series stops once more than this share of
@@ -73,6 +73,21 @@ export function codeState(sha, porcelain, trees = "") {
 // The part of a code state that must stay the same through a series: the trees.
 export function codeTree(codigo) {
   return String(codigo ?? "").split("@")[1]?.replace("+cambios", "") ?? "";
+}
+
+// --repetir-invalidas N (brain v3's final series, 2026-11-02): an invalid match is played again with the same heroes,
+// side and variant, up to N times, so one bad match does not throw its whole block away (n2-nivel1 fell from 8 to 4
+// per arm that way). Only for reasons fixed before the match is played (the set-up: teams, heroes, spawns, couriers,
+// starting net worth, the human, variant and mode in the log): a match that broke while being played ("sin final",
+// a Dota that closed) may depend on the variant's own code, and replaying it would drop one arm's bad matches only
+// (review 2026-11-02). Never after "sin-gsi" (the series stops). Both rows stay in series.csv, with "intento" 0, 1...:
+// per (etiqueta, partida) the last row counts; the stop rule and the per-variant count of invalid ones see every row.
+const REPEATABLE = ["reparto ", "sin registro de inicio", "héroes distintos de los sorteados", "sin registro de carga",
+  "sin registro de aparición", "héroe aparecido tras el inicio", "couriers ", "patrimonio inicial", "humano ",
+  "variante sin registro", "variante ", "modo "];
+export function shouldRepeat(motivo, outcome, tries, max) {
+  if (!motivo || outcome === "sin-gsi" || tries >= max) return false;
+  return REPEATABLE.some((p) => motivo.startsWith(p));
 }
 
 // Whether the series must stop: from the fifth match on, more than MAX_INVALID_SHARE of them not valid.
@@ -124,6 +139,14 @@ export const VARIANTS = {
   defensa_t12: { defensa_t12: true, thinkless: 1 },
   // Both level 1 fixes together, for the level 2 series.
   nivel1: { filtro_ultis: true, defensa_t12: true, thinkless: 1 },
+  // Brain v3 (signed by Pedro 2026-11-01, trabajo/cerebro-v3.md): the whole package, v2's brain, builds, whole-team
+  // base defence, phases by the state of the match, the early retreat and farming without the clock, with v3's layers.
+  cerebro_v3: { cerebro: true, cerebro_v3: true, builds: true, defensa_total: true, fase_estado: true,
+    retirada_temprana: true, farm_sin_reloj: true, thinkless: 1 },
+  // The same with layer 1's fight evaluation in shadow (it logs next to OHA's "we are stronger" and does not act), to
+  // fix its thresholds in an observed game.
+  cerebro_v3_sombra: { cerebro: true, cerebro_v3: true, v3_sombra: true, builds: true, defensa_total: true,
+    fase_estado: true, retirada_temprana: true, farm_sin_reloj: true, thinkless: 1 },
   // Brain v3, game 0 (trabajo/cerebro-v3.md; MEDICIONES v3-partida0): FunLib/api_probe.lua logs what the API answers
   // about enemies; "farm" (no 6k-lead cut) and "farm_sin_reloj" keep the farm going past minute 18 (Pedro, 2026-11-01).
   // Its ATTACK hook (nil for Valve's desire) was removed: nil counts as 0.
@@ -512,6 +535,7 @@ function parseArgs(argv) {
     else if (k === "--lado") opt.lado = v; // debugging one side: dota-bot always plays it (no side balance)
     else if (k === "--espejo") opt.espejo = v; // "no", debugging only: Dire keeps the random heroes the engine gives it
     else if (k === "--rival") opt.rival = v; // "valve" (default) or "dotabot": both teams dota-bot, one variant each
+    else if (k === "--repetir-invalidas") opt.repetir = Number(v); // replay an invalid match, same heroes and side
     else throw new Error(`Opción desconocida: ${k}`);
   }
   if (!Number.isInteger(opt.partidas) || opt.partidas < 1 || opt.partidas > 50) throw new Error("--partidas: 1 a 50");
@@ -522,6 +546,8 @@ function parseArgs(argv) {
   opt.modo ??= "normal";
   if (!["normal", "turbo"].includes(opt.modo)) throw new Error("--modo: normal o turbo");
   if (opt.lado !== undefined && !["radiant", "dire"].includes(opt.lado)) throw new Error("--lado: radiant o dire");
+  opt.repetir ??= 0;
+  if (!Number.isInteger(opt.repetir) || opt.repetir < 0 || opt.repetir > 3) throw new Error("--repetir-invalidas: 0 a 3");
   opt.rival ??= "valve";
   if (!["valve", "dotabot"].includes(opt.rival)) throw new Error("--rival: valve o dotabot");
   if (opt.rival === "dotabot" && ((opt.variantes ?? []).length !== 2 || opt.lado !== undefined)) {
@@ -663,6 +689,8 @@ async function main(argv) {
       throw new Error(`El código de bots/, del custom game o del orquestador no tiene commit (${firstCodigo}); ninguna partida valdría. Paro.`);
     }
     const results = [];
+    const allRows = []; // repeated invalid matches included, for the stop rule
+    let tries = 0; // repeats of the current match (--repetir-invalidas)
     let heroes = [];
     let rivals = [];
     for (let i = 0; i < opt.partidas; i++) {
@@ -683,7 +711,8 @@ async function main(argv) {
         if (variant) writeFileSync(VARIANT_FILE, variantLua(variant));
       }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
-      if (i % opt.block === 0) { heroes = drawHeroes(); rivals = drawHeroes(Math.random, heroes); }
+      // A repeat keeps the block's heroes even when it is the block's first match.
+      if (i % opt.block === 0 && tries === 0) { heroes = drawHeroes(); rivals = drawHeroes(Math.random, heroes); }
       const groups = sideGroups(dotabot, heroes, rivals, opt.espejo ?? "");
       const esperado = { radiant: groups.radiant, dire: groups.dire ?? [] };
       writeFileSync(MATCH_FILE, matchConfigLua(groups.radiant, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), groups.dire));
@@ -785,16 +814,34 @@ async function main(argv) {
         modo: opt.modo,
         codigo,
         rival: opt.rival,
+        intento: tries,
       };
       appendFileSync(CSV, csvRow(row) + "\n");
-      results.push(row);
+      allRows.push(row);
+      const repetir = shouldRepeat(motivo, outcome, tries, opt.repetir);
+      if (!repetir) results.push(row); // with N = 0 exactly as before: the row counts even when the series stops here
       console.log(`  ${outcome}${row.ganador ? `: gana ${row.ganador} (${row.ganador === dotabot ? "dota-bot" : "Valve"})` : ""}${motivo ? ` · NO VÁLIDA: ${motivo}` : ""}`);
       if (outcome === "sin-gsi") { console.log("Dota no envió datos por GSI; paro."); break; }
-      if (tooManyInvalid(results)) {
+      if (tooManyInvalid(allRows)) {
         console.log(`Más del ${MAX_INVALID_SHARE * 100} % de las partidas no son válidas; paro para investigar.`);
         break;
       }
+      if (repetir) {
+        tries += 1;
+        console.log(`  repito la partida ${i + 1} con los mismos héroes, lado y variante (${tries} de ${opt.repetir})`);
+        i -= 1;
+        await sleep(8000);
+        continue;
+      }
+      tries = 0;
       await sleep(8000);
+    }
+    // Invalid matches per variant, repeated ones included: a different rate between arms is a finding (a variant that
+    // breaks matches), not noise (review 2026-11-02).
+    const invalidBy = {};
+    for (const r of allRows) if (r.valida !== "si") invalidBy[r.variante || "-"] = (invalidBy[r.variante || "-"] ?? 0) + 1;
+    if (Object.keys(invalidBy).length) {
+      console.log(`Inválidas por variante (con las repetidas): ${Object.entries(invalidBy).map(([v, n]) => `${v} ${n}`).join(", ")}.`);
     }
     if (opt.rival === "dotabot") {
       // Rows are written from the first variant's side: its wins are the matches it won against the second.

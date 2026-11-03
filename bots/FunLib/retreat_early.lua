@@ -35,6 +35,14 @@ end
 function R.Desire(bot)
 	if not R.Enabled() or not bot:IsAlive() or bot:GetUnitName() == "npc_dota_hero_huskar" then return 0 end
 	J = J or require(GetScriptDirectory()..'/FunLib/jmz_func')
+	-- Brain v3: no early retreat in the laning phase, OHA's own retreat only. In lane a lone hero nearly always has two
+	-- enemies near, and the v3 retreat at 0.97 fired ~46 times per game before minute 10 and cut every trade (n3-v3-a,
+	-- DECISIONES 2026-11-02).
+	local TBl = J.TeamBrain()
+	if TBl.Enabled() and TBl.V3() and TBl.TeamLaning() then
+		bot.__retreatEarlyUntil = nil
+		return 0
+	end
 	local here = bot:GetLocation()
 	local enemies = J.GetEnemiesNearLoc(here, RADIUS)
 	if #enemies == 0 then
@@ -45,11 +53,32 @@ function R.Desire(bot)
 	local now = DotaTime()
 	-- Held while the threat stays: renewed, not a fixed time (review 2026-11-01: a Razor let go at threat 0.82 turned
 	-- back and died).
+	-- v3: a fight that turned ours (the verdict) ends the hold.
+	local TBh = J.TeamBrain()
+	local heldOurs = TBh.Enabled() and TBh.V3() and not TBh.Shadow() and TBh.FightVerdict(bot) == true
+	if heldOurs then bot.__retreatEarlyUntil = nil end
 	if bot.__retreatEarlyUntil and now < bot.__retreatEarlyUntil and threat >= KEEP_THREAT then
 		bot.__retreatEarlyUntil = now + HOLD_SECONDS
-		return DESIRE
+		return bot.__retreatEarlyDesire or DESIRE
 	end
 	if threat < THREAT then return 0 end
+	-- Brain v3, layer 2: the fight's evaluation is the filter instead of the 0.9 below the attack mode. A fight that
+	-- does not hold (value under 0.8) makes the hero run at 0.97, above OHA's attack (0.95); a fight held as ours keeps
+	-- it in (OHA's own retreat rules still apply).
+	local TB = J.TeamBrain()
+	if TB.Enabled() and TB.V3() and not TB.Shadow() then
+		local strong, value = TB.FightVerdict(bot)
+		if strong == true then return 0 end
+		if value ~= nil and value < 0.8 then
+			bot.__retreatEarlyUntil = now + HOLD_SECONDS
+			bot.__retreatEarlyDesire = 0.97
+			if observe then
+				print(string.format('[bench] retirada_temprana t=%d pid=%d amenaza=%.2f valor=%.2f hp=%.2f v3',
+					math.floor(now), bot:GetPlayerID(), threat, value, J.GetHP(bot)))
+			end
+			return 0.97
+		end
+	end
 	local allies = #J.GetAlliesNearLoc(here, RADIUS) -- includes the bot itself
 	local hit = bot:WasRecentlyDamagedByAnyHero(1) == true
 	if #enemies > allies or (J.GetHP(bot) < LOW_HP and hit and allies <= #enemies) then
@@ -58,6 +87,7 @@ function R.Desire(bot)
 			print(string.format('[bench] retirada_temprana t=%d pid=%d amenaza=%.2f enemigos=%d aliados=%d hp=%.2f',
 				math.floor(now), bot:GetPlayerID(), threat, #enemies, allies, J.GetHP(bot)))
 		end
+		bot.__retreatEarlyDesire = DESIRE
 		return DESIRE
 	end
 	return 0

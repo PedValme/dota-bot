@@ -13,7 +13,10 @@ local Probe = probeOn and require(GetScriptDirectory()..'/FunLib/api_probe') or 
 function TeamThink()
 	if Brain ~= nil then
 		local ok, err = pcall(Brain.Update)
-		if not ok then print('[bench] plan error ' .. tostring(err)) end
+		if not ok then
+			print('[bench] plan error ' .. tostring(err))
+			pcall(Brain.OnError)
+		end
 	end
 	if Probe ~= nil then
 		local ok, err = pcall(Probe.Tick)

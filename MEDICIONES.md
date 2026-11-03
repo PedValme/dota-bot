@@ -347,3 +347,173 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Validez: partida de mecanismo, no comparación.
 - Decisión: el gancho del ataque se quita; la capa 4 forma e inicia con deseos de otros modos por encima de 0,95. La
   capa 1 usa `IsFullyCastable` de la ulti enemiga visible y cuenta los TP enemigos hacia la pelea.
+
+### 2026-11-02 · `v3-sombra` (cerebro v3, capas observadas con la evaluación de la capa 1 en sombra)
+- Pregunta: ¿actúa cada capa en partida (farm, glifo, recompra, fases) y separa la evaluación de pelea las peleas
+  ganadas de las perdidas, para fijar sus umbrales?
+- Qué cambió: variante `cerebro_v3_sombra`, código `4959dd1` (antes de los arreglos de la capa 4 de la segunda
+  revisión: la capa 4 de estas partidas no vale para juzgarla).
+- Configuración: `--variantes cerebro_v3_sombra --partidas 2 --modo turbo --observar`; Valve en Injusto, ×4.
+- Resultado: 1 de 2 (gana como Dire). Sin `plan error`. Capa 5: 2 glifos (T3 al 38 % con 2 héroes, cuartel al 33 % con
+  3) y 3 recompras para la base. Capa 3: líneas `[bench] farm` de los núcleos con el objeto que les falta (`farm=true`
+  todo el tiempo: «falta» cuenta el objeto entero, componentes comprados o no). Capa 1, 106 peleas, valor al empezar
+  frente a muertes en 10 s a 2.500: con ≥ 1,6, 10 ganadas y 1 perdida (41 peleas); con < 0,5, 2 ganadas y 1 perdida
+  (24); entre 0,5 y 1,6, 2 y 2 (41, casi todas sin muertes). Coincide con «somos más fuertes» de OHA en el 68 % de
+  las decisiones (2.752 iguales, 1.319 distintas, por segundo y bot).
+- Validez: mecanismo, no comparación; dos partidas cortas (11 min reales).
+- Decisión: los umbrales 1,1 y 0,8 se quedan (la franja media no tiene datos para moverlos); partida activa por lado
+  con la capa 4 arreglada (`v3-activo`).
+
+### 2026-11-02 · `n3-v3` (serie final única: `cerebro_v3` frente a `base`) — pregunta escrita antes de lanzarla
+- Pregunta: ¿gana más dota-bot con el cerebro v3 completo (paquete firmado: v2, `builds`, `defensa_total`,
+  `fase_estado`, `retirada_temprana`, `farm_sin_reloj` y las 5 capas) que con `base`? Firmada por Pedro (DECISIONES
+  2026-11-01).
+- Qué cambió: todo el cerebro v3; el banco, `--repetir-invalidas` (una partida inválida se repite con los mismos
+  héroes, lado y variante).
+- Configuración: `--variantes cerebro_v3,base --modo turbo --repetir-invalidas 2`, Valve en Injusto, ×4, sin
+  `--observar` salvo la primera tanda (para el registro de mecanismo); en tandas de bloques de 4, cada tanda con su
+  etiqueta (`n3-v3-a`, `n3-v3-b`…: el orquestador numera las partidas desde 1 en cada ejecución).
+- Tamaño: secuencial, máximo 40 por brazo (80 partidas, unas 40 h); miradas a 16 y 28 por brazo.
+- Métrica principal: victorias (un tope de 60 min cuenta como no ganada).
+- Análisis fijo: por bloques (mismo sorteo en los dos brazos), Cochran-Mantel-Haenszel a una cola sobre bloques
+  completos y válidos (con repeticiones). Fronteras Lan-DeMets tipo O'Brien-Fleming, α = 0,05 a una cola (calculadas
+  con 400.000 simulaciones): z ≥ 2,81 a 16 por brazo, ≥ 2,04 a 28, ≥ 1,70 a 40 (p nominal 0,0025, 0,0205, 0,044).
+  Parada por inutilidad, no vinculante, en la mirada de 28 si v3 no gana más que `base` (z ≤ 0).
+- Secundarias de mecanismo, fijadas antes: patrimonio por minuto de dota-bot menos el de Valve en el min 18-26;
+  estructuras propias perdidas yendo por encima de +5.000; torres enemigas en pie al llegar a +10.000; derrotas tras
+  +10.000; muertes por partida; inválidas por brazo (una asimetría ahí es contaminación y para la serie).
+- Lo que vale la conclusión: para el paquete entero, no para cada capa.
+- Completado tras la revisión adversarial de la medición (2026-11-02), antes de lanzarla:
+  - Tandas: `n3-v3-a` de 32 partidas (8 bloques, con `--observar`), `n3-v3-b` y `n3-v3-c` de 24 (6 bloques), sin
+    observar. Cada mirada es por bloques completos y válidos, con clave (etiqueta, bloque): 8, 14 y 20 bloques. Si
+    faltan bloques, se juega otra tanda corta hasta llegar; si una mirada no cae justa, la frontera se recalcula con
+    la misma función de gasto en la fracción real.
+  - Todas las filas `n3-v3-*` deben tener los mismos árboles de `bots/` y `tools/bench/` (el commit de la tanda a) y
+    la misma `dota_version`; si no, la serie para. Se lanza desde el clon principal (las junctions de Dota apuntan
+    ahí) con el commit en `HEAD`.
+  - Inválidas: la serie para e investiga si `cerebro_v3` tiene más `sin final` que `base`, o si un brazo tiene 3
+    inválidas más que el otro (todas las filas, repetidas incluidas).
+  - Llamadas a Think por segundo de juego (`[bench] think`, solo con observador, una línea por bot y minuto): se
+    comparan entre brazos en la tanda a. Si v3 piensa claramente menos (más de un 10 % por debajo de `base`), la
+    serie para: el banco a ×4 lo castigaría por un artefacto.
+  - Análisis con `tools/analisis/n3-v3.mjs <mirada>` (fuera de `tools/bench/`, que entra en la comprobación de
+    código). Secundaria con prueba fijada: patrimonio por minuto en el min 18-26, diferencia por bloque, prueba de
+    signos; el resto de secundarias se describen, sin prueba.
+  - Potencia (simulación del revisor, 40.000 series): α real ≈ 0,05; frente a `base` ≈ 50 %: +10 puntos ≈ 20 %, +20 ≈
+    50-55 %, +30 ≈ 85 %. La mirada de 16 casi nunca para por eficacia (4 % con +20); la inutilidad a 28 para el 55 %
+    de las series sin efecto.
+  - Máquina medida antes de cada tanda (regla global); con carga, no se lanza sin el sí de Pedro. Tanda a: CPU 24 %,
+    memoria libre 54 %.
+  - Parada por perjuicio, no vinculante, en la primera mirada: z ≤ −1 corta la serie (Pedro, DECISIONES 2026-11-02;
+    añadida con la tanda a en curso, antes de mirar sus victorias).
+  - Sin comprobar: el Turbo imitado no es el Turbo real (torres y runas normales); el primer bot aparece tarde
+    (lo rechaza la validez); la velocidad real varía (×1,6-3,4) sin saber si distinto por lado; la lista de héroes del
+    sorteo es recordada, no de `BotImplemented`.
+
+### 2026-11-02 · Humo del cerebro v3 activo (`v3-activo`, `v3-humo`, `v3-humo2`)
+- Pregunta: puerta de medición (DECISIONES 2026-10-31): ¿son válidas las partidas con `cerebro_v3`, actúa cada capa y
+  sale el plan sin errores?
+- `v3-activo` (código `6a0b8c2`, 2 partidas, 0 ganadas): 34 `plan error` (`J.IsInLaningPhase` lee `GetBot()`, nil en el
+  cerebro de equipo; con cada error el plan se apagaba 10 s). No vale como humo. Arreglo `57f4219`.
+- `v3-humo` (`57f4219`, 2 partidas, 0 ganadas): sin errores del plan; todas las capas actúan (fases 6+15 FORMAR,
+  52+86 INICIAR; glifos, recompras para la base, retiradas v3). Pero en las 6 partidas con v3 hasta aquí ganó 1, y en
+  dos fue +20.000 y +29.000 y perdió. Causa leída en el plan: los umbrales relativos con suelos de 3.000/6.000 metían a
+  los cinco en CERRAR en el minuto 10 con +9.400 y los tenían agrupados del min 9 al 20 con el farm de los núcleos
+  prohibido: faltaba la alternancia ASALTO/PREPARAR del plan firmado. Arreglo `9284050`: asaltos de 60 s y 45 s de
+  preparar (farm), umbrales nunca por debajo de los de v2 (+5.000, +10.000).
+- `v3-humo2` (`9284050`, 2 partidas, 2 ganadas): válidas, sin errores del plan, 3 y 5 fases de preparar.
+- Validez: humo, no comparación; las victorias de estas partidas no cuentan para nada.
+- Decisión: el humo pasa con `9284050`; revisor adversarial de la medición antes de lanzar `n3-v3`.
+
+### 2026-11-02 · `n3-v3`, primera mirada (tanda `n3-v3-a`, 8 bloques)
+- Resultado: `cerebro_v3` 8 de 16, `base` 8 de 16; CMH z = 0,00. Ni eficacia (z ≥ 2,81) ni perjuicio (z ≤ −1): la
+  serie sigue. Sin inválidas (0 y 0). Think igual en los dos brazos (~30 llamadas por segundo de juego).
+- Descriptivo, sin prueba: llegó a +10.000 en 11 (v3) y 14 (`base`) partidas, y perdió tras ir +10.000 en 3 y 6;
+  minutos medios 32,5 y 35,7. Secundaria fijada (patrimonio por minuto, min 18-26, por bloque): v3 mejor en 3, peor
+  en 4.
+- Decisión: tandas `n3-v3-b` y `n3-v3-c` (24 partidas cada una, sin observar), mismo commit `1162c9c`. Máquina antes
+  de la tanda b: CPU 27 %, memoria libre 53 %.
+
+### 2026-11-02 · `n3-v3` cortada tras la primera mirada; relanzada como `n3-v3r`
+- Pedro cortó la serie (DECISIONES 2026-11-02) tras la primera mirada (8-8) y la partida 1 de la tanda b, que no
+  cuentan para la serie relanzada. Causa, leída en la tanda a observada (16 partidas por brazo), en la fase de líneas:
+  - ventaja media en el min 5, 10 y 18: v3 +1.100, +5.000 y +7.200; `base` +2.100, +7.100 y +13.500; kills en el
+    min 5: 1,2 frente a 2,6;
+  - la retirada v3 (0,97) se disparó 739 veces antes del min 10 (unas 46 por partida); el plan mandó a objetivos
+    de equipo 63 veces y hubo 473 entradas en INICIAR antes del min 10.
+- Arreglo (`646e767`, `f447404`, revisados por Opus): en la fase de líneas (hasta que el nivel medio de los diez llega a
+  9,2 o cae una T1) v3 no actúa: sin retirada temprana, plan en LINEA salvo defender la base, sin fases de pelea salvo
+  contrainiciación, y «somos más fuertes» de OHA.
+- Humo `v3-humo3` (`646e767`, 1 bloque observado, v3 contra `base`): antes del min 10, retirada temprana 1,5 por
+  partida; modos de línea como `base`; ventaja en el min 5 +3.400 y +3.400, en el min 10 +8.400 y +9.200. Mecanismo,
+  no comparación. Queda, después de las líneas, menos farm en v3 (7 % frente a 16 % en el min 10-18): es el diseño de
+  asaltos firmado y lo mide la serie.
+- Relanzamiento `n3-v3r`: mismo diseño, fronteras, paradas (eficacia, perjuicio a 16, inutilidad a 28), umbral de
+  inválidas y análisis (`tools/analisis/n3-v3.mjs <mirada>`, prefijo `n3-v3r-`). Tandas `n3-v3r-a` (32, observada),
+  `-b` y `-c` (24). Código `f447404` (con humo `v3-humo4` antes).
+- Humo `v3-humo4` (código de `f447404`, árbol `9c6b553.2e6ca87`, 1 partida por lado): las 2 válidas, sin errores del
+  plan, líneas `[bench] think` presentes. Pasa.
+- Tanda `n3-v3r-a` lanzada el 2026-11-02 con la máquina cargada (una pestaña de Chrome al 96 % de un núcleo; CPU total
+  23-65 %), con el sí de Pedro (DECISIONES 2026-11-02); la carga va por partida en `series.csv` y el Think se compara
+  entre brazos en esta tanda.
+
+### 2026-11-02 · Diagnóstico de la fase de líneas: dota-bot (OHA en líneas) frente a Valve, sin partidas nuevas
+- Pregunta (Pedro: «¿no tenemos una métrica de todo lo que sacamos que nos permita tomar decisiones útiles para la fase
+  de líneas?»): ¿dónde pierde o gana dota-bot frente a Valve hasta el min 10, para decidir si hace falta una capa de
+  líneas?
+- Datos: registros observados ya existentes, 18 partidas válidas en las que dota-bot juega las líneas como OHA
+  (`n3-v3-a` brazo `base` y `n3-v3r-a` hasta ese momento); mismos héroes por bloque en los dos lados. Rol aproximado
+  por patrimonio en el min 10 dentro del equipo (r1 = el más rico); mid = el más cercano a la diagonal en el min 2-5.
+  Script: `scratchpad/lanes.mjs` de la sesión (lectura).
+- Resultado, dota-bot frente a Valve, medias por partida en el min 10:
+  - patrimonio del equipo 25.200 frente a 17.500 (+44 %); kills 9,7 frente a 6,2; muertes 6,5 frente a 9,7;
+  - últimos golpes por rol (r1-r5): 48/35/31/17/13 frente a 21/20/12/14/6 (más del doble en los núcleos);
+  - el mid de Valve pasa el 49 % del tiempo fuera de su línea desde el nivel 6 (el de dota-bot, el 9 %), pero mata
+    menos (1,2 frente a 2,9 kills hasta el min 10);
+  - los soportes de dota-bot pasan el 64 % del tiempo a 1.500 o menos de un núcleo (Valve, 35 %).
+- Validez: descriptivo; 18 partidas; rol y mid aproximados; los últimos golpes incluyen neutrales.
+- Lectura: contra Valve, dota-bot gana la fase de líneas con holgura (unos +7.700 en el min 10). Lo que pierde
+  partidas está después (regalar ventajas, no cerrar), que es lo que mide `n3-v3r`. Una capa de líneas contra Valve
+  tendría poco margen; contra humanos puede ser distinto (rotaciones del mid, por ejemplo): se mira con el resultado
+  de la serie y con la prueba con amigos.
+
+### 2026-11-02 · `n3-v3r`, primera mirada (tanda `n3-v3r-a`, 8 bloques)
+- Resultado: `cerebro_v3` 3 de 16, `base` 4 de 16; CMH z = −1,00: toca la parada por perjuicio (z ≤ −1, no
+  vinculante). Sin inválidas. Think 30,0 y 30,0. CPU media 28 %, máximo 76 %.
+- v3 no arregla el defecto que ataca: llegó a +10.000 en 13 y perdió 10 (`base`: 12 y 8). Secundaria (patrimonio
+  por minuto, min 18-26, por bloque): v3 mejor en 2, peor en 6. Sumando `n3-v3-a` y `n3-v3r-a`: v3 11 de 32,
+  `base` 12 de 32.
+- Validez: en esta tanda los dos brazos ganan mucho menos que en `n3-v3-a` (`base` 4/16 frente a 8/16, mismo
+  código): cae igual sobre los dos (mismo sorteo y lados por bloque); causa sin aislar (sorteo, carga).
+- Decisión: pendiente de Pedro (recomendación: aceptar la parada y diagnosticar en los registros observados por qué v3
+  sigue regalando ventajas antes de diseñar nada).
+
+### 2026-11-03 · Diagnóstico de las ventajas regaladas (lectura de `n3-v3r-a`, los dos brazos observados)
+- Pregunta: ¿por qué dota-bot, con y sin v3, pierde partidas en las que fue +10.000? Pedro aceptó la parada y pidió
+  diagnosticar antes de corregir (DECISIONES 2026-11-03).
+- Datos: las 25 partidas de `n3-v3r-a` que llegaron a +10.000 (v3: 10 perdidas y 3 ganadas; `base`: 8 y 4). Scripts de
+  lectura de la sesión (`scratchpad/throws.mjs`, `numbers.mjs`).
+- Resultado:
+
+  | | v3 perdidas | `base` perdidas | v3 ganadas | `base` ganadas |
+  |---|---|---|---|---|
+  | Pico de ventaja (media) y minuto | +14.300, min 18 | +33.600, min 26 | +39.400, min 25 | +44.600, min 31 |
+  | Torres enemigas en pie en el pico (de 11) / cuarteles (de 6) | 8,4 / 6,0 | 7,1 / 5,4 | 1,3 / 2,7 | 4,3 / 3,5 |
+  | Desde el pico: muertes / kills | 16,9 / 10,5 | 14,8 / 9,4 | 0 / 0 | 3,5 / 3,0 |
+  | Desde el pico: torres / cuarteles propios perdidos | 7,0 / 3,5 | 6,5 / 3,8 | 0 / 0 | 1,3 / 0,5 |
+  | Rachas de 3+ muertes en 20 s desde el pico | 2,4 | 2,9 | 0 | 0,5 |
+  | Muertes en la mitad propia | 65 % | 70 % | — | 41 % |
+
+  - Plan de v3 desde el pico en las perdidas: LINEA 58 %, REAGRUPAR 17 %, DEFENDER 14 %, y los estados de asalto
+    (TOMAR, AGRUPAR, EMPUJAR, CERRAR, ROSHAN) juntos un 11 %.
+- Lectura:
+  1. Las ventajas que se pierden son ventajas de oro sin edificios: en el pico Valve conserva 7-8 de sus 11 torres y
+     todos sus cuarteles; cuando dota-bot gana, en el pico le quedan 1-4 torres.
+  2. Valve remonta empujando la mitad de dota-bot: tras el pico, dota-bot pierde 6-7 torres y 3-4 cuarteles y muere
+     en su propia mitad (65-70 %), a menudo varios a la vez.
+  3. v3 no cambia nada de eso: llega antes a un pico más bajo y luego pasa el 89 % del tiempo en línea, reagrupando o
+     defendiendo. Los asaltos que diseñamos apenas ocurren después del pico.
+- Validez: descriptivo, 25 partidas. Las posiciones son cada 30 s: a esa resolución no se ve la pelea en el momento
+  de cada muerte (la foto anterior muestra 2-3 aliados y 1 enemigo cerca), así que «pierde las peleas en su mitad
+  porque llega en inferioridad» no está comprobado.
+- Decisión: pendiente de Pedro.

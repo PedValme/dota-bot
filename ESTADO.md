@@ -2,18 +2,20 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Cerebro v3 FIRMADO (2026-11-01), en construcción** (`trabajo/cerebro-v3.md`, sección «Versión final
-  tras la revisión adversarial»). Revisión hecha el 2026-11-01 con tres revisores Opus; hallazgo mayor, comprobado en
-  el código: el farm se apaga en el min 18 de Turbo (`mode_farm_generic.lua:382-383`) y el ataque es de Valve, así que
-  partes de v2/v3 no actuarían. Con la firma: partida 0 de API, luego capas 5 → 1 → 3 → 2 → 4, y una serie final
-  secuencial firmada (hasta 40 por brazo, miradas a 16 y 28). Farm y fases sin reloj, por situación (DECISIONES 2026-11-01).
-  - En curso (2026-11-01): partida 0 (`sonda_api`, rama `claude/cerebro-v3-partida0`, 2 partidas `v3-partida0`
-    corriendo; revisión de la sonda sin bloqueos: falta que la ulti enemiga se lea tras verla lanzar, que los
-    modificadores con tiempo se impriman y que `AttackDesire` vaya en pcall). Capas 5, 1, 3 y 2 escritas en el worktree
-    `../dota-bot-v3` (rama `claude/cerebro-v3-capas`, variantes `cerebro_v3` y `cerebro_v3_sombra`), en revisión Opus.
-    Siguiente: leer la partida 0, arreglar la sonda, capa 4 con el gancho del ataque, partida observada en sombra.
-  - Pedro critica, con razón, que en 4 días el bot por defecto sigue igual: se dedicó casi todo a hacer fiable el banco
-    y luego a reglas sueltas, contra su regla del 2026-10-30. No repetirlo.
+- **Cerebro v3 (firmado 2026-11-01) construido, medido y parado: no mejora a `base`.** Serie `n3-v3r` parada por
+  perjuicio en la primera mirada (3-4; con la serie cortada antes, 11 de 32 frente a 12 de 32). Corridas paradas hasta
+  corregir (DECISIONES 2026-11-03). Todo en MEDICIONES desde `v3-partida0`.
+- **Diagnóstico hecho** (MEDICIONES, «Diagnóstico de las ventajas regaladas»): dota-bot, con y sin v3, pierde ventajas de
+  oro sin edificios (en el pico Valve conserva 7-8 de 11 torres y todos los cuarteles); Valve remonta empujando su
+  mitad (6-7 torres y 3-4 cuarteles perdidos, el 65-70 % de las muertes en la mitad propia, en rachas). v3 apenas
+  asalta después del pico (89 % del tiempo en línea, reagrupando o defendiendo).
+- Espera al dueño: qué hacer con el diagnóstico · Recomendado: la que se le presentó el 2026-11-03 (ver respuesta de esa
+  sesión; si no está escrita aquí, preguntarle de nuevo con el diagnóstico delante).
+- El código de v3 está en `main` apagado por defecto (variante `cerebro_v3`), con las mejoras del banco
+  (`--repetir-invalidas`, contador de Think, `tools/analisis/n3-v3.mjs`). La fase de líneas queda como está
+  (DECISIONES 2026-11-02).
+- Pedro critica, con razón, que el bot por defecto sigue igual tras días de trabajo. No repetir construcciones grandes
+  sin un diagnóstico que diga dónde se pierde.
 - **2026-11-01. Niveles 0 y 1 hechos y en `main`** (#22-#26):
   - banco completo; serie A contra A (`aa`): brazos parejos, las victorias son demasiado ruidosas para el nivel 2
     (~90 partidas por brazo para 20 puntos) y el minuto de +10.000 apenas varía (~1,4 min);

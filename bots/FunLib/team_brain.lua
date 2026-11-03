@@ -72,11 +72,20 @@ local function Centroid(units)
 end
 
 -- Deaths in the last FIGHT_WINDOW seconds, from alive -> dead transitions.
+-- Where each hero was last seen alive (allies always, enemies when visible): where it died, for the v3 fight log.
+local lastLoc = {}
+local deathLocs = { ally = {}, enemy = {} }
 local function TrackDeaths(now)
+	for _, u in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if u:IsAlive() and not u:IsIllusion() then lastLoc[u:GetPlayerID()] = u:GetLocation() end
+	end
+	for _, u in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES) or {}) do
+		if u:CanBeSeen() and u:IsAlive() and not u:IsIllusion() then lastLoc[u:GetPlayerID()] = u:GetLocation() end
+	end
 	for side, team in pairs({ ally = GetTeam(), enemy = GetOpposingTeam() }) do
 		for _, pid in ipairs(GetTeamPlayers(team)) do
 			local alive = IsHeroAlive(pid)
-			if wasAlive[pid] == true and not alive then deathTimes[side][pid] = now end
+			if wasAlive[pid] == true and not alive then deathTimes[side][pid] = now; deathLocs[side][pid] = lastLoc[pid] end
 			wasAlive[pid] = alive
 		end
 	end
@@ -127,7 +136,7 @@ local function NetWorthLead(allies, enemies)
 		local level = math.max(1, math.min(30, GetHeroLevel(pid) or 1))
 		theirs = theirs + math.max(enemyItems[pid] or 0, NW_BY_LEVEL[level])
 	end
-	return mine - theirs
+	return mine - theirs, mine + theirs
 end
 
 local function Power(u, raw)
@@ -168,6 +177,302 @@ function B.EvaluateFight(loc, now)
 	end
 	return allyPower / math.max(1, enemyPower), allyCount
 end
+
+-- Layer 1 (v3): one evaluation per fight, for the next 10-20 s (criterio §1). A fight is a group of visible enemies
+-- near an ally, wherever it is (v2 only evaluated around the centre of the five, outside LINEA). Allies count if they
+-- arrive within 8 s (distance / speed) or are teleporting there; enemies seen with their raw power (less if we saw
+-- their ultimate cast recently), unseen ones last seen near for under 10 s; our tower near helps, theirs hurts, Aegis
+-- helps. Computed once per team in Update; each ally keeps a verdict with hysteresis (in above 1.1, out below 0.8),
+-- which J.WeAreStronger returns instead of OHA's (in shadow mode, "v3_sombra", it only logs both).
+local FIGHT_ENTER, FIGHT_EXIT = 1.1, 0.8
+local ASSAULT_MAX, PREPARE_TIME = 60, 45 -- layer 3: seconds of an assault, then of preparing (farming) before the next
+local assaultSince = nil
+local FORM_MAX = 6    -- seconds a fight may stay forming (from its first FORMAR) before it starts anyway
+local INIT_MAX = 10   -- seconds the initiators get "in a team fight" from the start of INICIAR
+local FORM_DIST = 1100 -- forming point: this far from the enemy group, toward our allies
+local ARRIVE_SECONDS = 8
+local fights = {}          -- current fights: { loc, value, allies, enemies, id }
+local verdict = {}         -- ally pid -> { strong = bool, value, time, fight }
+local fightLog = {}        -- fight id -> { time, loc, value, allyDeaths0, enemyDeaths0, logged }
+local nextFightId = 1
+
+local function TowerNear(team, loc, r)
+	for _, t in ipairs({ TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3, TOWER_MID_1, TOWER_MID_2, TOWER_MID_3, TOWER_BOT_1,
+		TOWER_BOT_2, TOWER_BOT_3, TOWER_BASE_1, TOWER_BASE_2 }) do
+		local u = GetTower(team, t)
+		if u ~= nil and u:IsAlive() and Dist(u:GetLocation(), loc) <= r then return true end
+	end
+	return false
+end
+
+-- v3: the team's laning phase, by the state of the match (Pedro: not the clock). J.IsInLaningPhase() reads GetBot(),
+-- which is nil in the team's think (34 plan errors in the v3-activo smoke). The laning ends when the average level of
+-- the ten reaches 9.2 (that of a normal game's minute 15, J.IsEarlyGame by state) or a tier 1 tower falls; without
+-- fase_estado, the clock (8 min in Turbo, 15 normal). In n3-v3-a the brain's early retreat and team objectives cost
+-- half the kills by minute 5 and half the lead by minute 18 (DECISIONES 2026-11-02): in this phase OHA plays.
+-- Cached 0.2 s (it is asked per bot and per frame through WeAreStronger), and once over it stays over.
+local T1S = { TOWER_TOP_1, TOWER_MID_1, TOWER_BOT_1 }
+local laningOver, laningAt, laningValue = false, -1000, true
+function B.TeamLaning(now)
+	now = now or DotaTime()
+	if now < 0 then return true end
+	if laningOver then return false end
+	if now - laningAt < UPDATE_EVERY then return laningValue end
+	laningAt = now
+	local value = true
+	for _, team in ipairs({ GetTeam(), GetOpposingTeam() }) do
+		for _, t in ipairs(T1S) do
+			local u = GetTower(team, t)
+			if u == nil or not u:IsAlive() then value = false end
+		end
+	end
+	if value then
+		if J ~= nil and J.StatePhases() then value = J.GamePhaseLevel() < 9.2
+		else value = now < ((J ~= nil and J.IsModeTurbo()) and 8 or 15) * 60 end
+	end
+	laningValue = value
+	if not value then laningOver = true end
+	return value
+end
+
+local ultCache = {} -- enemy unit name -> its ultimate ability (found once)
+local function EnemyUltimate(e)
+	local key = e:GetUnitName()
+	if ultCache[key] == nil then
+		ultCache[key] = false
+		for i = 0, 23 do
+			local a = e:GetAbilityInSlot(i)
+			if a ~= nil and not a:IsHidden() and a:IsUltimate() then ultCache[key] = a; break end
+		end
+	end
+	return ultCache[key] or nil
+end
+
+function B.EvaluateFightV3(loc, now, hasAegis)
+	now = now or DotaTime()
+	-- Teleports toward the fight, ours and theirs (game 0: GetIncomingTeleports lists the enemy's too).
+	local tpTo, enemyTp = {}, 0
+	local enemyPids = {}
+	for _, pid in ipairs(GetTeamPlayers(GetOpposingTeam())) do enemyPids[pid] = true end
+	for _, tp in ipairs(GetIncomingTeleports() or {}) do
+		if tp.location ~= nil and Dist(tp.location, loc) <= 1500 then
+			tpTo[tp.playerid] = true
+			if enemyPids[tp.playerid] then enemyTp = enemyTp + 1 end
+		end
+	end
+	local allyPower, allyCount = 0, 0
+	for _, a in ipairs(Allies()) do
+		if a:IsAlive() then
+			local d = Dist(a:GetLocation(), loc)
+			local speed = math.max(250, a:GetCurrentMovementSpeed() or 300)
+			if d <= 1200 or d / speed <= ARRIVE_SECONDS or tpTo[a:GetPlayerID()] then
+				allyPower = allyPower + Power(a, false) * (d <= 1200 and 1 or 0.8)
+				allyCount = allyCount + 1
+			end
+		end
+	end
+	local enemyPower, enemyCount, seen = 0, 0, {}
+	for _, e in ipairs(VisibleEnemies()) do
+		if Dist(e:GetLocation(), loc) <= 1800 then
+			-- Game 0: an enemy ultimate's cooldown reads -1, but IsFullyCastable answers (false after it is cast).
+			local ultUsed = enemyUltSeen[e:GetUnitName()] ~= nil and now - enemyUltSeen[e:GetUnitName()] < 60
+			local ult = EnemyUltimate(e)
+			if ult ~= nil and ult:GetLevel() >= 1 then ultUsed = not ult:IsFullyCastable() end
+			enemyPower = enemyPower + Power(e, true) * (ultUsed and 0.8 or 1)
+			enemyCount = enemyCount + 1
+		end
+		seen[e:GetPlayerID()] = true
+	end
+	local avgAlly = allyCount > 0 and allyPower / allyCount or 1
+	-- Enemies teleporting to the fight, unseen there yet, count as an average ally each.
+	enemyPower = enemyPower + enemyTp * avgAlly
+	enemyCount = enemyCount + enemyTp
+	for _, pid in ipairs(GetTeamPlayers(GetOpposingTeam())) do
+		if IsHeroAlive(pid) and not seen[pid] then
+			local info = GetHeroLastSeenInfo(pid)
+			local last = info and info[1] or info
+			if last and last.time_since_seen and last.time_since_seen < 10 and last.location
+				and Dist(last.location, loc) <= 3000 then
+				enemyPower = enemyPower + avgAlly * 0.8
+				enemyCount = enemyCount + 1
+			end
+		end
+	end
+	local mul = 1
+	if TowerNear(GetTeam(), loc, 900) then mul = mul * 1.2 end
+	if TowerNear(GetOpposingTeam(), loc, 900) then mul = mul * 0.75 end
+	if hasAegis then mul = mul * 1.15 end
+	return mul * allyPower / math.max(1, enemyPower), allyCount, enemyCount
+end
+
+-- Groups of visible enemies (within 1500 of each other) with an ally within 2500: the fights to evaluate.
+local function FindFights(allies, enemies, now, hasAegis)
+	local list, used = {}, {}
+	for i, e in ipairs(enemies) do
+		if not used[i] then
+			local group = { e }
+			used[i] = true
+			for j = i + 1, #enemies do
+				if not used[j] and Dist(enemies[j]:GetLocation(), e:GetLocation()) <= 1500 then
+					used[j] = true
+					table.insert(group, enemies[j])
+				end
+			end
+			local loc = Centroid(group)
+			local near = false
+			for _, a in ipairs(allies) do if a:IsAlive() and Dist(a:GetLocation(), loc) <= 2500 then near = true end end
+			if loc ~= nil and near then
+				local value, nA, nE = B.EvaluateFightV3(loc, now, hasAegis)
+				-- Allies already there (within FORM_DIST + 600: those holding at the forming point count, review
+				-- 2026-11-02), the ones that can arrive in 8 s (they get the forming point too), whether one of them
+				-- was hit in the last 1.5 s (then nobody holds), the allies' centre, and whether an enemy of the group
+				-- just cast its ultimate (they initiated on us: counter-initiation).
+				local present, here, members, allyHit = 0, {}, {}, false
+				for _, a in ipairs(allies) do
+					if a:IsAlive() then
+						local d = Dist(a:GetLocation(), loc)
+						if d <= FORM_DIST + 600 then present = present + 1 end
+						if d <= 3000 then table.insert(here, a) end
+						if d <= 1200 or d / math.max(250, a:GetCurrentMovementSpeed() or 300) <= ARRIVE_SECONDS then
+							members[a:GetPlayerID()] = true
+							if a:WasRecentlyDamagedByAnyHero(1.5) then allyHit = true end
+						end
+					end
+				end
+				local theyInitiated = false
+				for _, g in ipairs(group) do
+					local t = enemyUltSeen[g:GetUnitName()]
+					if t ~= nil and now - t <= 1.5 then theyInitiated = true end
+				end
+				table.insert(list, { loc = loc, value = value, allies = nA, enemies = nE, size = #group, present = present,
+					allyCenter = Centroid(here), theyInitiated = theyInitiated, members = members, allyHit = allyHit })
+			end
+		end
+	end
+	return list
+end
+
+local function UpdateFights(allies, enemies, now, hasAegis)
+	fights = FindFights(allies, enemies, now, hasAegis)
+	-- Same fight as a recent one (within 1500 of where it was, seen in the last 15 s): keep its id for the log.
+	local usedIds = {} -- two fights of one tick never share an entry (and its phase)
+	for _, f in ipairs(fights) do
+		local bestD = 1500
+		for id, l in pairs(fightLog) do
+			local d = Dist(l.loc, f.loc)
+			if not usedIds[id] and now - l.seen <= 15 and d <= bestD then f.id, bestD = id, d end
+		end
+		if f.id ~= nil then usedIds[f.id] = true end
+		if f.id == nil then
+			f.id = nextFightId
+			nextFightId = nextFightId + 1
+			usedIds[f.id] = true
+			fightLog[f.id] = { start = now, loc = f.loc, value = f.value }
+			print(string.format('[bench] eval t=%d team=%d id=%d valor=%.2f aliados=%d enemigos=%d visibles=%d', math.floor(now),
+				GetTeam(), f.id, f.value, f.allies, f.enemies, f.size))
+		end
+		fightLog[f.id].seen = now
+		fightLog[f.id].loc = f.loc
+		-- Layer 4 (v3), initiation by phases (criterio §6). FORMAR: the fight is ours with the allies who can arrive,
+		-- but fewer are there than needed; those present hold 1300 from the enemy until the rest come (at most
+		-- FORM_MAX s). INICIAR: enough are there (or the form timed out, or they initiated on us): initiators may start
+		-- (J.IsInTeamFight answers yes for them, INIT_MAX s). Below the bar, no phase.
+		local l = fightLog[f.id]
+		local need = math.min(f.allies, f.enemies + 1)
+		-- Forming is for real team fights: two or more enemies, past the laning phase (review 2026-11-02: against a lone
+		-- laner it made the core walk off its lane and let low enemies escape).
+		local laning = B.TeamLaning(now)
+		local canForm = f.enemies >= 2 and not laning
+		local formedOut = l.formStart ~= nil and now - l.formStart > FORM_MAX
+		local phase = nil
+		-- In the laning phase no phases at all but a counter-initiation: INICIAR made every lane skirmish a team fight
+		-- for the initiators (473 times before minute 10 in n3-v3-a).
+		if laning and not f.theyInitiated then
+			-- a counter-initiation already started keeps its INIT_MAX window (review 2026-11-02), then ends
+			phase = (l.phase == 'INICIAR' and now - l.phaseSince <= INIT_MAX and f.value >= FIGHT_EXIT) and 'INICIAR' or nil
+		elseif f.theyInitiated and f.value >= FIGHT_EXIT then
+			phase = 'INICIAR'
+		elseif (l.phase == 'INICIAR' or l.phase == 'PELEA') and f.value >= FIGHT_EXIT then
+			-- once started, the fight goes on while it holds; the initiators' window closes after INIT_MAX
+			phase = (l.phase == 'INICIAR' and now - l.phaseSince <= INIT_MAX) and 'INICIAR' or 'PELEA'
+		elseif l.phase == 'FORMAR' and f.value >= FIGHT_EXIT then
+			phase = (f.present >= need or formedOut) and 'INICIAR' or 'FORMAR'
+		elseif f.value >= FIGHT_ENTER then
+			if f.present >= need or not canForm or formedOut then phase = 'INICIAR' else phase = 'FORMAR' end
+		end
+		if phase == 'FORMAR' and l.formStart == nil then l.formStart = now end
+		if phase ~= l.phase then
+			print(string.format('[bench] fase t=%d team=%d id=%d %s -> %s valor=%.2f presentes=%d/%d enemigos=%d%s', math.floor(now),
+				GetTeam(), f.id, tostring(l.phase), tostring(phase), f.value, f.present, need, f.enemies,
+				(l.phase == 'FORMAR' and formedOut) and ' caduca' or ((f.theyInitiated and phase == 'INICIAR') and ' contra' or '')))
+			l.phase, l.phaseSince = phase, now
+		end
+		f.phase = phase
+		if phase == 'FORMAR' and f.allyCenter ~= nil then
+			local dx, dy = f.allyCenter.x - f.loc.x, f.allyCenter.y - f.loc.y
+			local d = math.max(1, math.sqrt(dx * dx + dy * dy))
+			f.formPoint = Vector(f.loc.x + dx / d * FORM_DIST, f.loc.y + dy / d * FORM_DIST, 0)
+		end
+	end
+	-- 10 s after a fight starts: who died near it (within 2500 of where it was) since it started, by side.
+	for id, l in pairs(fightLog) do
+		if not l.logged and now - l.start >= 10 then
+			l.logged = true
+			local function Near(side)
+				local n = 0
+				for pid, t in pairs(deathTimes[side]) do
+					local where = deathLocs[side][pid]
+					if t >= l.start and t <= now and where ~= nil and Dist(where, l.loc) <= 2500 then n = n + 1 end
+				end
+				return n
+			end
+			local a, e = Near('ally'), Near('enemy')
+			print(string.format('[bench] eval_fin t=%d team=%d id=%d valor=%.2f muertos_aliados=%d muertos_enemigos=%d',
+				math.floor(now), GetTeam(), id, l.value, a, e))
+		end
+		if now - (l.seen or l.start) > 60 then fightLog[id] = nil end
+	end
+	-- Each ally's verdict: the nearest fight within 1600, with hysteresis; no fight near means no verdict (OHA's).
+	for _, a in ipairs(allies) do
+		local pid = a:GetPlayerID()
+		local best, bestD = nil, 1600
+		if a:IsAlive() then
+			for _, f in ipairs(fights) do
+				local d = Dist(a:GetLocation(), f.loc)
+				if d <= bestD then best, bestD = f, d end
+			end
+		end
+		if best == nil then
+			verdict[pid] = nil
+		else
+			local prev = verdict[pid]
+			-- The hysteresis belongs to one fight: coming from a won fight does not make a new one "ours".
+			local strong = prev ~= nil and prev.fight == best.id and prev.strong
+			if strong and best.value < FIGHT_EXIT then strong = false
+			elseif not strong and best.value >= FIGHT_ENTER then strong = true end
+			verdict[pid] = { strong = strong, value = best.value, time = now, fight = best.id }
+		end
+	end
+end
+
+-- v3: an error in Update must not leave the five on a stale plan. Back to LINEA (OHA's own behaviour), no fight
+-- verdicts, and the plan off for 10 s (team_desires.lua calls this; B.Update checks errorUntil).
+local errorUntil = -1000
+function B.OnError()
+	if not B.V3() then return end -- B.V3: the local V3 is defined further down
+	errorUntil = DotaTime() + 10
+	fights, verdict = {}, {}
+	B.plan.state, B.plan.lane, B.plan.rally, B.plan.engage = 'LINEA', nil, nil, nil
+	B.plan.defenders, B.plan.creepDefense = {}, nil
+end
+
+-- The v3 verdict for a bot (true / false), or nil when there is no fight near it or v3 is off.
+function B.FightVerdict(bot)
+	local v = verdict[bot:GetPlayerID()]
+	if v == nil or DotaTime() - v.time > 0.5 then return nil end
+	return v.strong, v.value
+end
+function B.Fights() return fights end
 
 -- Our base structures under attack, per lane (T3 and barracks; T4 and Ancient count for mid). Creeps count too:
 -- OHA's defend mode only reacted to heroes, and megacreeps took a base 18k ahead (docs/mapa.md, remate-ab game 17).
@@ -323,7 +628,11 @@ local function Flag(name)
 	end
 	return flags[name]
 end
-local function DefendAll() return Flag('defensa_total') end
+-- Brain v3 (trabajo/cerebro-v3.md, signed by Pedro 2026-11-01): variant "cerebro_v3", on top of v2.
+local function V3() return Flag('cerebro_v3') end
+B.V3 = V3
+function B.Shadow() return Flag('v3_sombra') end
+local function DefendAll() return Flag('defensa_total') or V3() end
 
 local function NearestAllies(loc, k)
 	local list = {}
@@ -338,6 +647,7 @@ function B.Update()
 	local now = DotaTime()
 	if now < nextUpdate then return end
 	nextUpdate = now + UPDATE_EVERY
+	if now < errorUntil and V3() then return end
 	if J == nil then
 		local ok, mod = pcall(require, GetScriptDirectory()..'/FunLib/jmz_func')
 		if ok then J = mod end
@@ -349,7 +659,16 @@ function B.Update()
 	TrackEnemyUlts(enemies, now)
 	local center = Centroid(allies) or GetAncient(GetTeam()):GetLocation()
 	local aliveA, aliveE = AliveCount(GetTeam()), AliveCount(GetOpposingTeam())
-	local lead = NetWorthLead(allies, enemies)
+	local lead, totalWorth = NetWorthLead(allies, enemies)
+	-- v3: the lead thresholds relative to the gold in the game (the benchmark gives double gold, and +5k means less as
+	-- the game grows): +5k of the pros is about 7 % of both teams' net worth around their minute 20, +10k about 12 %.
+	local leadGroup, leadClose = LEAD_GROUP, LEAD_CLOSE
+	if V3() then
+		-- Never below v2's absolute thresholds: with floors of 3k/6k the team went up the high ground at minute 10 with
+		-- +9.4k and stayed grouped for ten minutes (v3-activo smoke, 2026-11-02); relative only raises them later.
+		leadGroup = math.max(LEAD_GROUP, 0.07 * totalWorth)
+		leadClose = math.max(LEAD_CLOSE, 0.12 * totalWorth)
+	end
 	if now - (B.lastTick or -1000) >= 30 then
 		B.lastTick = now
 		-- Lane fronts by the API's own measure and by geometry, to check how GetLaneFrontAmount counts for each side.
@@ -358,8 +677,8 @@ function B.Update()
 			local f = GetLaneFrontLocation(GetTeam(), lane, 0)
 			table.insert(fronts, string.format('%d:%.2f@%d,%d', lane, GetLaneFrontAmount(GetTeam(), lane, false), f.x, f.y))
 		end
-		print(string.format('[bench] plan_tick t=%d team=%d state=%s lead=%d alive=%d-%d fronts=%s', math.floor(now), GetTeam(),
-			B.plan.state, lead, aliveA, aliveE, table.concat(fronts, ' ')))
+		print(string.format('[bench] plan_tick t=%d team=%d state=%s lead=%d total=%d alive=%d-%d fronts=%s', math.floor(now), GetTeam(),
+			B.plan.state, lead, totalWorth, aliveA, aliveE, table.concat(fronts, ' ')))
 	end
 	local okAegis, aegis = pcall(function() return J ~= nil and J.DoesTeamHaveAegis() end)
 	local hasAegis = okAegis and aegis == true
@@ -379,6 +698,8 @@ function B.Update()
 		p.engage = { loc = center, time = now }
 	end
 
+	if V3() then UpdateFights(allies, enemies, now, hasAegis) end
+
 	if now < 0 then SetState('LINEA', { reason = 'pregame' }, now) return end
 
 	-- 1) Defend the base first, whatever the lead. Two or more enemy heroes, or any past the T3, make the whole plan
@@ -391,6 +712,7 @@ function B.Update()
 		if worst == nil or t.heroes > worst.heroes or (t.heroes == worst.heroes and t.creeps > worst.creeps) then worstLane, worst = lane, t end
 	end
 	p.creepDefense = nil
+	p.baseThreats, p.worstThreat = threats, worst
 	if worst ~= nil and (worst.heroes >= 2 or (worst.heroes >= 1 and worst.inner)) then
 		local k = worst.heroes >= 3 and 5 or worst.heroes + 1
 		-- Variant "defensa_total" (2026-10-31): as Dire most of the brain's deaths were defending its base piecemeal
@@ -406,6 +728,13 @@ function B.Update()
 	elseif worst ~= nil then
 		local k = ((worst.heroes >= 1 and worst.creeps >= 5) or worst.creeps >= 8) and 2 or 1
 		p.creepDefense = { lane = worstLane, defenders = NearestAllies(worst.loc, k) }
+	end
+
+	-- v3: in the laning phase the plan only defends the base (above); no regrouping, taking, grouping, pushing or
+	-- Roshan: those pulled heroes off their lanes (63 times before minute 10 in n3-v3-a, DECISIONES 2026-11-02).
+	if V3() and B.TeamLaning(now) then
+		SetState('LINEA', { reason = 'fase de lineas' }, now)
+		return
 	end
 
 	-- Hold the current state a little unless something above overrides it.
@@ -453,21 +782,38 @@ function B.Update()
 	-- 4) Clear lead at even or better numbers: Roshan, or group and push one lane; into the base with Aegis or +10k.
 	-- Hysteresis: a group already formed keeps going while the lead stays above 3.5k and at most one hero is down.
 	local grouped = p.state == 'AGRUPAR' or p.state == 'EMPUJAR' or p.state == 'CERRAR'
+	-- Layer 3 (v3), assaults and preparing (criterio §12, signed plan): an assault lasts at most ASSAULT_MAX s, then the
+	-- team PREPARES for PREPARE_TIME s (LINEA: the cores farm by FarmV3, OHA's own laning and pushing). Without it the
+	-- plan kept the five grouped from minute 9 to 20 with the cores' farming off, and the lead went (v3-activo smoke,
+	-- 2026-11-02). Aegis keeps the assault going; a won fight still takes its objective (TOMAR, above).
+	if V3() then
+		if grouped or p.state == 'TOMAR' then
+			assaultSince = assaultSince or now
+			if grouped and not hasAegis and now - assaultSince > ASSAULT_MAX then
+				SetState('LINEA', { reason = string.format('preparar lead=%d', lead) }, now)
+				lineaHoldUntil = now + PREPARE_TIME
+				assaultSince = nil
+				return
+			end
+		else
+			assaultSince = nil
+		end
+	end
 	-- Variant "prudente" (2026-10-31): as Dire, with weaker heroes (random, see the custom game), the brain grouped and
 	-- pushed on a gold lead it could not fight for. With it, a new group push also needs the fight around the team
 	-- clearly ours.
 	local fightOk = not Flag('prudente') or grouped or B.EvaluateFight(center, now) >= 1.1
-	if fightOk and ((lead >= LEAD_GROUP and aliveA >= aliveE) or (grouped and lead >= LEAD_GROUP - 1500 and aliveA >= aliveE - 1)) then
-		if roshanReady and aliveA >= 4 and lead >= LEAD_GROUP and (p.state == 'ROSHAN' or aliveE <= 3) then
+	if fightOk and ((lead >= leadGroup and aliveA >= aliveE) or (grouped and lead >= leadGroup - 1500 and aliveA >= aliveE - 1)) then
+		if roshanReady and aliveA >= 4 and lead >= leadGroup and (p.state == 'ROSHAN' or aliveE <= 3) then
 			SetState('ROSHAN', { reason = string.format('lead=%d', lead) }, now)
 			return
 		end
 		-- Into the enemy base only with the fight in favour, not just Aegis or a lead: in v1 the team went up the high
 		-- ground, lost the fight there and the base after it (series cerebro-ab). Needs at least four alive, no fewer
 		-- than them, and the fight around the group evaluated clearly ours.
-		local fightHere = B.EvaluateFight(center, now)
+		local fightHere = V3() and B.EvaluateFightV3(center, now, hasAegis) or B.EvaluateFight(center, now)
 		-- Hysteresis: 1.2 to start closing, 1.0 to keep at it (the evaluation moves with what the team sees).
-		local close = (hasAegis or lead >= LEAD_CLOSE) and aliveA >= 4 and aliveA >= aliveE
+		local close = (hasAegis or lead >= leadClose) and aliveA >= 4 and aliveA >= aliveE
 			and fightHere >= (p.state == 'CERRAR' and 1.0 or 1.2)
 		-- And back out in time: once the closing goes wrong (an ally down and the fight no longer ours), stop and farm
 		-- instead of feeding the rest of the team into the towers.
@@ -565,9 +911,46 @@ function B.DefendDesire(bot, lane)
 	return nil
 end
 
--- Rally point for mode_assemble: gather before a push, or fall back after a lost fight.
+-- The fight a bot's verdict belongs to (v3), or nil.
+local function BotFight(bot)
+	local v = verdict[bot:GetPlayerID()]
+	if v == nil or DotaTime() - v.time > 0.5 then return nil end
+	for _, f in ipairs(fights) do if f.id == v.fight then return f end end
+	return nil
+end
+
+-- Layer 4 (v3): heroes whose ultimate starts a fight (blink or area control). Only they get J.IsInTeamFight from the
+-- INICIAR phase; v2's engage hook changed every spell of every hero (~300 uses).
+local INITIATORS = {
+	npc_dota_hero_enigma = true, npc_dota_hero_magnataur = true, npc_dota_hero_tidehunter = true,
+	npc_dota_hero_earthshaker = true, npc_dota_hero_faceless_void = true, npc_dota_hero_axe = true,
+	npc_dota_hero_sand_king = true, npc_dota_hero_centaur = true, npc_dota_hero_mars = true,
+	npc_dota_hero_primal_beast = true, npc_dota_hero_dark_seer = true, npc_dota_hero_disruptor = true,
+	npc_dota_hero_warlock = true, npc_dota_hero_batrider = true, npc_dota_hero_puck = true,
+	npc_dota_hero_slardar = true, npc_dota_hero_legion_commander = true, npc_dota_hero_beastmaster = true,
+}
+function B.InitiateNow(bot)
+	if not (Enabled() and V3()) or not INITIATORS[bot:GetUnitName()] then return false end
+	local f = BotFight(bot)
+	return f ~= nil and f.phase == 'INICIAR'
+end
+
+-- Rally point for mode_assemble: gather before a push, or fall back after a lost fight; v3, hold at the forming point
+-- of a fight in FORMAR (0.97, above Valve's attack at 0.95, so nobody walks in alone), unless hit right now.
 function B.RallyFor(bot)
 	local p = B.plan
+	-- Every ally the fight counts on (there or arriving in 8 s) gets the point; nobody holds while hurt, retreating hard
+	-- or while any ally of that fight is being hit (review 2026-11-02).
+	if Enabled() and V3() and not B.IsDefender(bot) then
+		local pid = bot:GetPlayerID()
+		for _, f in ipairs(fights) do
+			if f.phase == 'FORMAR' and f.formPoint ~= nil and f.members[pid] and not f.allyHit
+				and bot:GetHealth() / math.max(1, bot:GetMaxHealth()) >= 0.5
+				and not (bot:GetActiveMode() == BOT_MODE_RETREAT and bot:GetActiveModeDesire() > 0.9) then
+				return f.formPoint, 0.97
+			end
+		end
+	end
 	if p.rally == nil or B.IsDefender(bot) then return nil end
 	local d = Dist(bot:GetLocation(), p.rally)
 	if p.state == 'AGRUPAR' and d > 700 then return p.rally, 0.8 end
@@ -579,6 +962,62 @@ end
 -- fight; in LINEA OHA's own rule stays.
 function B.FarmAllowed()
 	return B.plan.state == 'REAGRUPAR'
+end
+
+-- Layer 3 (v3), farming by the situation, not the clock (Pedro, 2026-11-01: «situacional, por cantidad de oro en el
+-- carry mid y off quizás o algo que no dependa del reloj»). The gold a core still needs for its next key item (2000+
+-- gold) in its remaining purchase list (item_purchase_generic.lua keeps it, next item last).
+local KEY_ITEM_COST = 2000
+function B.KeyItemGoldNeeded(bot)
+	local list = bot.purchaseListInReverseOrder
+	if type(list) ~= 'table' then return nil end
+	for i = #list, 1, -1 do
+		local cost = GetItemCost(list[i]) or 0
+		if cost >= KEY_ITEM_COST then return math.max(0, cost - bot:GetGold()), list[i] end
+	end
+	return 0, nil -- nothing big left to buy
+end
+
+-- true: farm; false: do not farm; nil: OHA's own rules decide (supports in LINEA, or v3 off). Only an objective of the
+-- plan (defend, take, group, push, close, Roshan) stops a core's farming; a core with its key items done goes to
+-- pressure instead (its push desire, PushDesire below).
+local farmLog = {}
+function B.FarmV3(bot)
+	if not (Enabled() and V3()) then return nil end
+	local s = B.plan.state
+	if s == 'REAGRUPAR' then return true end
+	-- Objectives that use the whole team stop farming; while defending, only the assigned defenders stop.
+	if s == 'TOMAR' or s == 'AGRUPAR' or s == 'EMPUJAR' or s == 'CERRAR' or s == 'ROSHAN' then return false end
+	if B.IsDefender(bot) then return false end
+	-- Layer 2 (DECISIONES 2026-10-31): with 3+ enemies missing from the map (alive, unseen for 10 s), nobody farms in
+	-- the enemy half.
+	local missing = 0
+	for _, pid in ipairs(GetTeamPlayers(GetOpposingTeam())) do
+		if IsHeroAlive(pid) then
+			local info = GetHeroLastSeenInfo(pid)
+			local last = info and info[1] or info
+			if last == nil or last.time_since_seen == nil or last.time_since_seen >= 10 then missing = missing + 1 end
+		end
+	end
+	if missing >= 3 then
+		local here = bot:GetLocation()
+		if Dist(here, GetAncient(GetOpposingTeam()):GetLocation()) < Dist(here, GetAncient(GetTeam()):GetLocation()) then
+			return false
+		end
+	end
+	if J == nil or J.GetPosition(bot) > 3 then return nil end
+	local need, item = B.KeyItemGoldNeeded(bot)
+	-- A core with nothing big left to buy (or the gold for it in hand) is left to OHA's rules: there is no pressure
+	-- order yet for it to go to instead (review 2026-11-01). "falta" counts the whole item's cost, components bought
+	-- or not, so it overstates what is missing.
+	local farm = (need == nil or need > 0) and true or nil
+	local pid = bot:GetPlayerID()
+	if DotaTime() - (farmLog[pid] or -1000) >= 60 then
+		farmLog[pid] = DotaTime()
+		print(string.format('[bench] farm t=%d pid=%d pos=%d falta=%s item=%s farm=%s', math.floor(DotaTime()), pid,
+			J.GetPosition(bot), tostring(need), tostring(item), tostring(farm)))
+	end
+	return farm
 end
 
 -- Roshan desire (mode_roshan_generic.lua); a badly hurt bot is left to its own modes.
@@ -615,6 +1054,65 @@ function B.ShouldHelpAlly(bot, ally)
 		helpCache[pid] = c
 	end
 	return c.value >= 0.9
+end
+
+-- Layer 5 (v3), the base: glyph and buyback driven by the plan's base threats, creeps included. OHA's glyph only fires
+-- when an enemy HERO targets the building (ability_item_usage_generic.lua, X.IsTargetedByEnemy), so a megacreep siege
+-- never got one; OHA's Ancient buyback needs the Ancient below 80 % with no ally near it.
+local function LaneStructures(lane)
+	local team, list = GetTeam(), {}
+	for _, t in ipairs(BASE[lane].towers) do local u = GetTower(team, t); if u ~= nil and u:IsAlive() then table.insert(list, u) end end
+	for _, b in ipairs(BASE[lane].barracks) do local u = GetBarracks(team, b); if u ~= nil and u:IsAlive() then table.insert(list, u) end end
+	if lane == LANE_MID then local a = GetAncient(team); if a ~= nil and a:IsAlive() then table.insert(list, a) end end
+	return list
+end
+
+-- A reason to glyph now (string) or nil: a base structure under a real siege (an enemy hero or 5+ creeps at it) below
+-- 45 % health.
+function B.GlyphNow()
+	if not (Enabled() and V3()) or B.plan.baseThreats == nil then return nil end
+	for lane, t in pairs(B.plan.baseThreats) do
+		if t.heroes >= 1 or t.creeps >= 5 then
+			-- The siege must be at that same structure (an old wound next to a besieged T3 does not count).
+			local enemyCreeps = GetUnitList(UNIT_LIST_ENEMY_CREEPS) or {}
+			local enemies = VisibleEnemies()
+			for _, s in ipairs(LaneStructures(lane)) do
+				local hp = s:GetHealth() / math.max(1, s:GetMaxHealth())
+				if hp < 0.45 then
+					local loc, h, c = s:GetLocation(), 0, 0
+					for _, e in ipairs(enemies) do if Dist(e:GetLocation(), loc) <= 900 then h = h + 1 end end
+					for _, cr in ipairs(enemyCreeps) do if cr:IsAlive() and Dist(cr:GetLocation(), loc) <= 900 then c = c + 1 end end
+					if h >= 1 or c >= 5 then
+						return string.format('lane=%d %s hp=%.2f heroes=%d creeps=%d', lane, s:GetUnitName(), hp, h, c)
+					end
+				end
+			end
+		end
+	end
+	return nil
+end
+
+-- Whether a dead bot should buy back for the base: the plan is defending against heroes past the T3 (or two or more
+-- of them) and fewer allies are alive near the threat than enemy heroes there.
+function B.BuybackForBase(bot)
+	local w = B.plan.worstThreat
+	if not (Enabled() and V3()) or B.plan.state ~= 'DEFENDER' or w == nil then return false end
+	if not (w.heroes >= 2 or (w.heroes >= 1 and w.inner)) then return false end
+	-- Allies alive near the threat or at our fountain (one who just bought back counts), plus buybacks of the last
+	-- 15 s: no cascade of the five buying back for two heroes (review 2026-11-01).
+	local now, near = DotaTime(), 0
+	for _, a in ipairs(Allies()) do
+		if a:IsAlive() and (Dist(a:GetLocation(), w.loc) <= 3000 or a:DistanceFromFountain() <= 1500) then near = near + 1 end
+	end
+	B.recentBuybacks = B.recentBuybacks or {}
+	for pid, t in pairs(B.recentBuybacks) do
+		if now - t <= 15 then near = near + 1 else B.recentBuybacks[pid] = nil end
+	end
+	if near < w.heroes then
+		B.recentBuybacks[bot:GetPlayerID()] = now
+		return true
+	end
+	return false
 end
 
 function B.Focus(bot)
