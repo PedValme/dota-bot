@@ -32,23 +32,67 @@ function P.Queue(bot, s)
 	return s.buyQueue
 end
 
--- Buys the next part when the gold allows; returns a log line when something happened, else nil.
-function P.Buy(bot, s)
+local function MainSlotsUsed(bot)
+	local n = 0
+	for slot = 0, 5 do if bot:GetItemInSlot(slot) ~= nil then n = n + 1 end end
+	return n
+end
+
+-- Makes room: with the six main slots full, sells a branch (the cheapest filler); returns a log line or nil.
+local function MakeRoom(bot)
+	if MainSlotsUsed(bot) < 6 then return nil end
+	local slot = bot:FindItemSlot('item_branches')
+	if slot < 0 then return nil end
+	bot:ActionImmediate_SellItem(bot:GetItemInSlot(slot))
+	return 'vendo item_branches para hacer sitio'
+end
+
+-- Buys the next part when the gold allows; returns a log line when something happened, else nil. A part the shop
+-- near the hero cannot sell (secret shop: Hyperstone, Demon Edge, Reaver...) is skipped for now and logged: buying it
+-- with the courier at the secret shop is not part of phase 1 (it comes after minute 10 for this build).
+function P.Buy(bot, s, now)
 	local queue = P.Queue(bot, s)
 	local next = queue[s.buyIndex]
 	if next == nil then return nil end
+	if IsItemPurchasedFromSecretShop(next.part) then
+		s.buyIndex = s.buyIndex + 1
+		return string.format('%s (para %s) es de la tienda secreta: lo salto', next.part, next.of)
+	end
 	local cost = GetItemCost(next.part)
 	bot:SetNextItemPurchaseValue(cost)
-	if bot:GetGold() < cost then return nil end
+	if bot:GetGold() < cost or now - (s.buyTriedAt or -1000) < 1 then return nil end
+	if bot:GetItemInSlot(14) ~= nil then return nil end -- stash full: wait for the courier
+	s.buyTriedAt = now
+	local room = MakeRoom(bot)
 	local code = bot:ActionImmediate_PurchaseItem(next.part)
 	if code == PURCHASE_ITEM_SUCCESS then
 		s.buyIndex = s.buyIndex + 1
-		return string.format('%s (para %s) coste=%d oro=%d', next.part, next.of, cost, bot:GetGold())
+		return string.format('%s (para %s) coste=%d oro=%d%s', next.part, next.of, cost, bot:GetGold(),
+			room and (' · ' .. room) or '')
 	end
-	-- Not sold here (a secret shop part, out of stock...): logged once per part, retried later.
+	-- Not bought (out of stock...): logged once per part, retried at most once a second.
 	if s.buyFailed ~= next.part then
 		s.buyFailed = next.part
 		return string.format('%s (para %s) no comprado, codigo=%s', next.part, next.of, tostring(code))
+	end
+	return nil
+end
+
+-- A finished item left in the backpack (slots 6-8) gives nothing: swap it with an empty or consumable main slot.
+function P.Arrange(bot, s, now)
+	if now - (s.arrangeAt or -1000) < 3 then return nil end
+	for back = 6, 8 do
+		local item = bot:GetItemInSlot(back)
+		if item ~= nil and item:GetName() ~= 'item_branches' and item:GetName() ~= 'item_tango' then
+			for main = 0, 5 do
+				local m = bot:GetItemInSlot(main)
+				if m == nil or m:GetName() == 'item_branches' or m:GetName() == 'item_tango' then
+					s.arrangeAt = now
+					bot:ActionImmediate_SwapItems(back, main)
+					return string.format('paso %s de la mochila a la ranura %d', item:GetName(), main)
+				end
+			end
+		end
 	end
 	return nil
 end
@@ -65,7 +109,8 @@ end
 
 local function StashCount(bot)
 	local n = 0
-	for slot = 9, 15 do if bot:GetItemInSlot(slot) ~= nil then n = n + 1 end end
+	-- The stash is slots 9-14 (15 is the teleport scroll, 16 the neutral item): counting 15 sent the courier out empty.
+	for slot = 9, 14 do if bot:GetItemInSlot(slot) ~= nil then n = n + 1 end end
 	return n
 end
 

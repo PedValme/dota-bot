@@ -470,6 +470,14 @@ function L.Think()
 	local started = RealTime()
 	local s = State(bot)
 	Registro.Tick(bot)
+	-- Purchases, courier and inventory run dead or alive (OHA also buys while dead).
+	if s.bought then
+		local now = GameTime()
+		for _, line in ipairs({ Compras.Buy(bot, s, now) or false, Compras.Courier(bot, s, now) or false,
+			Compras.Arrange(bot, s, now) or false }) do
+			if line then Log(s, bot, 'compra', line) end
+		end
+	end
 	if not bot:IsAlive() then
 		-- Dead time counts too, so the calls per second compare with the other bots' (the smoke read 25 against 30).
 		s.pending, s.retreating, s.toFountain, s.lowHp, s.burstUntil = nil, false, false, false, nil
@@ -480,12 +488,6 @@ function L.Think()
 	CheckPending(bot, s, p)
 	WatchAutoAttack(bot, s, p)
 	LevelUp(bot, s)
-	if s.bought then
-		local line = Compras.Buy(bot, s)
-		if line then Log(s, bot, 'compra', line) end
-		line = Compras.Courier(bot, s, p.now)
-		if line then Log(s, bot, 'compra', line) end
-	end
 	if p.now >= s.busyUntil then
 		local d = Decide(bot, s, p)
 		-- Logged when the intent or the kind of reason changes (its first word), not each time a number in it moves.
