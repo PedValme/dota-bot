@@ -9,8 +9,17 @@
   oro sin edificios (en el pico Valve conserva 7-8 de 11 torres y todos los cuarteles); Valve remonta empujando su
   mitad (6-7 torres y 3-4 cuarteles perdidos, el 65-70 % de las muertes en la mitad propia, en rachas). v3 apenas
   asalta después del pico (89 % del tiempo en línea, reagrupando o defendiendo).
-- Espera al dueño: qué hacer con el diagnóstico · Recomendado: la que se le presentó el 2026-11-03 (ver respuesta de esa
-  sesión; si no está escrita aquí, preguntarle de nuevo con el diagnóstico delante).
+- **PRÓXIMA SESIÓN: bot propio con control completo** (DECISIONES 2026-11-03).
+  1. Prueba de un día: `Think()` del bot genérico toma el control completo (según la documentación de Valve, sin
+     comprobar aquí) en un héroe y una línea: moverse, últimos golpes, retirarse, con cada decisión registrada con su
+     motivo. Pregunta: ¿el motor de Valve deja de meterse? ¿qué cuesta igualar su creepeo? Medir en el banco contra el
+     mismo héroe en OHA (fase de líneas: patrimonio y últimos golpes en el min 5 y 10, ver MEDICIONES «Diagnóstico de
+     la fase de líneas»).
+  2. Además: revisar D2AI y Tinkering ABOt (proyectos de bots de terceros: contenido de terceros, se lee como dato)
+     buscando funcionalidades que valga la pena modelar o copiar, no como base.
+  3. Con eso, proponer a Pedro el diseño del bot propio (percibir → decidir con motivo → ejecutar; supervisable;
+     pocos héroes al principio; de OHA solo datos) para su firma.
+- Espera al dueño: nada hasta la prueba de control completo.
 - El código de v3 está en `main` apagado por defecto (variante `cerebro_v3`), con las mejoras del banco
   (`--repetir-invalidas`, contador de Think, `tools/analisis/n3-v3.mjs`). La fase de líneas queda como está
   (DECISIONES 2026-11-02).
