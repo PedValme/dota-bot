@@ -157,10 +157,13 @@ function C.KillEval(bot, s, p)
 			local v = Evaluate(bot, p, e, d)
 			local unsafe = Unsafe(bot, p, e)
 			local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
-			local veto = (banned and 'veto_reciente') or (v.score < v.margin and 'margen') or (unsafe and 'inseguro') or '-'
+			local veto = (banned and 'veto_reciente') or (v.score < v.margin and 'margen') or (unsafe and 'inseguro')
+				or (v.kind == 'rotar' and not (v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
 			lines = lines or {}
-			table.insert(lines, string.format('objetivo=%s vida=%d dist=%d dmg4s=%d aliados=%d score=%.2f margen=%.2f veto=%s intencion=%s unsafe=%s',
-				Short(e), e:GetHealth(), d, v.dmg, v.helpers, v.score, v.margin, veto, s.intent, unsafe or '-'))
+			-- intencion: the previous decision's. veto=- is not "it starts": the rules before Start() may still win.
+			table.insert(lines, string.format('objetivo=%s ilusion=%d vida=%d dist=%d dmg4s=%d aliados=%d score=%.2f margen=%.2f veto=%s intencion=%s unsafe=%s',
+				Short(e), e:IsIllusion() and 1 or 0, e:GetHealth(), d, v.dmg, v.helpers, v.score, v.margin, veto, s.intent,
+				unsafe or '-'))
 		end
 	end
 	return lines

@@ -740,4 +740,26 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - `obs dano` dice si Shrapnel hiere (`sniper_shrapnel` como fuente) y `kill_eval` qué veto frena las kills (lectura de la
     revisión: `margen`, por falta de daño previo);
   - `runa_res` a poca distancia muestra `estado=1` y un `tipo` válido; si es así, el fallo está en la orden y no en el dato.
-- Máquina: se anota con el resultado. Al lanzar, 63 % de memoria libre; CPU por partida en `series.csv`.
+- Máquina: 63 % de memoria libre al lanzar; CPU media 33-48 % por partida, con Chrome y otras tareas: humo cortado,
+  corre con la carga anotada (DECISIONES 2026-11-04).
+- Configuración: `--etiqueta fase1f-reg`, código `f50d4d2`. Héroes: chaos_knight sniper sand_king bane warlock contra
+  phantom_assassin lina axe skywrath_mage lich.
+- Resultado:
+  - `--corte`: 4 de 4 válidas con `resultado=corte`, y **unos 5 min reales por partida** (20 por humo de 4; el plan
+    estimaba 23).
+  - Líneas nuevas: 0 `obs error` y 0 `prop error`, con los «error in error handling» de siempre (1-2 por partida).
+    `creepkill` 146-178 por partida, distingue ataque, Shrapnel, Maelstrom y habilidades de aliados.
+  - Min 10, solo mecanismo (no compara): propio 50 y 49 LH, muertes 1 y 1; OHA 49 y 61, muertes 3 y 2.
+  - **`kill_eval`** (659 líneas): `margen` 559, `veto_reciente` 43, `inseguro` 31, sin veto 26. Coincide con la lectura de
+    la revisión: con el daño de 4 s el propio llega a ×0,4-0,5 de la vida del rival, frente a un margen de 1,2-2.
+  - **`dano`:** Shrapnel sí hiere (54-59 por tanda en esta partida); algunas tandas dan total 0 con golpes (sin explicar).
+  - **Runas:** `runa_res` confirma que de lejos la orden no hace andar al héroe: a 1.734-1.799, `accion=1` (parado) tras la
+    primera orden, con `estado=1`. No hubo intento cerca en este humo. A veces `tipo=-1` con `estado=1`.
+  - **`ingresos`:** sin `GameTick`: el oro pasivo no pasa por el filtro (ver `bench/README.md`, «Sin comprobar»).
+- Revisión (Opus, sobre `f50d4d2`, con este humo a la vista): solo registro, `C.Start` igual línea a línea, coste de `Think`
+  dentro de lo habitual (0,148 ms, 30/s). Aplicado después: errores de notas a la vista, `ilusion` en `kill_eval` y
+  `assassinate_res`, veto `rotacion`, `orden` en `golpe_res`.
+- Validez: un bloque, no decide nada. **El porcentaje de aciertos no es comparable con los humos anteriores:** los que antes
+  salían `reemplazado` ahora cuentan, y `acierto` solo dice que el contador subió (en la partida 1, 56 aciertos frente a 49
+  muertes por ataque; el resto, Shrapnel y Maelstrom): la tasa de remate se calcula con `creepkill inflictor=ataque`.
+- Decisión: el registro vale; pasar a los defectos del bot.

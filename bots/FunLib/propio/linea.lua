@@ -437,9 +437,10 @@ local function CheckPending(bot, s, p)
 		local hit = (q.deny and dn > 0) or (not q.deny and lh > 0)
 		if hit and q.deny then s.dnSeen = s.dnSeen + 1 elseif hit then s.lhSeen = s.lhSeen + 1 end
 		local alive = Valid(q.creep)
-		Log(s, bot, 'golpe_res', string.format('%s %s lh+%d dn+%d creep_vivo=%s vida=%s prevista=%.0f',
+		-- acierto: the counter rose, maybe by Shrapnel or Maelstrom; what killed it is in the custom game's creepkill.
+		Log(s, bot, 'golpe_res', string.format('%s %s lh+%d dn+%d creep_vivo=%s vida=%s prevista=%.0f orden=%.1f',
 			q.deny and 'denegar' or 'ultimo_golpe', hit and 'acierto' or 'fallo',
-			lh, dn, tostring(alive), alive and tostring(q.creep:GetHealth()) or '-', q.hpAt))
+			lh, dn, tostring(alive), alive and tostring(q.creep:GetHealth()) or '-', q.hpAt, q.orden))
 	end
 end
 
@@ -448,8 +449,8 @@ local function CheckAssassinate(bot, s, p)
 	local q = s.assassinate
 	if q == nil or p.now < q.at then return end
 	local alive = Valid(q.target)
-	Log(s, bot, 'assassinate_res', string.format('objetivo=%s vida_antes=%d vida_ahora=%s kills+%d', q.name, q.hp0,
-		alive and tostring(q.target:GetHealth()) or '-', GetHeroKills(bot:GetPlayerID()) - q.kills0))
+	Log(s, bot, 'assassinate_res', string.format('objetivo=%s ilusion=%d vida_antes=%d vida_ahora=%s kills+%d', q.name,
+		q.illusion and 1 or 0, q.hp0, alive and tostring(q.target:GetHealth()) or '-', GetHeroKills(bot:GetPlayerID()) - q.kills0))
 	s.assassinate = nil
 end
 
@@ -479,7 +480,8 @@ local function Act(bot, s, p, d)
 		s.busyUntil = p.now + d.castPoint + 0.3
 		Log(s, bot, 'habilidad', 'assassinate: ' .. d.reason)
 		s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
-			hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0 }
+			hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
+			illusion = d.target:IsIllusion() }
 		return
 	end
 	if d.intent == 'shrapnel' then
@@ -502,7 +504,8 @@ local function Act(bot, s, p, d)
 		s.busyUntil = p.now + d.hit.tLand - d.hit.flight + K.windUp
 		s.pending = s.pending or {}
 		if #s.pending == 0 then s.lhSeen, s.dnSeen = bot:GetLastHits(), bot:GetDenies() end
-		table.insert(s.pending, { creep = d.target, landAt = p.now + d.hit.tLand, hpAt = d.hit.hpAt, deny = d.hit.deny })
+		table.insert(s.pending, { creep = d.target, landAt = p.now + d.hit.tLand, hpAt = d.hit.hpAt, deny = d.hit.deny,
+			orden = p.t })
 		Log(s, bot, 'golpe', d.reason)
 		return
 	end
@@ -520,7 +523,7 @@ local function Act(bot, s, p, d)
 	if d.intent == 'rotar' and d.to == nil then MoveTo(bot, s, p, d.target:GetLocation()) return end
 	if d.intent == 'runa' then
 		if p.now - (s.runeOrderAt or -1000) > 1.0 then
-			RuneOrder(bot, s, p, d)
+			pcall(RuneOrder, bot, s, p, d) -- a logging failure must not stop the order
 			bot:Action_PickUpRune(d.rune)
 			s.runeOrderAt = p.now
 		end
@@ -604,7 +607,8 @@ function L.Think()
 	local p = Perceive(bot)
 	CheckPending(bot, s, p)
 	CheckAssassinate(bot, s, p)
-	for _, line in ipairs(Combate.KillEval(bot, s, p) or {}) do Log(s, bot, 'kill_eval', line) end
+	local evalOk, evalLines = pcall(Combate.KillEval, bot, s, p) -- a logging failure must not stop the bot
+	for _, line in ipairs(evalOk and evalLines or {}) do Log(s, bot, 'kill_eval', line) end
 	WatchAutoAttack(bot, s, p)
 	LevelUp(bot, s)
 	if p.now >= s.busyUntil then

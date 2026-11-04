@@ -36,6 +36,7 @@ end
 
 -- Gold and XP each player earned by reason, after the x2 (observer mode prints it every 30 s): the gap against OHA by
 -- source, instead of a regression over net worth (trabajo/fase1-plan.md). pid -> { gold = { reason -> n }, xp = {...} }.
+-- Not the total: the passive gold does not show up in this filter (nor gets the x2; MEDICIONES fase1f-reg).
 local earned = {}
 local function NoteEarned(kind, pid, reason, amount)
 	if pid == nil or pid < 0 or amount == nil or amount <= 0 then return end
@@ -44,18 +45,29 @@ local function NoteEarned(kind, pid, reason, amount)
 	into[reason] = (into[reason] or 0) + amount
 end
 
+-- A note taken inside a filter or an event must never change what the game does, nor fail in silence: a renamed field
+-- would read as "Shrapnel does not hit". One line per name, the analyzers count them.
+local noteFailed = {}
+local function Note(name, fn, ...)
+	local ok, err = pcall(fn, ...)
+	if not ok and not noteFailed[name] then
+		noteFailed[name] = true
+		print("[dotabench] obs error " .. name .. " " .. tostring(err))
+	end
+end
+
 local function ApplyTurbo()
 	local mode = GameRules:GetGameModeEntity()
 	mode:SetUseTurboCouriers(true)
 	mode:SetRespawnTimeScale(TURBO.respawn)
 	mode:SetModifyGoldFilter(function(_, event)
 		if event.gold > 0 and INCOME[event.reason_const] then event.gold = math.floor(event.gold * TURBO.gold) end
-		pcall(NoteEarned, "gold", event.player_id_const, event.reason_const, event.gold)
+		Note("ingresos_oro", NoteEarned, "gold", event.player_id_const, event.reason_const, event.gold)
 		return true
 	end, {})
 	mode:SetModifyExperienceFilter(function(_, event)
 		event.experience = math.floor(event.experience * TURBO.xp)
-		pcall(NoteEarned, "xp", event.player_id_const, event.reason_const, event.experience)
+		Note("ingresos_xp", NoteEarned, "xp", event.player_id_const, event.reason_const, event.experience)
 		return true
 	end, {})
 	local n = 0
@@ -455,7 +467,8 @@ local function NoteDamage(e)
 	local hero = PlayerResource:GetSelectedHeroEntity(l.own)
 	if not hero or (attacker ~= hero and victim ~= hero) then return end
 	if not victim:IsRealHero() then return end -- creeps and towers hit by the hero: creepkill tells those
-	local from = attacker:IsRealHero() and attacker:GetUnitName():gsub("npc_dota_hero_", "")
+	-- IsHero, not IsRealHero: an illusion is its hero's name, not a creep. A count with a total of 0 is a blocked hit.
+	local from = attacker:IsHero() and attacker:GetUnitName():gsub("npc_dota_hero_", "")
 		or (attacker:IsTower() and "torre") or "creep"
 	local inflictor = e.entindex_inflictor_const and EntIndexToHScript(e.entindex_inflictor_const)
 	local source = inflictor and inflictor.GetAbilityName and inflictor:GetAbilityName() or "ataque"
@@ -500,7 +513,7 @@ local function StartObserver()
 	print("[dotabench] observer on")
 	-- Reads only: always lets the damage through as it came, also if the note fails.
 	GameRules:GetGameModeEntity():SetDamageFilter(function(_, e)
-		pcall(NoteDamage, e)
+		Note("dano", NoteDamage, e)
 		return true
 	end, {})
 	Listen("dota_item_purchased", function(e)
@@ -529,7 +542,7 @@ local function StartObserver()
 	Listen("entity_killed", function(e)
 		local victim, vteam, vpid = UnitName(e.entindex_killed)
 		local unit = EntIndexToHScript(e.entindex_killed)
-		if unit then NoteCreepKill(e, unit, victim, vteam) end
+		if unit then Note("creepkill", NoteCreepKill, e, unit, victim, vteam) end
 		local important = unit and (unit:IsRealHero() or unit:IsTower() or unit:IsBuilding() or unit:IsCourier()
 			or victim == "npc_dota_roshan")
 		if not important then return end
