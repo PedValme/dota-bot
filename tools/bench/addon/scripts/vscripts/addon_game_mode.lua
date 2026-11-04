@@ -34,16 +34,28 @@ for _, name in ipairs({ "GameTick", "Building", "HeroKill", "CreepKill", "Neutra
 	if reason ~= nil then INCOME[reason] = true end
 end
 
+-- Gold and XP each player earned by reason, after the x2 (observer mode prints it every 30 s): the gap against OHA by
+-- source, instead of a regression over net worth (trabajo/fase1-plan.md). pid -> { gold = { reason -> n }, xp = {...} }.
+local earned = {}
+local function NoteEarned(kind, pid, reason, amount)
+	if pid == nil or pid < 0 or amount == nil or amount <= 0 then return end
+	earned[pid] = earned[pid] or { gold = {}, xp = {} }
+	local into = earned[pid][kind]
+	into[reason] = (into[reason] or 0) + amount
+end
+
 local function ApplyTurbo()
 	local mode = GameRules:GetGameModeEntity()
 	mode:SetUseTurboCouriers(true)
 	mode:SetRespawnTimeScale(TURBO.respawn)
 	mode:SetModifyGoldFilter(function(_, event)
 		if event.gold > 0 and INCOME[event.reason_const] then event.gold = math.floor(event.gold * TURBO.gold) end
+		pcall(NoteEarned, "gold", event.player_id_const, event.reason_const, event.gold)
 		return true
 	end, {})
 	mode:SetModifyExperienceFilter(function(_, event)
 		event.experience = math.floor(event.experience * TURBO.xp)
+		pcall(NoteEarned, "xp", event.player_id_const, event.reason_const, event.experience)
 		return true
 	end, {})
 	local n = 0
@@ -352,6 +364,131 @@ local function Snapshot()
 	end
 end
 
+-- The lane the variant follows (linea_heroe, e.g. the Sniper) and its rival, the other team's position 2 in the draw.
+-- Same lines in both arms; a match with no such variant logs none of them.
+local lane = nil
+local function LanePlayers()
+	if lane ~= nil then return lane end
+	local ok, variant = pcall(require, "bots.Customize.bench_variant")
+	local hero = ok and type(variant) == "table" and variant.linea_heroe or nil
+	if type(hero) ~= "string" then
+		lane = { own = -1, rival = -1 }
+		return lane
+	end
+	local own, rival = -1, -1
+	for pid = 0, 23 do
+		if PlayerResource:IsValidPlayerID(pid) and PlayerResource:GetSelectedHeroName(pid) == "npc_dota_hero_" .. hero then
+			own = pid
+		end
+	end
+	if own < 0 then return { own = -1, rival = -1 } end -- not picked yet: asked again later
+	local cfg = MatchConfig()
+	local other = PlayerResource:GetTeam(own) == DOTA_TEAM_GOODGUYS and cfg.heroes_dire or cfg.heroes
+	for pid = 0, 23 do
+		if other and PlayerResource:IsValidPlayerID(pid) and PlayerResource:GetSelectedHeroName(pid) == other[2] then
+			rival = pid
+		end
+	end
+	local found = { own = own, rival = rival }
+	if rival >= 0 then lane = found end
+	return found
+end
+
+-- A call that may not exist in this engine's API answers -1 instead of losing the whole line.
+local function Try(unit, method, ...)
+	local fn = unit[method]
+	if fn == nil then return -1 end
+	local ok, value = pcall(fn, unit, ...)
+	if ok and type(value) == "number" then return value end
+	return -1
+end
+
+-- Every 5 s, for the followed hero and its rival: what the 30 s snapshot lacks to read a trade.
+local function LaneSnapshot()
+	local l = LanePlayers()
+	for _, pid in ipairs({ l.own, l.rival }) do
+		local hero = pid >= 0 and PlayerResource:GetSelectedHeroEntity(pid) or nil
+		if hero then
+			local pos = hero:GetAbsOrigin()
+			Obs("linea pid=%d %s alive=%d x=%d y=%d hp=%d maxhp=%d mp=%d xp=%d dmg=%d aps=%.2f rango=%d", pid, HeroOf(pid),
+				hero:IsAlive() and 1 or 0, pos.x, pos.y, hero:GetHealth(), hero:GetMaxHealth(), hero:GetMana(),
+				Try(hero, "GetCurrentXP"), Try(hero, "GetAverageTrueAttackDamage", hero), Try(hero, "GetAttacksPerSecond", false),
+				Try(hero, "Script_GetAttackRange"))
+		end
+	end
+end
+
+-- Gold and XP by reason, accumulated (see ApplyTurbo), every 30 s for the followed hero and its rival.
+local function ReasonName(prefix, code)
+	for name, value in pairs(_G) do
+		if value == code and type(name) == "string" and string.sub(name, 1, #prefix) == prefix then
+			return string.sub(name, #prefix + 1)
+		end
+	end
+	return "r" .. tostring(code)
+end
+local function Reasons(prefix, map)
+	local parts = {}
+	for code, n in pairs(map) do table.insert(parts, ReasonName(prefix, code) .. ":" .. n) end
+	table.sort(parts)
+	return table.concat(parts, ",")
+end
+local function EarnedSnapshot()
+	local l = LanePlayers()
+	for _, pid in ipairs({ l.own, l.rival }) do
+		if pid >= 0 and earned[pid] then
+			Obs("ingresos pid=%d %s oro=%s xp=%s", pid, HeroOf(pid), Reasons("DOTA_ModifyGold_", earned[pid].gold),
+				Reasons("DOTA_ModifyXP_", earned[pid].xp))
+		end
+	end
+end
+
+-- Damage to and from the followed hero, by source (attack or ability), printed and reset every 10 s: says whether
+-- Shrapnel hits and who hurts the hero. As the filter receives it; whether armour is already applied is not checked.
+local damage = {}
+local function NoteDamage(e)
+	local l = LanePlayers()
+	if l.own < 0 then return end
+	local attacker = e.entindex_attacker_const and EntIndexToHScript(e.entindex_attacker_const)
+	local victim = e.entindex_victim_const and EntIndexToHScript(e.entindex_victim_const)
+	if not attacker or not victim or not victim.IsRealHero or not attacker.GetUnitName then return end
+	local hero = PlayerResource:GetSelectedHeroEntity(l.own)
+	if not hero or (attacker ~= hero and victim ~= hero) then return end
+	if not victim:IsRealHero() then return end -- creeps and towers hit by the hero: creepkill tells those
+	local from = attacker:IsRealHero() and attacker:GetUnitName():gsub("npc_dota_hero_", "")
+		or (attacker:IsTower() and "torre") or "creep"
+	local inflictor = e.entindex_inflictor_const and EntIndexToHScript(e.entindex_inflictor_const)
+	local source = inflictor and inflictor.GetAbilityName and inflictor:GetAbilityName() or "ataque"
+	local key = from .. ">" .. victim:GetUnitName():gsub("npc_dota_hero_", "") .. ":" .. source
+	local d = damage[key] or { total = 0, n = 0 }
+	d.total, d.n = d.total + e.damage, d.n + 1
+	damage[key] = d
+end
+local function DamageSnapshot()
+	local parts = {}
+	for key, d in pairs(damage) do table.insert(parts, string.format("%s:%d:%d", key, math.floor(d.total), d.n)) end
+	if #parts == 0 then return end
+	table.sort(parts)
+	Obs("dano %s", table.concat(parts, ","))
+	damage = {}
+end
+
+-- A creep killed within 1000 of the followed hero: by whom and with what (attack or Shrapnel), and the denominator
+-- of its last hits, which no line gave before.
+local function NoteCreepKill(e, unit, victim, vteam)
+	local l = LanePlayers()
+	local hero = l.own >= 0 and PlayerResource:GetSelectedHeroEntity(l.own) or nil
+	if not hero or not unit.IsCreep or not unit:IsCreep() or unit:IsHero() then return end
+	local pos, from = unit:GetAbsOrigin(), hero:GetAbsOrigin()
+	local dist = (pos - from):Length2D()
+	if dist >= 1000 then return end
+	local killer, kteam, kpid = UnitName(e.entindex_attacker)
+	local inflictor = e.entindex_inflictor and EntIndexToHScript(e.entindex_inflictor)
+	Obs("creepkill victim=%s vteam=%d killer=%s kteam=%d kpid=%d inflictor=%s x=%d y=%d d=%d heroe_vivo=%d", victim, vteam,
+		killer, kteam, kpid, inflictor and inflictor.GetAbilityName and inflictor:GetAbilityName() or "ataque", pos.x, pos.y,
+		dist, hero:IsAlive() and 1 or 0)
+end
+
 local function Listen(event, handler)
 	ListenToGameEvent(event, function(e)
 		local ok, err = pcall(handler, e)
@@ -361,6 +498,11 @@ end
 
 local function StartObserver()
 	print("[dotabench] observer on")
+	-- Reads only: always lets the damage through as it came, also if the note fails.
+	GameRules:GetGameModeEntity():SetDamageFilter(function(_, e)
+		pcall(NoteDamage, e)
+		return true
+	end, {})
 	Listen("dota_item_purchased", function(e)
 		Obs("buy pid=%s %s %s cost=%s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.itemname), tostring(e.itemcost))
 	end)
@@ -387,6 +529,7 @@ local function StartObserver()
 	Listen("entity_killed", function(e)
 		local victim, vteam, vpid = UnitName(e.entindex_killed)
 		local unit = EntIndexToHScript(e.entindex_killed)
+		if unit then NoteCreepKill(e, unit, victim, vteam) end
 		local important = unit and (unit:IsRealHero() or unit:IsTower() or unit:IsBuilding() or unit:IsCourier()
 			or victim == "npc_dota_roshan")
 		if not important then return end
@@ -429,7 +572,11 @@ local function StartObserver()
 			end, "dotabench_ward_" .. tostring(e.entindex), 0.1)
 		end
 	end)
-	local nextSnapshot = 0
+	local nextSnapshot, nextLane, nextDamage = 0, 0, 0
+	local function Safely(name, fn)
+		local ok, err = pcall(fn)
+		if not ok then print("[dotabench] obs error " .. name .. " " .. tostring(err)) end
+	end
 	GameRules:GetGameModeEntity():SetThink(function()
 		local state = GameRules:State_Get()
 		-- pcall: a failing snapshot must not stop this timer for the rest of the match.
@@ -437,10 +584,19 @@ local function StartObserver()
 			pcall(Snapshot)
 			return nil
 		end
-		if state >= DOTA_GAMERULES_STATE_PRE_GAME and GameRules:GetDOTATime(false, true) >= nextSnapshot then
+		local now = GameRules:GetDOTATime(false, true)
+		if state >= DOTA_GAMERULES_STATE_PRE_GAME and now >= nextSnapshot then
 			nextSnapshot = nextSnapshot + 30
-			local ok, err = pcall(Snapshot)
-			if not ok then print("[dotabench] obs error snapshot " .. tostring(err)) end
+			Safely("snapshot", Snapshot)
+			Safely("ingresos", EarnedSnapshot)
+		end
+		if state >= DOTA_GAMERULES_STATE_PRE_GAME and now >= nextLane then
+			nextLane = now + 5
+			Safely("linea", LaneSnapshot)
+		end
+		if state >= DOTA_GAMERULES_STATE_PRE_GAME and now >= nextDamage then
+			nextDamage = now + 10
+			Safely("dano", DamageSnapshot)
 		end
 		return 1
 	end, "dotabench_observer", 1)

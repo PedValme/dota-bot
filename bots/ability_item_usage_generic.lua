@@ -8464,9 +8464,13 @@ function BuybackUsageThink()
 			local ok, dmg = pcall(J.GetTotalEstimatedDamageToTarget, J.GetEnemiesNearLoc(bot:GetLocation(), 1200), bot)
 			if ok and dmg then threat = dmg / math.max(bot:GetHealth(), 1) end
 		end
-		print(string.format('[bench] mode t=%d pid=%d %s %s %.2f alive=%d hp=%.2f amenaza=%.2f', math.floor(DotaTime()),
+		-- x, y and what it attacks: where OHA stands and whom it hits, to compare with the own bot's lines (fase1-plan).
+		local loc, target = bot:GetLocation(), bot:GetAttackTarget()
+		print(string.format('[bench] mode t=%d pid=%d %s %s %.2f alive=%d hp=%.2f amenaza=%.2f x=%d y=%d obj=%s', math.floor(DotaTime()),
 			bot:GetPlayerID(), string.gsub(botName, 'npc_dota_hero_', ''), benchModeNames[mode] or tostring(mode),
-			bot:GetActiveModeDesire(), bot:IsAlive() and 1 or 0, bot:IsAlive() and J.GetHP(bot) or 0, threat))
+			bot:GetActiveModeDesire(), bot:IsAlive() and 1 or 0, bot:IsAlive() and J.GetHP(bot) or 0, threat,
+			loc and loc.x or 0, loc and loc.y or 0,
+			(target ~= nil and not target:IsNull()) and string.gsub(target:GetUnitName(), 'npc_dota_', '') or '-'))
 		-- Which way the API's lane geometry counts for this team (one bot, once a minute): is a negative offset of
 		-- GetLaneFrontLocation toward our base, and does GetAmountAlongLane count from our side? (Pedro, 2026-10-31:
 		-- dota-bot plays worse as Dire in every variant.)

@@ -426,16 +426,38 @@ local function LevelUp(bot, s)
 	s.nextSkill = s.nextSkill + 1
 end
 
--- After an attack lands, did the last hit or deny happen? Compares the counters (checklist item 6 and 7).
+-- After each attack lands, did the last hit or deny happen? A queue, oldest first: a new attack used to overwrite the
+-- pending one, which biased the hit rate (trabajo/fase1-plan.md). Each hit of the counter is spent on one attempt, so
+-- two attempts in flight cannot both claim the same last hit.
 local function CheckPending(bot, s, p)
-	local q = s.pending
-	if q == nil or p.now < q.landAt + 0.4 then return end
-	local lh, dn = bot:GetLastHits() - q.lh0, bot:GetDenies() - q.dn0
-	local alive = Valid(q.creep)
-	Log(s, bot, 'golpe_res', string.format('%s %s lh+%d dn+%d creep_vivo=%s vida=%s prevista=%.0f',
-		q.deny and 'denegar' or 'ultimo_golpe', ((q.deny and dn > 0) or (not q.deny and lh > 0)) and 'acierto' or 'fallo',
-		lh, dn, tostring(alive), alive and tostring(q.creep:GetHealth()) or '-', q.hpAt))
-	s.pending = nil
+	local queue = s.pending
+	while queue ~= nil and queue[1] ~= nil and p.now >= queue[1].landAt + 0.4 do
+		local q = table.remove(queue, 1)
+		local lh, dn = bot:GetLastHits() - s.lhSeen, bot:GetDenies() - s.dnSeen
+		local hit = (q.deny and dn > 0) or (not q.deny and lh > 0)
+		if hit and q.deny then s.dnSeen = s.dnSeen + 1 elseif hit then s.lhSeen = s.lhSeen + 1 end
+		local alive = Valid(q.creep)
+		Log(s, bot, 'golpe_res', string.format('%s %s lh+%d dn+%d creep_vivo=%s vida=%s prevista=%.0f',
+			q.deny and 'denegar' or 'ultimo_golpe', hit and 'acierto' or 'fallo',
+			lh, dn, tostring(alive), alive and tostring(q.creep:GetHealth()) or '-', q.hpAt))
+	end
+end
+
+-- An Assassinate, once its shot had time to land: did it kill? (3 of 23 OHA kills carry it; the revisers disagree.)
+local function CheckAssassinate(bot, s, p)
+	local q = s.assassinate
+	if q == nil or p.now < q.at then return end
+	local alive = Valid(q.target)
+	Log(s, bot, 'assassinate_res', string.format('objetivo=%s vida_antes=%d vida_ahora=%s kills+%d', q.name, q.hp0,
+		alive and tostring(q.target:GetHealth()) or '-', GetHeroKills(bot:GetPlayerID()) - q.kills0))
+	s.assassinate = nil
+end
+
+-- What each rune order found and left, since the far orders leave the hero idle and the near ones took nothing:
+-- the line that tells the cause (trabajo/fase1-plan.md, step 3).
+local function RuneOrder(bot, s, p, d)
+	Log(s, bot, 'runa_res', string.format('runa=%d d=%d estado=%d tipo=%d accion=%d visto=%.1f', d.rune, D2(p.loc, d.to),
+		GetRuneStatus(d.rune), GetRuneType(d.rune), bot:GetCurrentActionType(), GetRuneTimeSinceSeen(d.rune)))
 end
 
 local function Act(bot, s, p, d)
@@ -456,6 +478,8 @@ local function Act(bot, s, p, d)
 		bot:Action_UseAbilityOnEntity(d.ability, d.target)
 		s.busyUntil = p.now + d.castPoint + 0.3
 		Log(s, bot, 'habilidad', 'assassinate: ' .. d.reason)
+		s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
+			hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0 }
 		return
 	end
 	if d.intent == 'shrapnel' then
@@ -472,15 +496,13 @@ local function Act(bot, s, p, d)
 		return
 	end
 	if (d.intent == 'ultimo_golpe' or d.intent == 'denegar') then
-		if s.pending ~= nil then
-			Log(s, bot, 'golpe_res', string.format('%s reemplazado', s.pending.deny and 'denegar' or 'ultimo_golpe'))
-		end
 		bot:Action_AttackUnit(d.target, true)
 		s.lastAttackOrder = p.now
 		-- Protect the wind-up only (walk and attack point), not the projectile's flight.
 		s.busyUntil = p.now + d.hit.tLand - d.hit.flight + K.windUp
-		s.pending = { creep = d.target, landAt = p.now + d.hit.tLand, hpAt = d.hit.hpAt, deny = d.hit.deny,
-			lh0 = bot:GetLastHits(), dn0 = bot:GetDenies() }
+		s.pending = s.pending or {}
+		if #s.pending == 0 then s.lhSeen, s.dnSeen = bot:GetLastHits(), bot:GetDenies() end
+		table.insert(s.pending, { creep = d.target, landAt = p.now + d.hit.tLand, hpAt = d.hit.hpAt, deny = d.hit.deny })
 		Log(s, bot, 'golpe', d.reason)
 		return
 	end
@@ -498,6 +520,7 @@ local function Act(bot, s, p, d)
 	if d.intent == 'rotar' and d.to == nil then MoveTo(bot, s, p, d.target:GetLocation()) return end
 	if d.intent == 'runa' then
 		if p.now - (s.runeOrderAt or -1000) > 1.0 then
+			RuneOrder(bot, s, p, d)
 			bot:Action_PickUpRune(d.rune)
 			s.runeOrderAt = p.now
 		end
@@ -527,6 +550,20 @@ local function Status(bot, s, p)
 	Log(s, bot, 'estado', string.format('intencion=%s vida=%.2f mana=%.2f modo=%s accion=%d cola=%d creeps_e=%d creeps_a=%d heroes_e=%d daño3s=%d daño3s_todos=%d',
 		s.intent, p.hp, bot:GetMana() / math.max(bot:GetMaxMana(), 1), tostring(bot:GetActiveMode()), bot:GetCurrentActionType(),
 		bot:NumQueuedActions(), #p.enemyCreeps, #p.allyCreeps, #p.enemyHeroes, p.enemyBurst, p.enemyBurstAll))
+	-- Where it stands against the lane, with the same period: distance to the creep front, nearest enemy tower and hero
+	-- (-1 when none is in the snapshot).
+	local nearest = function(list)
+		local best = -1
+		for _, u in ipairs(list) do
+			if Valid(u) then
+				local d = D2(p.loc, u:GetLocation())
+				if best < 0 or d < best then best = d end
+			end
+		end
+		return best
+	end
+	Log(s, bot, 'pos', string.format('x=%d y=%d frente=%d torre=%d heroe=%d', p.loc.x, p.loc.y, D2(p.loc, p.front),
+		nearest(p.enemyTowers), nearest(p.enemyHeroes)))
 end
 
 -- How often the engine calls this Think and what it costs (checklist item 11): one line per minute of game time.
@@ -566,6 +603,8 @@ function L.Think()
 	end
 	local p = Perceive(bot)
 	CheckPending(bot, s, p)
+	CheckAssassinate(bot, s, p)
+	for _, line in ipairs(Combate.KillEval(bot, s, p) or {}) do Log(s, bot, 'kill_eval', line) end
 	WatchAutoAttack(bot, s, p)
 	LevelUp(bot, s)
 	if p.now >= s.busyUntil then

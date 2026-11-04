@@ -723,3 +723,21 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   no reduce ruido aquí (desviación por pareja 13 LH, sin emparejar ~11,5; correlación entre brazos −0,30, n=8).
 - Decisión: plan en `trabajo/fase1-plan.md`; lo que cambia lo firmado espera a Pedro. El desacuerdo entre revisores
   (Assassinate más liberal como mejora número 1 frente a 3 de 23 kills de OHA con él) queda abierto: se mide antes.
+
+### 2026-11-04 · Humo del banco y del registro (`fase1f-reg`, 1 bloque, 4 partidas cortadas en el min 12)
+- Pregunta: ¿funcionan `--corte` y las líneas nuevas en los dos brazos, y qué dicen de por qué el propio no activa runas?
+  No compara LH: un bloque no decide nada (±18).
+- Qué cambió: `--corte` y `--heroes` (#56); `creepkill`, `ingresos`, `dano`, `linea` en el custom game; `kill_eval`, `pos`,
+  `runa_res`, `assassinate_res` y `golpe_res` en cola en el propio; `x`, `y` y `obj` en `mode` de OHA. Comportamiento del
+  bot, sin cambios.
+- Ya medido en los registros, antes del humo (fase1 a fase1e, 92 decisiones `runa`): con la runa a más de 700,
+  `Action_PickUpRune` deja al héroe parado (`accion=1` en 111 de 125 muestras); a menos de 100, 12 intentos, `accion=2`,
+  nunca 7, y ninguna activación.
+- Predicción de mecanismo:
+  - cada partida acaba con `resultado=corte` y `valida=si`, con la línea `[bench] linea t=720` en el registro, en
+    6-8 min reales cada una (estimación del plan: 23 min por humo de 4);
+  - `obs creepkill` distingue clic de Shrapnel y da decenas de creeps por partida en los dos brazos;
+  - `obs dano` dice si Shrapnel hiere (`sniper_shrapnel` como fuente) y `kill_eval` qué veto frena las kills (lectura de la
+    revisión: `margen`, por falta de daño previo);
+  - `runa_res` a poca distancia muestra `estado=1` y un `tipo` válido; si es así, el fallo está en la orden y no en el dato.
+- Máquina: se anota con el resultado. Al lanzar, 63 % de memoria libre; CPU por partida en `series.csv`.
