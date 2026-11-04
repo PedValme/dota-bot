@@ -14,6 +14,7 @@ local L = {}
 local out = BenchRawPrint or print
 local Registro = require(GetScriptDirectory()..'/FunLib/propio/registro_linea')
 local Compras = require(GetScriptDirectory()..'/FunLib/propio/compras')
+local Combate = require(GetScriptDirectory()..'/FunLib/propio/combate')
 -- Per-hero ability rules (Finish, Harass); a hero without a module plays the lane without abilities.
 local HEROES = { npc_dota_hero_sniper = require(GetScriptDirectory()..'/FunLib/propio/sniper') }
 
@@ -322,7 +323,10 @@ local function Decide(bot, s, p)
 		local h = RuleHeal(bot, s, p)
 		if h then return h end
 	end
-	if r then return r end
+	if r then
+		if s.chase ~= nil then Log(s, bot, 'persecucion', Combate.Stop(bot, s, p, 'retirada')) end
+		return r
+	end
 	r = RuleHeal(bot, s, p)
 	if r then return r end
 	local hero = HEROES[bot:GetUnitName()]
@@ -330,8 +334,19 @@ local function Decide(bot, s, p)
 		r = hero.Finish(bot, s, p)
 		if r then return r end
 	end
+	-- Kills: a chase under way goes on (or ends with its reason), else a new kill or rotation may start.
+	local ended
+	r, ended = Combate.Continue(bot, s, p)
+	if ended then Log(s, bot, 'persecucion', ended) end
+	if r == nil then r = Combate.Start(bot, s, p) end
+	if r then
+		local cast = hero ~= nil and r.intent == 'matar' and hero.KillCast(bot, s, p, r.target) or nil
+		return cast or r
+	end
 	local ready
 	r, ready = RuleLastHit(bot, s, p)
+	if r then return r end
+	r = Combate.Rune(bot, s, p)
 	if r then return r end
 	if hero ~= nil then
 		r = hero.Harass(bot, s, p)
@@ -424,6 +439,25 @@ local function Act(bot, s, p, d)
 		s.pending = { creep = d.target, landAt = p.now + d.hit.tLand, hpAt = d.hit.hpAt, deny = d.hit.deny,
 			lh0 = bot:GetLastHits(), dn0 = bot:GetDenies() }
 		Log(s, bot, 'golpe', d.reason)
+		return
+	end
+	-- A kill: keep attacking the target (one order per target or per second, not per frame); unseen, walk to where it
+	-- was last seen. A rotation walks to it.
+	if d.intent == 'matar' and d.to == nil then
+		if s.attacking ~= d.target or p.now - (s.attackOrderAt or -1000) > 1.0 then
+			bot:Action_AttackUnit(d.target, false)
+			s.attacking, s.attackOrderAt = d.target, p.now
+		end
+		s.lastAttackOrder = p.now
+		return
+	end
+	s.attacking = nil
+	if d.intent == 'rotar' and d.to == nil then MoveTo(bot, s, p, d.target:GetLocation()) return end
+	if d.intent == 'runa' then
+		if p.now - (s.runeOrderAt or -1000) > 1.0 then
+			bot:Action_PickUpRune(d.rune)
+			s.runeOrderAt = p.now
+		end
 		return
 	end
 	-- No destination: no order (clearing the queue would leave the hero idle, free to auto-attack).

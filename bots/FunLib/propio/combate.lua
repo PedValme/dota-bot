@@ -1,0 +1,182 @@
+-- dota-bot's own bot: kills, chases, runes and rotations of the laning phase (phase 1, DECISIONES 2026-11-03: «buscar
+-- kill, perseguir pertinentemente, moverse de línea»). Each rule returns a decision with its reason, or nil; a chase
+-- keeps its state in s.chase and ends with a logged reason (kill, lost sight, tower, danger, too long, too far).
+-- Damage estimates are Valve's own (GetEstimatedDamageToTarget: attacks and abilities, mana and cooldowns included).
+local C = {}
+
+local K = {
+	killMargin = 1.15,    -- go for a kill when our side's 4 s damage is this many times the target's health
+	window = 4.0,         -- seconds of damage counted for a kill
+	alliesRadius = 1200,  -- allies this close to the target help with their own estimate
+	minHp = 0.35,         -- never start a kill below this health fraction
+	dangerShare = 0.60,   -- abort if the other enemy heroes near can deal this share of our health in 3 s
+	towerSafe = 800,      -- a target this close to its tower is not chased unless it dies to one more hit
+	chaseMax = 8.0,       -- seconds a chase may last
+	chaseLost = 1.5,      -- seconds without seeing the target before giving up
+	chaseFar = 1400,      -- give up when the target gets this far away
+	rotateMin = 1600,     -- a kill farther than this from us is a rotation (moving out of the lane)...
+	rotateMax = 4500,     -- ...and is only considered up to this distance
+	rotateTravel = 12,    -- seconds of walking allowed to reach a rotation
+	runeReach = 2500,     -- runes are checked only this close
+}
+
+local function D2(a, b)
+	if a == nil or b == nil then return 1e9 end
+	local dx, dy = a.x - b.x, a.y - b.y
+	return math.sqrt(dx * dx + dy * dy)
+end
+local function Seen(u) return u ~= nil and not u:IsNull() and u:IsAlive() and u:CanBeSeen() end
+local function Short(u) return (string.gsub(u:GetUnitName(), 'npc_dota_hero_', '')) end
+
+local function VisibleEnemies()
+	local list = {}
+	for _, e in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES) or {}) do
+		if Seen(e) and not e:IsInvulnerable() then table.insert(list, e) end
+	end
+	return list
+end
+
+local function NearestEnemyTower(loc)
+	local best, dist = nil, 1e9
+	for _, tw in ipairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS) or {}) do
+		if Seen(tw) and tw:IsTower() then
+			local d = D2(loc, tw:GetLocation())
+			if d < dist then best, dist = tw, d end
+		end
+	end
+	return best, dist
+end
+
+-- Our side's damage on the target in the window: ours plus that of allied heroes near it.
+local function SideDamage(bot, e)
+	local total = bot:GetEstimatedDamageToTarget(true, e, K.window, DAMAGE_TYPE_ALL)
+	local helpers = 0
+	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if a ~= bot and Seen(a) and D2(a:GetLocation(), e:GetLocation()) < K.alliesRadius then
+			total = total + a:GetEstimatedDamageToTarget(true, e, K.window, DAMAGE_TYPE_ALL)
+			helpers = helpers + 1
+		end
+	end
+	return total, helpers
+end
+
+-- Damage the enemy heroes other than the target, near us, can deal to us in 3 s.
+local function OthersBurst(bot, target, loc)
+	local dmg = 0
+	for _, o in ipairs(VisibleEnemies()) do
+		if o ~= target and D2(loc, o:GetLocation()) < 1400 then
+			dmg = dmg + o:GetEstimatedDamageToTarget(true, bot, 3.0, DAMAGE_TYPE_ALL)
+		end
+	end
+	return dmg
+end
+
+-- Why the target cannot be attacked safely now (nil when it can).
+local function Unsafe(bot, p, e)
+	if p.hp < K.minHp then return string.format('vida %.2f < %.2f', p.hp, K.minHp) end
+	local burst = OthersBurst(bot, e, p.loc)
+	if burst > K.dangerShare * p.hpAbs then return string.format('otros_enemigos %d > %.0f%% de %d', burst, K.dangerShare * 100, p.hpAbs) end
+	local tower, td = NearestEnemyTower(e:GetLocation())
+	if tower ~= nil and td < K.towerSafe then
+		local oneHit = e:GetActualIncomingDamage(bot:GetAttackDamage(), DAMAGE_TYPE_PHYSICAL)
+		if e:GetHealth() > oneHit then return string.format('objetivo bajo su torre (%d)', td) end
+	end
+	return nil
+end
+
+local function Ends(bot, s, p, why)
+	local c = s.chase
+	local kills = GetHeroKills(bot:GetPlayerID()) - c.kills0
+	s.lastChaseEnd = p.now
+	s.chase = nil
+	return string.format('%s %s duró %.1fs kills+%d motivo=%s', c.kind, c.name, p.now - c.since, kills, why)
+end
+
+-- Ends the current chase from outside (a retreat); returns its log line.
+function C.Stop(bot, s, p, why) return Ends(bot, s, p, why) end
+
+-- Continues or ends the current chase; returns (decision or nil, end line or nil).
+function C.Continue(bot, s, p)
+	local c = s.chase
+	if c == nil then return nil, nil end
+	local e = c.target
+	if GetHeroKills(bot:GetPlayerID()) > c.kills0 then return nil, Ends(bot, s, p, 'kill') end
+	if e == nil or e:IsNull() or not e:IsAlive() then return nil, Ends(bot, s, p, 'objetivo_muerto') end
+	if Seen(e) then c.seenAt = p.now end
+	if p.now - c.seenAt > K.chaseLost then return nil, Ends(bot, s, p, 'perdido_de_vista') end
+	local limit = c.kind == 'rotar' and (K.rotateTravel + K.chaseMax) or K.chaseMax
+	if p.now - c.since > limit then return nil, Ends(bot, s, p, 'demasiado_larga') end
+	if not Seen(e) then
+		return { intent = c.kind, target = e, to = c.lastLoc, reason = 'sigo a ' .. c.name .. ' (sin verlo)' }, nil
+	end
+	local d = D2(p.loc, e:GetLocation())
+	if c.kind == 'matar' and d > K.chaseFar then return nil, Ends(bot, s, p, string.format('lejos %d', d)) end
+	local why = Unsafe(bot, p, e)
+	if why then return nil, Ends(bot, s, p, why) end
+	local myTower, mtd = NearestEnemyTower(p.loc)
+	if myTower ~= nil and mtd < 750 and e:GetHealth() > e:GetActualIncomingDamage(bot:GetAttackDamage(), DAMAGE_TYPE_PHYSICAL) then
+		return nil, Ends(bot, s, p, 'me_meteria_bajo_torre')
+	end
+	c.lastLoc = e:GetLocation()
+	if c.kind == 'rotar' and d < K.rotateMin then c.kind = 'matar' end
+	return { intent = c.kind, target = e, reason = string.format('%s vida %d a %d', c.name, e:GetHealth(), d) }, nil
+end
+
+-- Starts a kill (in reach) or a rotation (farther), when our side's damage kills it and it is safe.
+function C.Start(bot, s, p)
+	if p.now - (s.lastChaseEnd or -1000) < 2 then return nil end
+	-- Many damage estimates per check (each enemy, each ally near it): four times a second is enough.
+	if p.now - (s.killCheckAt or -1000) < 0.25 then return nil end
+	s.killCheckAt = p.now
+	local best, bestScore = nil, 0
+	for _, e in ipairs(VisibleEnemies()) do
+		local d = D2(p.loc, e:GetLocation())
+		if d <= K.rotateMax then
+			local dmg, helpers = SideDamage(bot, e)
+			local score = dmg / math.max(e:GetHealth(), 1)
+			local travel = math.max(0, d - p.range) / math.max(p.moveSpeed, 1)
+			local kind = d > K.rotateMin and 'rotar' or 'matar'
+			if score >= K.killMargin and (kind == 'matar' or (travel <= K.rotateTravel and p.hp > 0.6))
+				and Unsafe(bot, p, e) == nil and score > bestScore then
+				best, bestScore = { e = e, d = d, dmg = dmg, helpers = helpers, kind = kind }, score
+			end
+		end
+	end
+	if best == nil then return nil end
+	local e = best.e
+	s.chase = { target = e, name = Short(e), kind = best.kind, since = p.now, seenAt = p.now, lastLoc = e:GetLocation(),
+		kills0 = GetHeroKills(bot:GetPlayerID()) }
+	return { intent = best.kind, target = e, start = true,
+		reason = string.format('%s vida %d, daño de mi lado en %.0fs %d (x%.2f, %d aliados) a %d', s.chase.name,
+			e:GetHealth(), K.window, best.dmg, bestScore, best.helpers, best.d) }
+end
+
+-- Runes: a visible rune near is picked up; at a power rune's spawn time (every 2 min from 6:00, as in normal Dota,
+-- which the imitated Turbo keeps: ESTADO, known problems) the nearer power rune spot is checked if the lane allows.
+function C.Rune(bot, s, p)
+	local best, bestD = nil, K.runeReach
+	for _, r in ipairs({ RUNE_POWERUP_1, RUNE_POWERUP_2, RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4 }) do
+		local loc = GetRuneSpawnLocation(r)
+		local d = D2(p.loc, loc)
+		if GetRuneStatus(r) == RUNE_STATUS_AVAILABLE and d < bestD then best, bestD = r, d end
+	end
+	if best ~= nil then
+		return { intent = 'runa', rune = best, to = GetRuneSpawnLocation(best),
+			reason = string.format('runa %d disponible a %d', best, bestD) }
+	end
+	local t = p.t
+	if t >= 355 and (t - 360) % 120 >= 110 or (t >= 360 and (t - 360) % 120 < 10) then
+		local spot, sd = nil, K.runeReach
+		for _, r in ipairs({ RUNE_POWERUP_1, RUNE_POWERUP_2 }) do
+			local d = D2(p.loc, GetRuneSpawnLocation(r))
+			if d < sd and GetRuneStatus(r) ~= RUNE_STATUS_MISSING then spot, sd = r, d end
+		end
+		if spot ~= nil then
+			return { intent = 'ir_a_runa', to = GetRuneSpawnLocation(spot),
+				reason = string.format('runa de poder %d por aparecer, a %d', spot, sd) }
+		end
+	end
+	return nil
+end
+
+return C

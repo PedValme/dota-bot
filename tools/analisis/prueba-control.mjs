@@ -45,6 +45,13 @@ for (const f of files) {
   console.log(`  hasta min 10: shrapnel ${casts.filter((l) => l.includes("shrapnel:")).length}, assassinate ${casts.filter((l) => l.includes("assassinate:")).length}, acosos ${upTo10("acoso").length}`);
   const bought = upTo10("compra").filter((l) => /\(para /.test(l) && !l.includes("no comprado")).map((l) => l.match(/compra t=\S+ pid=\d+ (\S+)/)?.[1]);
   console.log(`  compras hasta min 10: ${bought.join(" ") || "ninguna"}`);
+  // Kills, chases, rotations and runes (DECISIONES 2026-11-03, the complete phase 1 hero), up to minute 10.
+  const chases = upTo10("persecucion");
+  const why = {};
+  for (const l of chases) { const m = l.match(/motivo=(\S+)/); if (m) why[m[1]] = (why[m[1]] ?? 0) + 1; }
+  console.log(`  persecuciones hasta min 10: ${chases.length} (matar ${chases.filter((l) => / matar /.test(l)).length}, rotar ${chases.filter((l) => / rotar /.test(l)).length}); fin: ${Object.entries(why).map(([k, n]) => `${k} ${n}`).join(", ")}`);
+  const runes = lines.filter((l) => l.includes("[bench] prop decision ") && l.includes("intencion=runa") && Number(kv(l).t) <= 600).length;
+  console.log(`  runas buscadas hasta min 10: ${runes}`);
   const calls = lines.filter((l) => l.includes("[bench] prop llamadas ")).slice(-1)[0];
   console.log(`  aún llamadas por el motor (último informe): ${calls ? calls.slice(calls.indexOf("pid=")) : "ninguna"}`);
   const modes = new Set(lines.filter((l) => l.includes("[bench] prop estado ")).map((l) => kv(l).modo));

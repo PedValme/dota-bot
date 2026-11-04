@@ -19,7 +19,8 @@ function H.Finish(bot, s, p)
 	local range = a:GetCastRange()
 	local dmg = a:GetSpecialValueInt('damage')
 	if dmg == nil or dmg <= 0 then dmg = a:GetAbilityDamage() end
-	for _, e in ipairs(p.enemyHeroes) do
+	-- Every visible enemy hero in the ability's real range (it reaches farther than the 1500 of the lane snapshot).
+	for _, e in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES) or {}) do
 		if Seen(e) and not e:IsMagicImmune() and D2(p.loc, e:GetLocation()) <= range then
 			local real = e:GetActualIncomingDamage(dmg, DAMAGE_TYPE_MAGICAL)
 			local others = 0
@@ -51,6 +52,17 @@ function H.Harass(bot, s, p)
 		end
 	end
 	return nil
+end
+
+-- During a kill: Shrapnel on the target (slows it and adds damage), whatever the mana, if it is not slowed already.
+function H.KillCast(bot, s, p, e)
+	local a = bot:GetAbilityByName('sniper_shrapnel')
+	if a == nil or not a:IsFullyCastable() or p.now - (s.shrapnelAt or -1000) < 2 then return nil end
+	if not Seen(e) or e:HasModifier('modifier_sniper_shrapnel_slow') or D2(p.loc, e:GetLocation()) > a:GetCastRange() then
+		return nil
+	end
+	return { intent = 'shrapnel', ability = a, at = e:GetExtrapolatedLocation(1.2), castPoint = a:GetCastPoint(),
+		reason = string.format('en la kill sobre %s', Short(e)) }
 end
 
 return H
