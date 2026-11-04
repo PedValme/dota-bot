@@ -169,6 +169,9 @@ export const VARIANTS = {
   // (FunLib/propio/), against the same Sniper played by OHA. Both log its lane numbers once a minute ("[bench] linea").
   control_sniper: { control_completo: "sniper", linea_heroe: "sniper", empuje: false, thinkless: 1 },
   base_sniper: { linea_heroe: "sniper", empuje: false, thinkless: 1 },
+  // The own Sniper with its fighting off (no kills, abilities on heroes or trades), to measure what fighting costs in
+  // farm (trabajo/fase1-plan.md, step 5).
+  control_sniper_sincombate: { control_completo: "sniper", linea_heroe: "sniper", sin_combate: true, empuje: false, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
