@@ -557,7 +557,7 @@ local function Act(bot, s, p, d)
 		if d.to == nil and d.intent ~= 'ultimo_golpe' and d.intent ~= 'denegar' then d.to = LanePoint(p) end
 	end
 	if d.intent ~= 'matar' then s.attacking = nil end
-	if d.intent ~= 'runa' then s.runeTry = nil end
+	if d.intent ~= 'runa' then s.runeTry, s.runeMethod = nil, nil end
 	if d.intent == 'comprar' then Buy(bot, s) return end
 	-- An item order is not repeated each frame while the healing buff has not appeared yet.
 	if d.intent == 'curar_salvia' then bot:Action_UseAbilityOnEntity(d.item, bot) s.busyUntil = p.now + 0.6 return end
@@ -638,10 +638,24 @@ local function Act(bot, s, p, d)
 			s.runeBan = s.runeBan or {}
 			s.runeBan[d.rune] = p.now + K.runeBan
 			Log(s, bot, 'runa_res', string.format('runa=%d abandono tras %.0fs, d=%d', d.rune, K.runeTry, D2(p.loc, d.to)))
-			s.runeTry = nil
+			s.runeTry, s.runeMethod = nil, nil
 			return
 		end
-		bot:Action_PickUpRune(d.rune)
+		-- Standing on the rune, with its type read, Action_PickUpRune each tick leaves the hero idle (fase1g: accion=1 at
+		-- d=0, 0 activations), while OHA's same call works from its rune mode. One second of each way of giving the order;
+		-- the custom game's "rune" line tells which one worked (trabajo/fase1-plan.md, step 3).
+		local elapsed = p.now - s.runeTry
+		local method = elapsed < 1 and 'action' or elapsed < 2 and 'cola' or 'push'
+		if method ~= s.runeMethod then
+			s.runeMethod = method
+			if method == 'cola' then
+				bot:Action_ClearActions(true)
+				bot:ActionQueue_PickUpRune(d.rune)
+			end
+			Log(s, bot, 'runa_res', string.format('runa=%d metodo=%s d=%d', d.rune, method, D2(p.loc, d.to)))
+		end
+		if method == 'action' then bot:Action_PickUpRune(d.rune)
+		elseif method == 'push' then bot:ActionPush_PickUpRune(d.rune) end
 		s.moveTo = nil
 		return
 	end
@@ -727,6 +741,13 @@ function L.Think()
 	for _, line in ipairs(evalOk and evalLines or {}) do Log(s, bot, 'kill_eval', line) end
 	WatchAutoAttack(bot, s, p)
 	LevelUp(bot, s)
+	-- Once per match, the Treads as they come out of the recipe: in fase1g only 1 of 8 matches had to change them.
+	if not s.treadsSeen and bot:FindItemSlot('item_power_treads') >= 0 and bot:FindItemSlot('item_power_treads') <= 5 then
+		s.treadsSeen = true
+		Log(s, bot, 'compra', string.format('botas montadas stat_api=%d agi=%d int=%d',
+			bot:GetItemInSlot(bot:FindItemSlot('item_power_treads')):GetPowerTreadsStat(),
+			bot:GetAttributeValue(ATTRIBUTE_AGILITY), bot:GetAttributeValue(ATTRIBUTE_INTELLECT)))
+	end
 	local treads = (p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.TreadsToAgility(bot, s, p.now) or nil
 	if treads ~= nil then
 		-- Each change logs the attributes: the proof that the API's reading of the stat is the way round OHA says.

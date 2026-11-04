@@ -795,4 +795,35 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
     que en `fase1f-reg`, y muertes no por encima de las de OHA. Si `habilidades` da solo Assassinate, la clave
     `shrapnel_damage` está mal;
   - denegados: que no caigan de 25 en el min 10 por `soon`, y tangos usadas (`curar_tango`) sin abandonar oleadas.
+- Máquina: CPU media 23-46 % por partida.
+- Configuración: `--etiqueta fase1g`, código `b6d1815`, 2 bloques, 8 de 8 válidas. Héroes: rival Death Prophet y Lina.
+- Resultado (min 10), con n=4 por brazo: no compara, solo mecanismo.
+
+  | Brazo | LH | DN | Muertes | Kills | Patrimonio |
+  |---|---|---|---|---|---|
+  | Con combate | 57,3 [60 53 60 56] | 36,8 | 0,5 | 1,0 | 6.990 |
+  | Sin combate | 57,3 [53 56 57 63] | 32,0 | 0,3 | 0 | 6.286 |
+  | `ref-oha` (n=8) | 57,4 | 28,8 | 1,1 | 2,4 | 7.628 |
+
+  - La ablación no ve coste de farm: el combate no baja los LH y sube el patrimonio unos 700.
+  - Cumplido: 0 errores, 0 autoataques; oro 5 en t=0; salvia y TP repuestos (0-3 por partida); 0 ventas; TP usado (2-3 en las
+    partidas con vuelta); Take Aim 1-6 (antes 0); denegados 29-46; `habilidades` con Shrapnel y Assassinate (clave correcta).
+  - **Treads:** en la única partida que los cambió, `stat_api` 0→1→2: el primer cambio sube `int` de 33 a 43 con la API diciendo
+    agilidad, y el segundo sube el daño de 68 a 84. **La lectura invertida de OHA es correcta.** Las otras siete no los
+    cambian: falta saber qué leen al montarlos (línea nueva, `botas montadas`).
+  - **No cumplido, runas:** 0 activaciones. Causa acotada: **ahora el héroe llega a la runa** (`d=0`, `estado=1`, `tipo` válido,
+    9 y 1) **y se queda parado** con `Action_PickUpRune` a cada tick (`accion=1`), mientras la misma llamada activa en OHA desde
+    su modo de runa. Se pierden como mucho 3 s por intento. Sin explicar.
+  - **No cumplido, kills:** `veto=margen` sigue entre el 87 % y el 100 %, frente a la predicción de bajar del 85 %; persecuciones
+    0, 1, 5 y 0. Con los números propios el daño de 4 s es honesto y queda en la mitad de la vida del rival (395 frente a 868 a
+    nivel 7): falta daño previo o más daño, no otro umbral.
+- Validez: máquina con carga moderada; dos bloques; héroes distintos a los de `ref-oha`.
+- Decisión: seguir la vuelta: probar otras formas de dar la orden de runa y medir 8 partidas del mismo commit.
+
+### 2026-11-04 · Humo del listón (`fase1h`, 8 partidas del propio): predicción antes de lanzar
+- Pregunta: ¿el Sniper propio queda a −5 % o mejor de `ref-oha` en LH del min 10, con muertes ≤ OHA y suelo de 45? Salida
+  fijada el 2026-11-04: media ≥ 54,5 LH y muertes ≤ 1,1, a confirmación.
+- Qué cambió desde `fase1g`: tres formas de la orden de runa (`runa_res metodo=`) y la línea `botas montadas`.
+- Predicción: LH de 50 a 62, con una media cerca de 57 si `fase1g` no fue suerte; alguna activación si una de las otras dos
+  formas funciona, y si no, 0 y queda como defecto sin resolver.
 - Máquina: se anota con el resultado.
