@@ -767,7 +767,9 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 ### 2026-11-04 · Referencia de OHA (`ref-oha`, 8 partidas `base_sniper` cortadas en el min 12)
 - Pregunta: ¿cuánto hace el Sniper de OHA en el min 10 con el registro nuevo, para comparar los humos del propio sin
   repetir OHA en cada vuelta? (`trabajo/fase1-plan.md`, paso 1).
-- Código `4793c23`; sorteo por bloque, `--mid sniper`. Resultado: se anota al terminar.
+- Código `4793c23`; sorteo por bloque, `--mid sniper`. Máquina: CPU media 32 %.
+- Resultado (min 10, `tools/analisis/humo-linea.mjs`): 8 de 8 válidas. **LH 57,4** [53 47 57 74 57 44 65 62], DN 28,8, muertes
+  1,1, kills 2,4, patrimonio 7.628. Para el listón: −5 % son 54,5 LH y −15 %, 48,8.
 - Validez: OHA no cambia al tocar `bots/FunLib/propio/` (`linea.lua` solo se carga con `control_completo`), pero la referencia
   y el propio van en corridas separadas, con sorteos y carga distintos: `serie-fase1.mjs` rechaza mezclarlas a propósito. La
   comparación es descriptiva, para los humos; la confirmación de 20 parejas sigue intercalada.
