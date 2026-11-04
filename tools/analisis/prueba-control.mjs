@@ -39,6 +39,12 @@ for (const f of files) {
     const i = kv(l).intencion; dec[i] = (dec[i] ?? 0) + 1;
   }
   console.log(`  decisiones: ${Object.entries(dec).map(([k, n]) => `${k} ${n}`).join(", ")}`);
+  // Phase 1 (trabajo/bot-propio.md): abilities, trades and purchases up to minute 10.
+  const upTo10 = (kind) => lines.filter((l) => l.includes(`[bench] prop ${kind} `) && Number(kv(l).t) <= 600);
+  const casts = upTo10("habilidad");
+  console.log(`  hasta min 10: shrapnel ${casts.filter((l) => l.includes("shrapnel:")).length}, assassinate ${casts.filter((l) => l.includes("assassinate:")).length}, acosos ${upTo10("acoso").length}`);
+  const bought = upTo10("compra").filter((l) => /\(para /.test(l) && !l.includes("no comprado")).map((l) => l.match(/compra t=\S+ pid=\d+ (\S+)/)?.[1]);
+  console.log(`  compras hasta min 10: ${bought.join(" ") || "ninguna"}`);
   const calls = lines.filter((l) => l.includes("[bench] prop llamadas ")).slice(-1)[0];
   console.log(`  aún llamadas por el motor (último informe): ${calls ? calls.slice(calls.indexOf("pid=")) : "ninguna"}`);
   const modes = new Set(lines.filter((l) => l.includes("[bench] prop estado ")).map((l) => kv(l).modo));

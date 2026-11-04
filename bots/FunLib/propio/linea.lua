@@ -3,14 +3,19 @@
 -- only when the intent changes, never cutting an attack's wind-up), log ("[bench] prop ..." lines).
 -- What it does: walks to its lane behind its own creeps, predicts each creep's health when its own attack would land
 -- (attacks in flight, the next hits of the units attacking it) and hits once at the right moment, denies, retreats on
--- low health, tower aggro or enemy damage, uses salve and tango, buys its starting items and levels up with Valve's own
--- build for the hero (scripts/npc/bot_builds.txt, docs/api/README.md). It casts no ability and does not fight.
+-- low health, tower aggro or the damage of enemies that can reach it, uses salve and tango, levels up with Valve's own
+-- build for the hero (scripts/npc/bot_builds.txt, docs/api/README.md). Phase 1 (trabajo/bot-propio.md, signed
+-- 2026-11-03) adds: Valve's item build bought by parts with the courier (compras.lua), the hero's abilities to harass
+-- and finish (sniper.lua), and right-clicking the enemy laner when the trade favours it. It does not chase or roam.
 -- Only the Bot API listed in docs/api/volcado.md. The team's VM is shared with OHA, whose FunLib/aba_global_overrides
 -- wraps a few calls (GetHealth, GetLocation, GetNearby*...): for visible units they answer as Valve's.
 local L = {}
 
 local out = BenchRawPrint or print
 local Registro = require(GetScriptDirectory()..'/FunLib/propio/registro_linea')
+local Compras = require(GetScriptDirectory()..'/FunLib/propio/compras')
+-- Per-hero ability rules (Finish, Harass); a hero without a module plays the lane without abilities.
+local HEROES = { npc_dota_hero_sniper = require(GetScriptDirectory()..'/FunLib/propio/sniper') }
 
 -- Valve's own level-up order for the heroes this test may take (bot_builds.txt, 7.41f).
 local BUILDS = {
@@ -34,6 +39,13 @@ local K = {
 	windUp = 0.15,        -- extra seconds an attack order is protected after its attack point
 	lookAhead = 2.0,      -- seconds ahead a creep is watched to stand ready for it
 	moveRefresh = 1.0,    -- re-issue a move order at most this often unless the target moved
+	burstHold = 2.0,      -- once in danger, stay away this long after the danger is gone (no back and forth)
+	reachMargin = 150,    -- an enemy hero counts as dangerous within its reach plus this, plus half a second walking
+	reachCap = 1200,      -- cast ranges above this (global ultimates) count as this
+	tradeHp = 0.50,       -- right-click the enemy laner only above this health...
+	tradeEdge = 0.15,     -- ...and if its health fraction is not above ours by more than this
+	tradeCreeps = 2,      -- ...with at most this many enemy creeps within 500 of us (they aggro on hero attacks)
+	tradeEvery = 1.5,     -- seconds between two right-clicks on a hero
 }
 
 local S = {} -- pid -> state of this bot
@@ -136,11 +148,23 @@ local function Perceive(bot)
 		allyTowers = bot:GetNearbyTowers(1500, false) or {},
 		front = GetLaneFrontLocation(team, LANE_MID, 0),
 	}
-	-- Damage the visible enemy heroes can deal to us in 3 s (Valve's own estimate, mana and cooldowns included).
-	p.enemyBurst = 0
+	-- Damage the visible enemy heroes can deal to us in 3 s (Valve's own estimate, mana and cooldowns included), counted
+	-- only for those that can reach us: within their attack range or the cast range of a ready ability, plus a margin
+	-- and half a second walking. The smoke of 2026-11-03 retreated from an enemy far out of reach (MEDICIONES).
+	p.enemyBurst, p.enemyBurstAll = 0, 0
 	for _, e in ipairs(p.enemyHeroes) do
-		if Valid(e) and e:CanBeSeen() then
-			p.enemyBurst = p.enemyBurst + e:GetEstimatedDamageToTarget(true, bot, 3.0, DAMAGE_TYPE_ALL)
+		if Valid(e) then
+			local dmg = e:GetEstimatedDamageToTarget(true, bot, 3.0, DAMAGE_TYPE_ALL)
+			p.enemyBurstAll = p.enemyBurstAll + dmg
+			local reach = e:GetAttackRange()
+			for slot = 0, 5 do
+				local ab = e:GetAbilityInSlot(slot)
+				if ab ~= nil and not ab:IsPassive() and ab:IsFullyCastable() then
+					reach = math.max(reach, math.min(ab:GetCastRange(), K.reachCap))
+				end
+			end
+			reach = reach + K.reachMargin + 0.5 * e:GetCurrentMovementSpeed()
+			if D2(p.loc, e:GetLocation()) <= reach then p.enemyBurst = p.enemyBurst + dmg end
 		end
 	end
 	p.towerOnMe = false
@@ -163,10 +187,17 @@ end
 local function RuleRetreat(bot, s, p)
 	local reason = nil
 	if p.towerOnMe then reason = 'torre_me_ataca'
-	elseif p.hp < K.retreatHp then reason = string.format('vida %.2f < %.2f', p.hp, K.retreatHp)
+	elseif p.hp < K.retreatHp then
+		reason = string.format('vida %.2f < %.2f', p.hp, K.retreatHp)
+		s.lowHp = true
 	elseif p.enemyBurst > K.enemyBurst * p.hpAbs then
 		reason = string.format('daño_enemigo_3s %d > %.0f%% de %d', p.enemyBurst, K.enemyBurst * 100, p.hpAbs)
-	elseif s.retreating and p.hp < K.returnHp then reason = string.format('recuperando %.2f < %.2f', p.hp, K.returnHp) end
+		s.burstUntil = p.now + K.burstHold
+	elseif p.now < (s.burstUntil or -1000) then
+		reason = string.format('peligro_reciente %.1fs', s.burstUntil - p.now)
+	-- Only a retreat for low health waits to recover up to returnHp; one for danger ends when the danger does.
+	elseif s.lowHp and p.hp < K.returnHp then reason = string.format('recuperando %.2f < %.2f', p.hp, K.returnHp) end
+	if p.hp >= K.returnHp then s.lowHp = false end
 	s.retreating = reason ~= nil
 	if reason == nil then s.toFountain = false return nil end
 	-- Once heading for the fountain it keeps going until healed (returnHp), not back and forth with the tower.
@@ -258,6 +289,30 @@ local function LanePoint(p)
 	return spot
 end
 
+-- Right-click the enemy laner when the trade favours us: it is in our attack range, we are healthy and not worse off
+-- than it, few enemy creeps near us (they switch to us when we hit a hero) and no enemy tower near.
+local function RuleTrade(bot, s, p)
+	if p.now - (s.tradeAt or -1000) < K.tradeEvery or p.hp < K.tradeHp then return nil end
+	for _, tw in ipairs(p.enemyTowers) do
+		if Valid(tw) and D2(p.loc, tw:GetLocation()) < K.towerMargin + 50 then return nil end
+	end
+	local creepsNear = 0
+	for _, c in ipairs(p.enemyCreeps) do
+		if Valid(c) and D2(p.loc, c:GetLocation()) < 500 then creepsNear = creepsNear + 1 end
+	end
+	if creepsNear > K.tradeCreeps then return nil end
+	for _, e in ipairs(p.enemyHeroes) do
+		if Valid(e) and D2(p.loc, e:GetLocation()) <= p.range + 50 then
+			local ehp = e:GetHealth() / math.max(e:GetMaxHealth(), 1)
+			if ehp <= p.hp + K.tradeEdge then
+				return { intent = 'acosar', target = e, reason = string.format('%s vida %.2f frente a la mía %.2f, creeps cerca %d',
+					(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')), ehp, p.hp, creepsNear) }
+			end
+		end
+	end
+	return nil
+end
+
 local function Decide(bot, s, p)
 	if p.t < -5 and not s.bought then return { intent = 'comprar', reason = 'objetos iniciales' } end
 	local r = RuleRetreat(bot, s, p)
@@ -270,8 +325,19 @@ local function Decide(bot, s, p)
 	if r then return r end
 	r = RuleHeal(bot, s, p)
 	if r then return r end
+	local hero = HEROES[bot:GetUnitName()]
+	if hero ~= nil then
+		r = hero.Finish(bot, s, p)
+		if r then return r end
+	end
 	local ready
 	r, ready = RuleLastHit(bot, s, p)
+	if r then return r end
+	if hero ~= nil then
+		r = hero.Harass(bot, s, p)
+		if r then return r end
+	end
+	r = RuleTrade(bot, s, p)
 	if r then return r end
 	if ready ~= nil then
 		local spot = Toward(ready:GetLocation(), p.loc, p.range * 0.9)
@@ -327,6 +393,26 @@ local function Act(bot, s, p, d)
 	-- An item order is not repeated each frame while the healing buff has not appeared yet.
 	if d.intent == 'curar_salvia' then bot:Action_UseAbilityOnEntity(d.item, bot) s.busyUntil = p.now + 0.6 return end
 	if d.intent == 'curar_tango' then bot:Action_UseAbilityOnTree(d.item, d.tree) s.busyUntil = p.now + 1.0 return end
+	-- Abilities: protected for their cast point, so the cast is not cut by the next decision.
+	if d.intent == 'rematar' then
+		bot:Action_UseAbilityOnEntity(d.ability, d.target)
+		s.busyUntil = p.now + d.castPoint + 0.3
+		Log(s, bot, 'habilidad', 'assassinate: ' .. d.reason)
+		return
+	end
+	if d.intent == 'shrapnel' then
+		bot:Action_UseAbilityOnLocation(d.ability, d.at)
+		s.busyUntil, s.shrapnelAt = p.now + d.castPoint + 0.2, p.now
+		Log(s, bot, 'habilidad', 'shrapnel: ' .. d.reason)
+		return
+	end
+	if d.intent == 'acosar' then
+		bot:Action_AttackUnit(d.target, true)
+		s.lastAttackOrder, s.tradeAt = p.now, p.now
+		s.busyUntil = p.now + p.point + K.windUp + math.max(0, bot:GetLastAttackTime() + bot:GetSecondsPerAttack() - p.now)
+		Log(s, bot, 'acoso', d.reason)
+		return
+	end
 	if (d.intent == 'ultimo_golpe' or d.intent == 'denegar') then
 		if s.pending ~= nil then
 			Log(s, bot, 'golpe_res', string.format('%s reemplazado', s.pending.deny and 'denegar' or 'ultimo_golpe'))
@@ -361,9 +447,9 @@ end
 local function Status(bot, s, p)
 	if p.t - s.lastStatus < 2 then return end
 	s.lastStatus = p.t
-	Log(s, bot, 'estado', string.format('intencion=%s vida=%.2f modo=%s accion=%d cola=%d creeps_e=%d creeps_a=%d heroes_e=%d daño3s=%d',
-		s.intent, p.hp, tostring(bot:GetActiveMode()), bot:GetCurrentActionType(), bot:NumQueuedActions(),
-		#p.enemyCreeps, #p.allyCreeps, #p.enemyHeroes, p.enemyBurst))
+	Log(s, bot, 'estado', string.format('intencion=%s vida=%.2f mana=%.2f modo=%s accion=%d cola=%d creeps_e=%d creeps_a=%d heroes_e=%d daño3s=%d daño3s_todos=%d',
+		s.intent, p.hp, bot:GetMana() / math.max(bot:GetMaxMana(), 1), tostring(bot:GetActiveMode()), bot:GetCurrentActionType(),
+		bot:NumQueuedActions(), #p.enemyCreeps, #p.allyCreeps, #p.enemyHeroes, p.enemyBurst, p.enemyBurstAll))
 end
 
 -- How often the engine calls this Think and what it costs (checklist item 11): one line per minute of game time.
@@ -384,9 +470,17 @@ function L.Think()
 	local started = RealTime()
 	local s = State(bot)
 	Registro.Tick(bot)
+	-- Purchases, courier and inventory run dead or alive (OHA also buys while dead).
+	if s.bought then
+		local now = GameTime()
+		for _, line in ipairs({ Compras.Buy(bot, s, now) or false, Compras.Courier(bot, s, now) or false,
+			Compras.Arrange(bot, s, now) or false }) do
+			if line then Log(s, bot, 'compra', line) end
+		end
+	end
 	if not bot:IsAlive() then
 		-- Dead time counts too, so the calls per second compare with the other bots' (the smoke read 25 against 30).
-		s.pending, s.retreating, s.toFountain = nil, false, false
+		s.pending, s.retreating, s.toFountain, s.lowHp, s.burstUntil = nil, false, false, false, nil
 		Cost(bot, s, DotaTime(), (RealTime() - started) * 1000)
 		return
 	end
