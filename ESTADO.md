@@ -21,10 +21,15 @@
     propio, humo»): con build y mensajero (`compras.lua`), Shrapnel y Assassinate (`sniper.lua`), acoso y peligro por
     alcance, el Sniper propio suma 111 últimos golpes frente a 101 de OHA en el min 10 (dos lados) y el 96 % de su
     patrimonio; 0 errores, 0 ataques automáticos, 30 Think/s. Meta del diseño cumplida en humo.
-  - Pedro acotó la meta (DECISIONES 2026-11-03): la serie espera a que el héroe juegue su fase de línea completa.
-    Hecho en la rama `claude/fase1-completa`: buscar kills, perseguir con criterio, rotar y runas (`combate.lua`).
-  - Siguiente acción: revisión del código de combate, humo `fase1c`, y con él la puerta de medición de la serie.
-- Espera al dueño: nada hasta el humo de la fase 1 completa (luego, aprobar el tamaño de la serie).
+  - Pedro acotó la meta (DECISIONES 2026-11-03) y autorizó la serie (2026-11-04). En la rama `claude/fase1-completa`:
+    buscar kills, perseguir con criterio, rotar y runas (`combate.lua`); humo `fase1c` con fallos de rendimiento
+    (muertes quieto en línea), corregido (`283f763`) y humo `fase1d` limpio (−14 % LH, −13 % patrimonio frente a OHA,
+    un bloque). Puerta de medición pasada: revisor adversarial, pregunta y análisis fijo escritos (MEDICIONES, «Serie
+    de la fase 1»; `tools/analisis/serie-fase1.mjs`).
+  - Siguiente acción: la serie `serie-fase1` (24 partidas) en cuanto la máquina esté libre (a las 01:30 la cargaban
+    tres Unreal Editor y un Python ajenos al banco); leerla con `node tools/analisis/serie-fase1.mjs serie-fase1`,
+    entrada en MEDICIONES y PR de la rama.
+- Espera al dueño: nada (la serie está autorizada; si la máquina no se libera, se le dice al volver).
 - El código de v3 está en `main` apagado por defecto (variante `cerebro_v3`), con las mejoras del banco
   (`--repetir-invalidas`, contador de Think, `tools/analisis/n3-v3.mjs`). La fase de líneas queda como está
   (DECISIONES 2026-11-02).
