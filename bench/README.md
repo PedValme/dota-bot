@@ -62,6 +62,11 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
 - Si el orquestador se cierra a la fuerza (Administrador de tareas), su Dota queda abierto y puede quedar
   `bots/Customize/bench_valve_team.lua` (dura toda la partida desde el 2026-10-31, por S6 de MEDICIONES.md): mientras exista, un equipo juega con los bots de
   Valve en cualquier partida local. La siguiente corrida lo borra; también se puede borrar a mano.
+- Humos cortos (`--corte N`, DECISIONES 2026-11-04): la partida termina tras el minuto N de juego, válida y sin ganador
+  (`resultado=corte`, columna `corte`), para preguntas que solo leen la línea. No sirve para victorias ni cierre, y por
+  cada commit candidato se juega además una partida completa, para ver errores tardíos. Héroes fijos
+  (`--heroes a,b,c,d,e/v,w,x,y,z`, dota-bot el primero, cada uno de la lista de su posición; columna `heroes_fijos`): solo
+  para desarrollo y atribuir causas; una serie que decide mantiene el sorteo.
 - Línea de tiempo: el custom game escribe cada minuto torres, cuarteles, vida del Ancient, kills y oro de los dos
   equipos (el oro, solo de los bots); el orquestador la guarda en `lineas/<etiqueta>-<fecha>-<n>.csv` y resume la
   ventaja de oro máxima de dota-bot (`ventaja_oro_max`), el minuto en que llegó a +10.000 (`minuto_10k`) y las torres
@@ -111,9 +116,9 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 | Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |
 | Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |
 | Mismo código, con commit, en toda la serie | árbol de git de `bots/` y `tools/bench/` y `git status` antes y después de cada partida (`codigo` = commit@árboles; un commit solo de documentos no la invalida) | `código sin commit`, `el código cambió en la serie` |
-| La partida termina en tiempo razonable | reloj de GSI: a los 60 min se corta (`resultado=tope`, válida, sin ganador) | no la invalida |
+| La partida termina en tiempo razonable | reloj de GSI: a los 60 min se corta (`resultado=tope`, válida, sin ganador); con `--corte N`, en el minuto N (`resultado=corte`, igual) | no la invalida |
 | Lado, héroes y orden repartidos igual entre variantes | calendario por bloques (pruebas) | solo cuentan bloques completos; con `--repetir-invalidas N` una partida inválida **por un fallo de montaje** (reparto, héroes, apariciones, couriers, patrimonio inicial, humano, variante o modo en el log) se repite con los mismos héroes, lado y variante, hasta N veces; una rota mientras se juega (`sin final`) o con intrusos no se repite, porque podría depender del código de una variante. En `series.csv` cada intento tiene su fila (`intento` 0, 1…): por (etiqueta, partida) cuenta la última; las inválidas se informan por variante, con las repetidas |
-| Máquina libre | CPU y memoria por partida en `series.csv` | se anota; con carga alta, no se corre |
+| Máquina libre | CPU y memoria por partida en `series.csv` | se anota; con carga alta, no se corre, salvo los humos cortados en el min 12 (DECISIONES 2026-11-04) |
 
 Puerta antes de cada serie (DECISIONES 2026-10-31), sin excepción:
 1. Una partida de humo con `--observar`: su log se coteja fila por fila contra esta tabla (no el código).

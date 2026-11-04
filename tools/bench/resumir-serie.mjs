@@ -43,7 +43,10 @@ const obsFileOf = (m) => `${m.etiqueta}-${String(m.fecha).replace(/[-:T]/g, "")}
 const median = (xs) => { const s = [...xs].sort((a, b) => a - b); return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : null; };
 console.log(`Serie ${tag}: ${matches.length} partidas`);
 for (const v of [...new Set(matches.map((m) => m.variante))]) {
-  const ms = matches.filter((m) => m.variante === v && m.valida === "si");
+  // A match cut at --corte has no winner: it is neither a win nor a loss.
+  const valid = matches.filter((m) => m.variante === v && m.valida === "si");
+  const ms = valid.filter((m) => m.resultado !== "corte");
+  if (ms.length < valid.length) console.log(`  ${v}: ${valid.length - ms.length} partidas cortadas con --corte, fuera de este resumen`);
   const wins = ms.filter((m) => m.ganador === m.dotabot).length;
   const closes = ms.filter((m) => m.ganador === m.dotabot && m.minuto_10k !== "").map((m) => +m.minutos - +m.minuto_10k);
   const lostAfter10k = ms.filter((m) => m.ganador !== m.dotabot && m.minuto_10k !== "").length;

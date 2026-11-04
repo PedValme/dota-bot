@@ -7,7 +7,11 @@
 //   node tools/bench/orquestador.mjs [--partidas 2] [--dificultad 4] [--velocidad 4] [--etiqueta texto]
 //                                    [--variantes base,empuje] [--modo turbo] [--observar] [--lado dire]
 //                                    [--dota "<dota 2 beta>"]
-//                                    [--muestra-gsi <file>] [--repetir-invalidas 0-3]
+//                                    [--muestra-gsi <file>] [--repetir-invalidas 0-3] [--corte 12]
+//                                    [--heroes a,b,c,d,e/v,w,x,y,z]
+// --corte N ends each match after game minute N, valid and with no winner: for smokes that only read the lane numbers
+// (DECISIONES 2026-11-04). --heroes fixes the two groups (dota-bot's first) instead of the draw, for development only,
+// to attribute causes; each hero must belong to its position's pool, as a draw would give. Both go in series.csv.
 // --variantes interleaves versions of dota-bot (VARIANTS) in one series: per block of heroes, every variant plays
 // both sides, and the order flips every block, so heroes, side, Dota's version and the PC's load hit every variant
 // alike. Each match is a row of bench/series.csv; "valida" says whether it can be counted.
@@ -53,13 +57,20 @@ const MATCH_FILE = join(root, "tools", "bench", "addon", "scripts", "vscripts", 
 const CSV = join(root, "bench", "series.csv");
 const COLUMNS = ["fecha", "etiqueta", "partida", "bloque", "variante", "valida", "motivo", "dificultad", "dotabot",
   "ganador", "resultado", "minutos", "kills_radiant", "kills_dire", "humano", "heroes", "ventaja_oro_max",
-  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo", "codigo", "rival", "intento"];
+  "minuto_10k", "torres_fin", "dota_version", "cpu_media", "cpu_max", "mem_libre", "modo", "codigo", "rival", "intento",
+  "corte", "heroes_fijos"];
 
 // Measurement protocol (DECISIONES 2026-10-31): a match that reaches this game minute stops as "tope" (valid, with no
 // winner, so dota-bot did not win it; counted apart in the summary), and a series stops once more than this share of
 // its matches (from the fifth on) is not valid.
 export const GAME_CAP_MIN = 60;
 export const MAX_INVALID_SHARE = 0.2;
+
+// --corte N: the match ends once the game clock passes minute N (the 3 s before closing Dota let minute N's lines reach
+// the log). Pre-game clocks are negative and without the option it never fires.
+export function cutReached(clock, corte) {
+  return corte !== undefined && clock >= corte * 60;
+}
 
 // The code a match played: "commit@trees", where trees are git's tree ids of bots/ and tools/bench/ (what plays and
 // what judges), with "+cambios" when they had uncommitted changes (the bots read bots/ live, so such a match did not
@@ -208,8 +219,9 @@ export function schedule(i, variants) {
 export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo,
   espejo = "", start, codigo, firstCodigo, couriers, intrusos, tardios, esperado, killsAtStart = null }) {
   // A match stopped at the cap counts, as a match dota-bot did not win (Pedro, 2026-10-31): dropping it would drop
-  // exactly the matches an arm cannot close, a different number per arm.
-  if (outcome !== "final" && outcome !== "tope") return "sin final";
+  // exactly the matches an arm cannot close, a different number per arm. A match cut at --corte counts too: the smoke
+  // asked for it and only reads the lane numbers; it has no winner.
+  if (outcome !== "final" && outcome !== "tope" && outcome !== "corte") return "sin final";
   if (codigo === undefined || codigo.endsWith("+cambios")) return "código sin commit";
   if (!codeTree(codigo) || codeTree(codigo) !== codeTree(firstCodigo)) {
     return `el código cambió en la serie (${firstCodigo} -> ${codigo})`;
@@ -265,7 +277,8 @@ export function summarize(results, variants) {
     const rows = complete.filter((r) => r.variante === v);
     return { variante: v, ganadas: rows.filter((r) => r.ganador === r.dotabot).length, validas: rows.length,
       jugadas: results.filter((r) => r.variante === v).length,
-      topes: results.filter((r) => r.variante === v && r.resultado === "tope").length };
+      topes: results.filter((r) => r.variante === v && r.resultado === "tope").length,
+      cortes: results.filter((r) => r.variante === v && r.resultado === "corte").length };
   });
 }
 const TIMELINES = join(root, "bench", "lineas");
@@ -291,6 +304,32 @@ export function drawHeroes(random = Math.random, avoid = [], mid = undefined) {
     const from = free.length ? free : pool;
     return "npc_dota_hero_" + from[Math.floor(random() * from.length)];
   });
+}
+
+// --heroes a,b,c,d,e/v,w,x,y,z: the two groups a draw would give, one hero per position, each from its position's pool
+// and none shared, dota-bot's (or the first variant's) first. Development only: a series that decides keeps the draw.
+export function parseFixedHeroes(text) {
+  const groups = String(text).split("/").map((g) => g.split(",").map((h) => h.trim()));
+  if (groups.length !== 2 || groups.some((g) => g.length !== HERO_POOL.length)) {
+    throw new Error("--heroes: dos grupos de cinco, a,b,c,d,e/v,w,x,y,z");
+  }
+  for (const g of groups) g.forEach((h, pos) => {
+    if (!HERO_POOL[pos].includes(h)) throw new Error(`--heroes: ${h} no está en la posición ${pos + 1} (${HERO_POOL[pos].join(", ")})`);
+  });
+  if (new Set(groups.flat()).size !== groups.flat().length) throw new Error("--heroes: sin héroes repetidos");
+  return groups.map((g) => g.map((h) => "npc_dota_hero_" + h));
+}
+
+// A variant that follows one hero (linea_heroe) plays and logs nothing of its own unless dota-bot has that hero: such a
+// match would come out valid with plain OHA and no lane lines. Returns the error, or "".
+export function laneHeroProblem(variantes, mid, fijos) {
+  for (const v of variantes) {
+    const hero = VARIANTS[v]?.linea_heroe;
+    if (hero && mid !== hero && !fijos?.[0].includes("npc_dota_hero_" + hero)) {
+      return `--variantes ${v}: dota-bot debe llevar a ${hero} (--mid ${hero} o en el primer grupo de --heroes)`;
+    }
+  }
+  return "";
 }
 
 // Lua read by the custom game (tools/bench/addon/scripts/vscripts/addon_game_mode.lua).
@@ -549,8 +588,14 @@ function parseArgs(argv) {
     else if (k === "--rival") opt.rival = v; // "valve" (default) or "dotabot": both teams dota-bot, one variant each
     else if (k === "--repetir-invalidas") opt.repetir = Number(v); // replay an invalid match, same heroes and side
     else if (k === "--mid") opt.mid = v; // dota-bot's mid hero is fixed (full-control test); its rival is drawn as usual
+    else if (k === "--corte") opt.corte = Number(v); // ends each match after this game minute (valid, no winner)
+    else if (k === "--heroes") opt.fijos = parseFixedHeroes(v); // both groups fixed, development only
     else throw new Error(`Opción desconocida: ${k}`);
   }
+  if (opt.corte !== undefined && (!Number.isInteger(opt.corte) || opt.corte < 1 || opt.corte >= GAME_CAP_MIN)) {
+    throw new Error(`--corte: minuto de 1 a ${GAME_CAP_MIN - 1}`);
+  }
+  if (opt.fijos !== undefined && opt.mid !== undefined) throw new Error("--heroes y --mid: uno u otro");
   if (!Number.isInteger(opt.partidas) || opt.partidas < 1 || opt.partidas > 50) throw new Error("--partidas: 1 a 50");
   if (!Number.isInteger(opt.dificultad) || opt.dificultad < 0 || opt.dificultad > 4) throw new Error("--dificultad: 0 a 4");
   if (!Number.isInteger(opt.velocidad) || opt.velocidad < 1 || opt.velocidad > 8) throw new Error("--velocidad: 1 a 8");
@@ -569,6 +614,8 @@ function parseArgs(argv) {
   }
   for (const v of opt.variantes) if (!Object.hasOwn(VARIANTS, v)) throw new Error(`--variantes: ${Object.keys(VARIANTS).join(", ")}`);
   if (new Set(opt.variantes).size !== opt.variantes.length) throw new Error("--variantes: sin repetir");
+  const laneProblem = laneHeroProblem(opt.variantes, opt.mid, opt.fijos);
+  if (laneProblem) throw new Error(laneProblem);
   const block = opt.rival === "dotabot" ? 2 : 2 * Math.max(opt.variantes.length, 1);
   if (opt.variantes.length && opt.partidas % block !== 0) throw new Error(`--partidas: múltiplo de ${block} con esas variantes`);
   opt.block = block;
@@ -726,7 +773,10 @@ async function main(argv) {
       }
       if (opt.observar) writeFileSync(OBSERVE_FILE, "-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn true\n");
       // A repeat keeps the block's heroes even when it is the block's first match.
-      if (i % opt.block === 0 && tries === 0) { heroes = drawHeroes(Math.random, [], opt.mid); rivals = drawHeroes(Math.random, heroes); }
+      if (i % opt.block === 0 && tries === 0) {
+        heroes = opt.fijos?.[0] ?? drawHeroes(Math.random, [], opt.mid);
+        rivals = opt.fijos?.[1] ?? drawHeroes(Math.random, heroes);
+      }
       const groups = sideGroups(dotabot, heroes, rivals, opt.espejo ?? "");
       const esperado = { radiant: groups.radiant, dire: groups.dire ?? [] };
       writeFileSync(MATCH_FILE, matchConfigLua(groups.radiant, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), groups.dire));
@@ -758,9 +808,8 @@ async function main(argv) {
         // removed at the horn). A hard kill leaves it behind until the next run (bench/README.md).
         if (isFinished(latest)) { outcome = "final"; break; }
         if ((latest?.clock ?? 0) >= GAME_CAP_MIN * 60) { outcome = "tope"; break; }
+        if (cutReached(latest?.clock ?? 0, opt.corte)) { outcome = "corte"; break; }
       }
-      removeTeamFile();
-      removeVariantFile();
       const memFree = Math.round((100 * os.freemem()) / os.totalmem());
       if (childAlive) {
         await sleep(3000);
@@ -769,6 +818,9 @@ async function main(argv) {
         while (childAlive && Date.now() < deadline) await sleep(500);
         if (childAlive) throw new Error("Mi Dota no se cerró en 30 s; paro.");
       }
+      // Only now: a hero copy spawned in those last 3 s would otherwise load dota-bot on Valve's team (cleanup covers errors).
+      removeTeamFile();
+      removeVariantFile();
       if (outcome === "dota-cerrado" && (await running("dota2.exe"))) {
         throw new Error("Mi Dota se cerró pero hay otro dota2.exe abierto; paro sin tocarlo.");
       }
@@ -829,6 +881,8 @@ async function main(argv) {
         codigo,
         rival: opt.rival,
         intento: tries,
+        corte: opt.corte ?? "",
+        heroes_fijos: opt.fijos ? "si" : "",
       };
       appendFileSync(CSV, csvRow(row) + "\n");
       allRows.push(row);
@@ -857,7 +911,13 @@ async function main(argv) {
     if (Object.keys(invalidBy).length) {
       console.log(`Inválidas por variante (con las repetidas): ${Object.entries(invalidBy).map(([v, n]) => `${v} ${n}`).join(", ")}.`);
     }
-    if (opt.rival === "dotabot") {
+    if (opt.corte !== undefined) {
+      // A cut match has no winner, so wins say nothing here.
+      // Rival rows are written from the first variant's side.
+      for (const s of summarize(results, opt.rival === "dotabot" ? [opt.variantes[0]] : opt.variantes)) {
+        console.log(`${s.variante ? `Variante ${s.variante}: ` : ""}jugó ${s.jugadas}, ${s.cortes} cortadas en el min ${opt.corte} (sin ganador), ${s.validas} válidas de bloques completos. Detalle en bench/series.csv.`);
+      }
+    } else if (opt.rival === "dotabot") {
       // Rows are written from the first variant's side: its wins are the matches it won against the second.
       const [s] = summarize(results, [opt.variantes[0]]);
       // A capped match has no winner: neither variant won it, so it shows apart (not as a win for the second).
