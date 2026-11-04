@@ -763,3 +763,34 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   salían `reemplazado` ahora cuentan, y `acierto` solo dice que el contador subió (en la partida 1, 56 aciertos frente a 49
   muertes por ataque; el resto, Shrapnel y Maelstrom): la tasa de remate se calcula con `creepkill inflictor=ataque`.
 - Decisión: el registro vale; pasar a los defectos del bot.
+
+### 2026-11-04 · Referencia de OHA (`ref-oha`, 8 partidas `base_sniper` cortadas en el min 12)
+- Pregunta: ¿cuánto hace el Sniper de OHA en el min 10 con el registro nuevo, para comparar los humos del propio sin
+  repetir OHA en cada vuelta? (`trabajo/fase1-plan.md`, paso 1).
+- Código `4793c23`; sorteo por bloque, `--mid sniper`. Resultado: se anota al terminar.
+- Validez: OHA no cambia al tocar `bots/FunLib/propio/` (`linea.lua` solo se carga con `control_completo`), pero la referencia
+  y el propio van en corridas separadas, con sorteos y carga distintos: `serie-fase1.mjs` rechaza mezclarlas a propósito. La
+  comparación es descriptiva, para los humos; la confirmación de 20 parejas sigue intercalada.
+
+### 2026-11-04 · Humo de los defectos y las mejoras (`fase1g`, ablación 4+4, propio): predicción antes de lanzar
+- Pregunta: ¿se mueve cada mecanismo como dice su arreglo? (`trabajo/fase1-plan.md`, pasos 3 a 5). Los LH de 8 partidas se
+  comparan con `ref-oha`; la ablación mira cuánto farm cuesta el combate.
+- Qué cambió: runas (andar y recoger de cerca, 3 s y abandono), compras (oro inicial, piezas baratas primero, salvia y TP,
+  venta solo junto a la tienda), `RuleHeal`, maná de Shrapnel, torres, denegar, soltar aggro con 2 creeps, build, Take Aim,
+  Treads en agilidad, rotación apagada, TP de vuelta, prueba de kill propia, variante `control_sniper_sincombate`.
+- Predicción de mecanismo, por línea del registro y hasta el min 10:
+  - runas: `runa_res` con `d` que baja hasta 80 y `accion=2` mientras anda (antes, parado). Si de cerca sigue sin activar, las
+    coordenadas de `intento=si` dicen a dónde va, y la causa sigue abierta: máximo 3 s perdidos por runa;
+  - oro: `oro` bajo 100 en t=0; ningún tramo de más de 1.000 ocioso; `repongo item_flask` y `repongo item_tpscroll`;
+  - ventas: 0 `vendo` lejos de la tienda;
+  - Take Aim: `habilidad take_aim` mayor que 0 (antes, 0 frente a 7-15 de OHA); `rango` de `obs linea` mayor que antes;
+  - Treads: `botas cambio` a lo sumo 2 veces por partida, y `agi` por encima de `int` tras el último cambio; si no, la lectura
+    de OHA está al revés;
+  - maná: primer `shrapnel` tras el quinto punto, a ≤ alcance+200;
+  - torres: ninguna caída de más de 0,5 de vida en 10 s bajo una torre por ir a por un creep;
+  - TP: `habilidad tp` mayor que 0 en partidas con vuelta a la fuente (antes, 0 frente a 4-19);
+  - kills: `kill_eval` con `golpes` y `habilidades` mayores que 0, `veto=margen` por debajo del 85 % actual, más `persecucion`
+    que en `fase1f-reg`, y muertes no por encima de las de OHA. Si `habilidades` da solo Assassinate, la clave
+    `shrapnel_damage` está mal;
+  - denegados: que no caigan de 25 en el min 10 por `soon`, y tangos usadas (`curar_tango`) sin abandonar oleadas.
+- Máquina: se anota con el resultado.
