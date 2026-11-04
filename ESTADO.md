@@ -26,12 +26,17 @@
     (muertes quieto en línea), corregido (`283f763`) y humo `fase1d` limpio (−14 % LH, −13 % patrimonio frente a OHA,
     un bloque). Puerta de medición pasada: revisor adversarial, pregunta y análisis fijo escritos (MEDICIONES, «Serie
     de la fase 1»; `tools/analisis/serie-fase1.mjs`).
-  - **La serie no se corrió**: la máquina no se liberó en toda la noche (01:40-07:40, muestras cada 2 min: cinco
-    Unreal Editor al 100 % de un núcleo cada uno, Chrome al 85 %, CPU 28-60 %, 37 % de memoria libre), y la regla de
-    medición prohíbe correr con carga sin la palabra de Pedro.
-  - Siguiente acción: con la respuesta de Pedro, la serie `serie-fase1` (24 partidas); leerla con
-    `node tools/analisis/serie-fase1.mjs serie-fase1`, entrada en MEDICIONES y PR de la rama.
-- Espera al dueño: correr la serie de la fase 1 con la máquina cargada por los Unreal Editor (ajenos al banco) o liberarla primero · Recomendado: lanzarla con la carga anotada, como el 2026-11-02, porque la métrica es de tiempo de juego (LH y patrimonio del min 10) y los dos brazos se intercalan por bloque; o cerrar los Unreal si no se usan
+  - **La serie no se corrió y queda aplazada** (DECISIONES 2026-11-04): solo confirma lo que los humos ya muestran a
+    la par o mejor, y el propio sigue por debajo de OHA. La máquina tampoco se liberó en la noche (cinco Unreal Editor
+    ajenos al banco).
+  - Diagnóstico hecho (MEDICIONES, «Diagnóstico: dónde pierde últimos golpes»; `tools/analisis/diag-linea.mjs`): la
+    brecha se abre desde el min 5-6; la mayor fuga era huir con vida casi llena por la estimación de daño de Valve,
+    luego runas y soltar el aggro. Ajustado (`cd9e90e`) y probado en el humo `fase1e` (MEDICIONES): una pareja a la par
+    (51 y 5.822 frente a 50 y 5.795), la otra muy por debajo (28 y 3.803 frente a 58 y 9.699): −27 % LH, −38 %
+    patrimonio. En esa línea se queda sin curación, derrocha Shrapnel a más de 1.000 y casi no empieza kills (OHA hizo 6).
+  - Siguiente acción: con el sí de Pedro, reponer salvia y tango, Shrapnel a corta distancia, mirar por qué casi no
+    empieza kills, y otro humo. A la par o mejor en los humos, la serie `serie-fase1`.
+- Espera al dueño: aprobar la siguiente vuelta y el uso de la PC para otro humo (4 partidas, 70-80 min) · Recomendado: aprobarla, porque cada causa ya está leída en el registro
 - El código de v3 está en `main` apagado por defecto (variante `cerebro_v3`), con las mejoras del banco
   (`--repetir-invalidas`, contador de Think, `tools/analisis/n3-v3.mjs`). La fase de líneas queda como está
   (DECISIONES 2026-11-02).

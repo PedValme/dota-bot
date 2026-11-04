@@ -647,3 +647,44 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
     la serie; el propio piensa 30/s);
   - quién va de verdad al mid de Valve (no se registra).
 - Máquina: se mide al lanzar y va en la entrada del resultado.
+- **No se corrió.** La máquina no se liberó en la noche (cinco Unreal Editor ajenos al banco) y, a la mañana, Pedro la
+  aplazó: una serie solo confirma lo que los humos ya muestran a la par o mejor (DECISIONES 2026-11-04).
+
+### 2026-11-04 · Diagnóstico: dónde pierde últimos golpes el Sniper propio (registros de `fase1`, `fase1c`, `fase1d`)
+- Pregunta (Pedro): ¿por qué sigue por debajo de OHA? Sin partidas nuevas; `tools/analisis/diag-linea.mjs`.
+- Resultado:
+  1. **La brecha se abre desde el min 5-6.** Hasta el min 5 van casi iguales en últimos golpes (`fase1d`: 26 y 23 el
+     propio, 27 y 20 OHA); del min 5 al 10, OHA suma 34 y 27, el propio 21 y 23. En `fase1c` igual.
+  2. **El propio sale de creepear mucho más que antes del combate:** 92-226 s de 600 en `fase1c`/`fase1d`, frente a
+     50-62 s en `fase1`. Intentos de último golpe hasta el min 10: 41-56 frente a 62-72.
+  3. **La mayor fuga, la regla de peligro.** En `fase1d` Dire: 156 s de retirada, 108 con más del 60 % de vida y 102 con
+     un héroe enemigo a la vista; de 35 a 36 decisiones de `daño_enemigo_3s` (1.009 estimados frente a 857-1.110 de vida,
+     el arsenal entero de Death Prophet, sin que le estuviera pegando), una huida cada 4 s, con vida casi llena.
+  4. **Runas:** 24-34 s hasta el min 10, justo cuando se abre la brecha (desde el min 6), con creeps a mano.
+  5. **Soltar el aggro:** 18 s en `fase1d`, con un solo creep pegando a veces y delante del último golpe.
+  6. Colocarse a `rango − 100` (`fase1d`) coincide con menos intentos; no se separa de lo anterior.
+  7. Lo que no explica la brecha: aciertos del 65-70 % de los intentos en todos los humos; 4-11 los mató otro antes.
+- Validez: descriptivo, 6 partidas del propio y 6 de OHA; héroes distintos por humo. Las posiciones de OHA no se comparan.
+- Decisión: ajustar (`daño_enemigo_3s` solo con un héroe encima de verdad; soltar el aggro tras el último golpe y solo
+  con 2 creeps o vida bajando; runas sin dejar una oleada a mano; `rango − 200`), humo `fase1e`.
+
+### 2026-11-04 · Humo tras el diagnóstico (`fase1e`, 1 bloque, 4 partidas)
+- Pregunta: ¿los ajustes del diagnóstico ponen al propio a la par de OHA en el min 10?
+- Configuración: `--etiqueta fase1e`, código `cd9e90e`. Héroes: skeleton_king sniper sand_king vengefulspirit oracle
+  contra luna death_prophet axe lion witch_doctor. Máquina: CPU 48-62 %, 35 % de memoria libre, seis Unreal Editor
+  ajenos al banco.
+- Resultado (min 10): Radiant, propio 51 LH y 5.822 (0 kills, 0 muertes), OHA 50 y 5.795 (0 y 2): **a la par**. Dire,
+  propio 28 LH y 3.803 (0 y 1), OHA 58 y 9.699 (6 y 1): **muy por debajo**. Media −27 % LH, −38 % patrimonio. Fase 1:
+  NO PASA. 4 válidas, 0 errores.
+- Lectura de la partida mala (Dire, frente a Death Prophet):
+  1. 122 s fuera por vida: 70 s andando a la fuente y 52 s de retirada; se quedó sin salvia en el min 1 y no compra más
+     (Power Treads no se completa hasta el min 3:35, el martillo hasta el 7:49).
+  2. Shrapnel derrochado: 16 hasta el min 10, a 1.228 de distancia media (38 de 46 a más de 1.000).
+  3. No pelea: 1 sola persecución hasta el min 10 en las dos partidas y 0 kills; OHA hizo 6 kills en esa misma línea,
+     y es casi toda su ventaja de patrimonio.
+  4. La regla de peligro ya no huye en falso con vida llena: 62 s fuera de creepear en la partida buena.
+  5. Los 7 `autoataque` de la partida 1 son todos sobre Axe, después del min 15: con toda probabilidad su Berserker's
+     Call, que obliga a atacar (supuesto, no comprobado), no el motor actuando solo.
+- Validez: un bloque, máquina cargada. Las dos parejas se parecen poco: la varianza entre líneas es enorme.
+- Decisión: la serie sigue aplazada (DECISIONES 2026-11-04). Siguiente vuelta, para que Pedro decida: reponer salvia y
+  tango, Shrapnel a corta distancia, y por qué casi no empieza kills.
