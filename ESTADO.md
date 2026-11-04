@@ -17,8 +17,13 @@
     variante `control_sniper`, `--mid sniper`) creepea en los dos lados y saca en el min 10 el 67-80 % de los
     últimos golpes de OHA, sin habilidades ni compras. Le falta: peligro por alcance real, responder al acoso, sus
     habilidades y su build.
-  - Siguiente acción: con la firma de Pedro, fase 1 del diseño (`trabajo/bot-propio.md`).
-- Espera al dueño: firmar el diseño del bot propio (`trabajo/bot-propio.md`: fases y meta de la fase 1) · Recomendado: firmarlo tal cual y empezar la fase 1 con Sniper
+  - diseño firmado (DECISIONES 2026-11-03, «ok procede»); **fase 1 hecha en humo** (MEDICIONES, «Fase 1 del bot
+    propio, humo»): con build y mensajero (`compras.lua`), Shrapnel y Assassinate (`sniper.lua`), acoso y peligro por
+    alcance, el Sniper propio suma 111 últimos golpes frente a 101 de OHA en el min 10 (dos lados) y el 96 % de su
+    patrimonio; 0 errores, 0 ataques automáticos, 30 Think/s. Meta del diseño cumplida en humo.
+  - Siguiente acción: la serie de la fase 1 con su puerta de medición (pregunta escrita, revisor adversarial,
+    tamaño fijado antes, máquina libre), y con su resultado, la fase 2 (los cinco en línea).
+- Espera al dueño: aprobar la serie de la fase 1 (6 bloques, 24 partidas, unas 8 h de máquina libre, sin coste de cuota; pregunta: ¿el Sniper propio iguala a OHA en LH y patrimonio del min 10?) · Recomendado: aprobarla y correrla de noche con el PC libre
 - El código de v3 está en `main` apagado por defecto (variante `cerebro_v3`), con las mejoras del banco
   (`--repetir-invalidas`, contador de Think, `tools/analisis/n3-v3.mjs`). La fase de líneas queda como está
   (DECISIONES 2026-11-02).

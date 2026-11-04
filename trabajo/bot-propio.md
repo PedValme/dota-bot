@@ -35,6 +35,12 @@ bot propio sustituya a OHA o Pedro lo descarte.
 
 Hasta la fase 2, OHA juega el resto del equipo; en ningún momento el bot por defecto cambia sin la variante.
 
+## Avance
+- 2026-11-03: firmado («ok procede»). Fase 1 hecha en humo: 111 frente a 101 últimos golpes en el min 10 y el 96 % del
+  patrimonio de OHA (MEDICIONES, «Fase 1 del bot propio, humo»). Falta la serie de la fase 1 (con la puerta de
+  medición) antes de pasar a la fase 2. Huecos conocidos: Shrapnel no se usa para últimos golpes; las piezas de
+  tienda secreta se saltan (sin compra con el mensajero en la tienda secreta); no persigue ni usa objetos activos.
+
 ## Lo que pide la firma
 - Este orden de fases y la meta de la fase 1.
 - Que la fase 1 empiece ya, con Sniper, sin serie hasta igualar a OHA en humo.

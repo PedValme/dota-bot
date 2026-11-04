@@ -55,8 +55,11 @@ function P.Buy(bot, s, now)
 	local next = queue[s.buyIndex]
 	if next == nil then return nil end
 	if IsItemPurchasedFromSecretShop(next.part) then
-		s.buyIndex = s.buyIndex + 1
-		return string.format('%s (para %s) es de la tienda secreta: lo salto', next.part, next.of)
+		-- The rest of that item is skipped too: its recipe without the secret part is wasted gold and a slot (seen in
+		-- the 2026-11-03 phase 1 smoke: Mjollnir's recipe bought without the Hyperstone).
+		local skipped = next.of
+		while queue[s.buyIndex] ~= nil and queue[s.buyIndex].of == skipped do s.buyIndex = s.buyIndex + 1 end
+		return string.format('%s (para %s) es de la tienda secreta: salto lo que queda de %s', next.part, skipped, skipped)
 	end
 	local cost = GetItemCost(next.part)
 	bot:SetNextItemPurchaseValue(cost)
@@ -83,7 +86,8 @@ function P.Arrange(bot, s, now)
 	if now - (s.arrangeAt or -1000) < 3 then return nil end
 	for back = 6, 8 do
 		local item = bot:GetItemInSlot(back)
-		if item ~= nil and item:GetName() ~= 'item_branches' and item:GetName() ~= 'item_tango' then
+		if item ~= nil and item:GetName() ~= 'item_branches' and item:GetName() ~= 'item_tango'
+			and not string.find(item:GetName(), '^item_recipe_') then
 			for main = 0, 5 do
 				local m = bot:GetItemInSlot(main)
 				if m == nil or m:GetName() == 'item_branches' or m:GetName() == 'item_tango' then
@@ -121,9 +125,10 @@ function P.Courier(bot, s, now)
 	if c == nil then return nil end
 	local state = GetCourierState(c)
 	if state ~= COURIER_STATE_AT_BASE and state ~= COURIER_STATE_IDLE then return nil end
+	local n = StashCount(bot)
 	bot:ActionImmediate_Courier(c, COURIER_ACTION_TAKE_AND_TRANSFER_ITEMS)
 	s.courierAt = now
-	return string.format('mensajero lleva %d objetos (estado=%d)', StashCount(bot), state)
+	return string.format('mensajero lleva %d objetos (estado=%d)', n, state)
 end
 
 return P

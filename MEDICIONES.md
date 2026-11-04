@@ -559,3 +559,35 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   de OHA (compra su build, usa el mensajero, lanza Shrapnel). Sirve para el mecanismo, no para decidir por números.
   Las cuatro partidas las ganó Valve (no cuenta: el humo no mide victorias).
 - Decisión: el control completo funciona; siguiente paso, el diseño del bot propio para la firma de Pedro.
+
+### 2026-11-03 · Fase 1 del bot propio, humo (`fase1`, 1 bloque, 4 partidas)
+- Pregunta (DECISIONES 2026-11-03, diseño firmado: «no hay serie hasta igualar a OHA en últimos golpes y patrimonio
+  del min 10 en humo»): con build y mensajero, Shrapnel y Assassinate, acoso y peligro por alcance, ¿iguala el Sniper
+  propio al de OHA en el min 10?
+- Qué cambió desde `prueba-control`: `compras.lua` (build de Valve por piezas con `GetItemComponents`, mensajero,
+  inventario), `sniper.lua` (Shrapnel para acosar, Assassinate para rematar), regla de acoso con ataque normal, peligro
+  solo de enemigos que llegan (con 2 s de margen), la recuperación hasta 0,65 solo tras retirarse por vida. Revisado por
+  un subagente antes del humo; aplicadas sus correcciones (mensajero que salía vacío, piezas de tienda secreta que
+  bloqueaban la build, inventario, compras estando muerto).
+- Configuración: la de `prueba-control`, `--etiqueta fase1`, código `502f47e`. Héroes: chaos_knight sniper axe
+  skywrath_mage witch_doctor contra juggernaut razor sand_king lion lich (Razor en mid).
+- Máquina: CPU 42-64 % al lanzar (el mismo script de otra sesión del proyecto `trafico`), 63 % de memoria libre.
+- Resultado (min 10):
+
+  | Lado | Brazo | LH | DN | Patrimonio | Kills | Muertes |
+  |---|---|---|---|---|---|---|
+  | Radiant | propio | 58 | 30 | 6.744 | 1 | 0 |
+  | Radiant | OHA | 60 | 30 | 9.143 | 5 | 0 |
+  | Dire | propio | 53 | 28 | 7.045 | 2 | 0 |
+  | Dire | OHA | 41 | 26 | 5.190 | 0 | 1 |
+
+  - Suma de los dos lados: últimos golpes 111 frente a 101; patrimonio 13.789 frente a 14.333 (96 %). La diferencia de
+    patrimonio viene casi entera de los 5 kills del OHA Radiant (el propio no persigue).
+  - Respecto a `prueba-control`: de 32 y 41 a 58 y 53 últimos golpes (otros héroes rivales: no es comparable uno a uno).
+  - Mecanismo: 0 errores, 0 ataques automáticos, 30 llamadas a `Think` por segundo (como los demás bots), 0,11-0,15 ms
+    de media. Hasta el min 10: 10 y 14 Shrapnel, 2 y 3 Assassinate, 20 y 18 acosos; aciertos de último golpe 48 de 72
+    y 42 de 62. Compró botas, Power Treads y las piezas de Maelstrom/Mjollnir.
+  - Defecto visto: al saltar el Hyperstone (tienda secreta) compraba igual la receta de Mjollnir; corregido después.
+- Validez: humo, un bloque, máquina cargada; mismo sesgo declarado (OHA usa objetos activos y persigue). Cumple la meta
+  del diseño en últimos golpes; en patrimonio queda al 96 %, dentro del ruido de un bloque.
+- Decisión: pendiente de Pedro (la serie de la fase 1, con su puerta de medición).
