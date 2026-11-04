@@ -21,9 +21,10 @@
     propio, humo»): con build y mensajero (`compras.lua`), Shrapnel y Assassinate (`sniper.lua`), acoso y peligro por
     alcance, el Sniper propio suma 111 últimos golpes frente a 101 de OHA en el min 10 (dos lados) y el 96 % de su
     patrimonio; 0 errores, 0 ataques automáticos, 30 Think/s. Meta del diseño cumplida en humo.
-  - Siguiente acción: la serie de la fase 1 con su puerta de medición (pregunta escrita, revisor adversarial,
-    tamaño fijado antes, máquina libre), y con su resultado, la fase 2 (los cinco en línea).
-- Espera al dueño: aprobar la serie de la fase 1 (6 bloques, 24 partidas, unas 8 h de máquina libre, sin coste de cuota; pregunta: ¿el Sniper propio iguala a OHA en LH y patrimonio del min 10?) · Recomendado: aprobarla y correrla de noche con el PC libre
+  - Pedro acotó la meta (DECISIONES 2026-11-03): la serie espera a que el héroe juegue su fase de línea completa.
+    Hecho en la rama `claude/fase1-completa`: buscar kills, perseguir con criterio, rotar y runas (`combate.lua`).
+  - Siguiente acción: revisión del código de combate, humo `fase1c`, y con él la puerta de medición de la serie.
+- Espera al dueño: nada hasta el humo de la fase 1 completa (luego, aprobar el tamaño de la serie).
 - El código de v3 está en `main` apagado por defecto (variante `cerebro_v3`), con las mejoras del banco
   (`--repetir-invalidas`, contador de Think, `tools/analisis/n3-v3.mjs`). La fase de líneas queda como está
   (DECISIONES 2026-11-02).
