@@ -41,6 +41,9 @@ Hasta la fase 2, OHA juega el resto del equipo; en ningún momento el bot por de
   medición) antes de pasar a la fase 2. Huecos conocidos: Shrapnel no se usa para últimos golpes; las piezas de
   tienda secreta se saltan (sin compra con el mensajero en la tienda secreta); no persigue ni usa objetos activos.
 
+- 2026-11-04: la cifra de arriba dependía de una pareja; revisión adversarial y plan de la siguiente vuelta en
+  `trabajo/fase1-plan.md` (MEDICIONES, «Revisión adversarial de la fase 1»). La serie, aplazada (DECISIONES 2026-11-04).
+
 ## Lo que pide la firma
 - Este orden de fases y la meta de la fase 1.
 - Que la fase 1 empiece ya, con Sniper, sin serie hasta igualar a OHA en humo.
