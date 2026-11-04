@@ -667,3 +667,24 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Validez: descriptivo, 6 partidas del propio y 6 de OHA; héroes distintos por humo. Las posiciones de OHA no se comparan.
 - Decisión: ajustar (`daño_enemigo_3s` solo con un héroe encima de verdad; soltar el aggro tras el último golpe y solo
   con 2 creeps o vida bajando; runas sin dejar una oleada a mano; `rango − 200`), humo `fase1e`.
+
+### 2026-11-04 · Humo tras el diagnóstico (`fase1e`, 1 bloque, 4 partidas)
+- Pregunta: ¿los ajustes del diagnóstico ponen al propio a la par de OHA en el min 10?
+- Configuración: `--etiqueta fase1e`, código `cd9e90e`. Héroes: skeleton_king sniper sand_king vengefulspirit oracle
+  contra luna death_prophet axe lion witch_doctor. Máquina: CPU 48-62 %, 35 % de memoria libre, seis Unreal Editor
+  ajenos al banco.
+- Resultado (min 10): Radiant, propio 51 LH y 5.822 (0 kills, 0 muertes), OHA 50 y 5.795 (0 y 2): **a la par**. Dire,
+  propio 28 LH y 3.803 (0 y 1), OHA 58 y 9.699 (6 y 1): **muy por debajo**. Media −27 % LH, −38 % patrimonio. Fase 1:
+  NO PASA. 4 válidas, 0 errores.
+- Lectura de la partida mala (Dire, frente a Death Prophet):
+  1. 122 s fuera por vida: 70 s andando a la fuente y 52 s de retirada; se quedó sin salvia en el min 1 y no compra más
+     (Power Treads no se completa hasta el min 3:35, el martillo hasta el 7:49).
+  2. Shrapnel derrochado: 16 hasta el min 10, a 1.228 de distancia media (38 de 46 a más de 1.000).
+  3. No pelea: 1 sola persecución hasta el min 10 en las dos partidas y 0 kills; OHA hizo 6 kills en esa misma línea,
+     y es casi toda su ventaja de patrimonio.
+  4. La regla de peligro ya no huye en falso con vida llena: 62 s fuera de creepear en la partida buena.
+  5. Los 7 `autoataque` de la partida 1 son todos sobre Axe, después del min 15: con toda probabilidad su Berserker's
+     Call, que obliga a atacar (supuesto, no comprobado), no el motor actuando solo.
+- Validez: un bloque, máquina cargada. Las dos parejas se parecen poco: la varianza entre líneas es enorme.
+- Decisión: la serie sigue aplazada (DECISIONES 2026-11-04). Siguiente vuelta, para que Pedro decida: reponer salvia y
+  tango, Shrapnel a corta distancia, y por qué casi no empieza kills.
