@@ -8,6 +8,10 @@ local C = {}
 
 local K = {
 	rotar = false,        -- walking out of the lane for a kill
+	-- Going for runes. Off: from the own Think() no form of the order picks one up, standing on it with its type read
+	-- (Action_, ActionQueue_ and ActionPush_PickUpRune: 0 activations, fase1g and fase1h; open defect, ESTADO), so each trip
+	-- only cost farm. The same Action_PickUpRune works in OHA, from its rune mode.
+	runas = false,
 	killMargin = 1.15,    -- go for a kill when our side's 4 s damage is this many times the target's health
 	window = 4.0,         -- seconds of damage counted for a kill
 	alliesRadius = 1200,  -- allies this close to the target help with their own estimate
@@ -230,6 +234,7 @@ end
 C.WaveInReach = WaveInReach
 
 function C.Rune(bot, s, p)
+	if not K.runas then return nil end
 	local wave = WaveInReach(p)
 	local best, bestD = nil, wave and K.runeNear or K.runeReach
 	for _, r in ipairs({ RUNE_POWERUP_1, RUNE_POWERUP_2, RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4 }) do

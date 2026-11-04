@@ -67,6 +67,8 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   cada commit candidato se juega además una partida completa, para ver errores tardíos. Héroes fijos
   (`--heroes a,b,c,d,e/v,w,x,y,z`, dota-bot el primero, cada uno de la lista de su posición; columna `heroes_fijos`): solo
   para desarrollo y atribuir causas; una serie que decide mantiene el sorteo.
+- Jugar contra el Sniper propio: `node tools/jugar-sniper.mjs` y un lobby normal (no es una medición); al acabar,
+  `node tools/jugar-sniper.mjs quitar`. Mientras exista su archivo, todo lobby local juega así.
 - Línea de tiempo: el custom game escribe cada minuto torres, cuarteles, vida del Ancient, kills y oro de los dos
   equipos (el oro, solo de los bots); el orquestador la guarda en `lineas/<etiqueta>-<fecha>-<n>.csv` y resume la
   ventaja de oro máxima de dota-bot (`ventaja_oro_max`), el minuto en que llegó a +10.000 (`minuto_10k`) y las torres

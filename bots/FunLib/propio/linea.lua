@@ -557,7 +557,7 @@ local function Act(bot, s, p, d)
 		if d.to == nil and d.intent ~= 'ultimo_golpe' and d.intent ~= 'denegar' then d.to = LanePoint(p) end
 	end
 	if d.intent ~= 'matar' then s.attacking = nil end
-	if d.intent ~= 'runa' then s.runeTry, s.runeMethod = nil, nil end
+	if d.intent ~= 'runa' then s.runeTry = nil end
 	if d.intent == 'comprar' then Buy(bot, s) return end
 	-- An item order is not repeated each frame while the healing buff has not appeared yet.
 	if d.intent == 'curar_salvia' then bot:Action_UseAbilityOnEntity(d.item, bot) s.busyUntil = p.now + 0.6 return end
@@ -638,24 +638,10 @@ local function Act(bot, s, p, d)
 			s.runeBan = s.runeBan or {}
 			s.runeBan[d.rune] = p.now + K.runeBan
 			Log(s, bot, 'runa_res', string.format('runa=%d abandono tras %.0fs, d=%d', d.rune, K.runeTry, D2(p.loc, d.to)))
-			s.runeTry, s.runeMethod = nil, nil
+			s.runeTry = nil
 			return
 		end
-		-- Standing on the rune, with its type read, Action_PickUpRune each tick leaves the hero idle (fase1g: accion=1 at
-		-- d=0, 0 activations), while OHA's same call works from its rune mode. One second of each way of giving the order;
-		-- the custom game's "rune" line tells which one worked (trabajo/fase1-plan.md, step 3).
-		local elapsed = p.now - s.runeTry
-		local method = elapsed < 1 and 'action' or elapsed < 2 and 'cola' or 'push'
-		if method ~= s.runeMethod then
-			s.runeMethod = method
-			if method == 'cola' then
-				bot:Action_ClearActions(true)
-				bot:ActionQueue_PickUpRune(d.rune)
-			end
-			Log(s, bot, 'runa_res', string.format('runa=%d metodo=%s d=%d', d.rune, method, D2(p.loc, d.to)))
-		end
-		if method == 'action' then bot:Action_PickUpRune(d.rune)
-		elseif method == 'push' then bot:ActionPush_PickUpRune(d.rune) end
+		bot:Action_PickUpRune(d.rune)
 		s.moveTo = nil
 		return
 	end

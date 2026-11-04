@@ -4,15 +4,19 @@
 // control_sniper / base_sniper. Per pair: the Sniper's last hits (LH, primary) and net worth (NW, secondary) at
 // minute 10, from the "[bench] linea" line whose t is the first >= 600 (the line can come late if the hero was dead).
 // Result: mean of the per-pair differences (own − OHA), its 95 % interval (t distribution), and that mean as a share of
-// OHA's mean. "Iguala" (non-inferior) when the interval's lower end is above −10 % of OHA's mean, for LH and for NW.
-//   node tools/analisis/serie-fase1.mjs <etiqueta>
+// OHA's mean. The bar (DECISIONES 2026-11-04, replaces the −10 % and the net worth rule): phase 1 passes when last hits
+// are not inferior by −15 % of OHA's mean (the interval's lower end above it), the own mean reaches the floor of 45 and
+// its deaths are not above OHA's; net worth is only informative. Stop for futility (same day): at 8 and 14 pairs, a mean
+// below −8 last hits. Several labels are one series (its stages, a, b, c), played in that order.
+//   node tools/analisis/serie-fase1.mjs <etiqueta> [<etiqueta>...]
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const tag = process.argv[2];
-if (!tag) { console.log("Uso: node tools/analisis/serie-fase1.mjs <etiqueta>"); process.exit(1); }
+const tags = process.argv.slice(2);
+const tag = tags.join("+");
+if (!tags.length) { console.log("Uso: node tools/analisis/serie-fase1.mjs <etiqueta> [<etiqueta>...]"); process.exit(1); }
 const dir = join(root, "bench", "observaciones");
 const kv = (line) => Object.fromEntries([...line.matchAll(/(\w+)=(\S+)/g)].map((m) => [m[1], m[2]]));
 
@@ -23,8 +27,8 @@ const col = (name) => head.indexOf(name);
 const rows = new Map();
 for (const line of csv.slice(1)) {
   const f = line.split(",");
-  if (f[col("etiqueta")] !== tag) continue;
-  rows.set(Number(f[col("partida")]), { bloque: Number(f[col("bloque")]), valida: f[col("valida")], variante: f[col("variante")],
+  if (!tags.includes(f[col("etiqueta")])) continue;
+  rows.set(`${f[col("etiqueta")]}|${f[col("partida")]}`, { etiqueta: f[col("etiqueta")], partida: Number(f[col("partida")]), bloque: Number(f[col("bloque")]), valida: f[col("valida")], variante: f[col("variante")],
     fijos: f[col("heroes_fijos")] ?? "", corte: f[col("corte")] ?? "", arboles: (f[col("codigo")] ?? "").split("@")[1] ?? "" });
 }
 // What decides must be one draw-based run: fixed heroes (development only) give a single match-up, and a reused label
@@ -41,11 +45,14 @@ const pairs = new Map(); // "bloque|team" -> { control, base }
 // timestamp in the name orders them). Review of 2026-11-04: lost pairs are counted by arm and reason, never dropped
 // silently, and the arm in the log must match the variant in series.csv.
 const latest = new Map();
-for (const f of readdirSync(dir).filter((f) => f.startsWith(tag + "-") && f.endsWith(".log")).sort()) {
-  latest.set(Number(f.match(/-(\d+)\.log$/)?.[1]), f);
+for (const t of tags) {
+  for (const f of readdirSync(dir).filter((f) => f.startsWith(t + "-") && f.endsWith(".log")).sort()) {
+    latest.set(`${t}|${Number(f.match(/-(\d+)\.log$/)?.[1])}`, f);
+  }
 }
 const lost = [];
-for (const [n, row] of [...rows.entries()].sort((a, b) => a[0] - b[0])) {
+const inOrder = [...rows.entries()].sort((a, b) => tags.indexOf(a[1].etiqueta) - tags.indexOf(b[1].etiqueta) || a[1].partida - b[1].partida);
+for (const [n, row] of inOrder) {
   const arm0 = row.variante === "control_sniper" ? "control" : row.variante === "base_sniper" ? "base" : row.variante;
   if (row.valida !== "si") { lost.push(`partida ${n} (${arm0}): no válida`); continue; }
   const f = latest.get(n);
@@ -55,7 +62,7 @@ for (const [n, row] of [...rows.entries()].sort((a, b) => a[0] - b[0])) {
   if (!at10) { lost.push(`partida ${n} (${arm0}): sin línea del min 10`); continue; }
   const arm = at10.control === "true" ? "control" : "base";
   if (arm !== arm0) throw new Error(`partida ${n}: series.csv dice ${row.variante} y el log dice control=${at10.control}`);
-  const key = `${row.bloque}|${at10.team}`;
+  const key = `${row.etiqueta}|${row.bloque}|${at10.team}`;
   if (pairs.get(key)?.[arm]) throw new Error(`partida ${n}: la pareja ${key} ya tiene brazo ${arm} (duplicada)`);
   if (Number(at10.t) > 620) lost.push(`partida ${n} (${arm}): muestra tardía t=${at10.t} (contada)`);
   pairs.set(key, { ...(pairs.get(key) ?? {}), [arm]: { lh: Number(at10.lh), nw: Number(at10.nw), muertes: Number(at10.muertes), kills: Number(at10.kills), t: Number(at10.t) } });
@@ -80,14 +87,23 @@ for (const m of ["lh", "nw"]) {
   const sd = Math.sqrt(d.reduce((a, x) => a + (x - mean) ** 2, 0) / (n - 1));
   const half = T95[Math.min(n - 1, 30) - 1] * sd / Math.sqrt(n);
   const oha = complete.reduce((a, [, p]) => a + p.base[m], 0) / n;
-  // Three verdicts, fixed before the data (MEDICIONES, the series' question): equal (lower end above −10 % of OHA),
-  // worse (upper end below 0), else undetermined.
-  const verdict = mean - half > -0.10 * oha ? "IGUALA" : mean + half < 0 ? "PEOR" : "INDETERMINADO";
+  // Three verdicts: equal (lower end above −15 % of OHA), worse (upper end below 0), else undetermined.
+  const verdict = mean - half > -0.15 * oha ? "IGUALA" : mean + half < 0 ? "PEOR" : "INDETERMINADO";
   verdicts[m] = verdict;
-  console.log(`${m.toUpperCase()} min 10: diferencia media ${mean.toFixed(1)} (IC95 ${(mean - half).toFixed(1)} a ${(mean + half).toFixed(1)}), OHA media ${oha.toFixed(0)} → ${(100 * mean / oha).toFixed(1)} %: ${verdict}`);
+  console.log(`${m.toUpperCase()} min 10: diferencia media ${mean.toFixed(1)} (IC95 ${(mean - half).toFixed(1)} a ${(mean + half).toFixed(1)}), OHA media ${oha.toFixed(0)} → ${(100 * mean / oha).toFixed(1)} %: ${m === "nw" ? `${verdict}, informativo` : verdict}`);
 }
-// The joint rule: phase 1 passes when last hits IGUALA and net worth is not PEOR.
-if (verdicts.lh && verdicts.nw) {
-  const pass = verdicts.lh === "IGUALA" && verdicts.nw !== "PEOR";
-  console.log(`Fase 1: ${pass ? "PASA" : "NO PASA"} (regla: LH IGUALA y patrimonio no PEOR).`);
+const avgOf = (arm, m) => complete.reduce((a, [, p]) => a + p[arm][m], 0) / Math.max(complete.length, 1);
+if (complete.length >= 2) {
+  const ownLh = avgOf("control", "lh");
+  const deaths = [avgOf("control", "muertes"), avgOf("base", "muertes")];
+  const floor = ownLh >= 45;
+  const fewDeaths = deaths[0] <= deaths[1];
+  console.log(`Suelo: propio ${ownLh.toFixed(1)} LH frente a 45: ${floor ? "cumple" : "NO cumple"}. Muertes: propio ${deaths[0].toFixed(2)} frente a OHA ${deaths[1].toFixed(2)}: ${fewDeaths ? "cumple" : "NO cumple"}.`);
+  console.log(`Fase 1: ${verdicts.lh === "IGUALA" && floor && fewDeaths ? "PASA" : "NO PASA"} (regla: LH IGUALA a −15 %, suelo de 45 y muertes ≤ OHA).`);
+  const lhDiff = avgOf("control", "lh") - avgOf("base", "lh");
+  if ((complete.length === 8 || complete.length === 14) && lhDiff < -8) {
+    console.log(`Parada por inutilidad: ${complete.length} parejas con media ${lhDiff.toFixed(1)} LH, por debajo de −8. No se sigue.`);
+  } else if (complete.length === 8 || complete.length === 14) {
+    console.log(`Mirada a ${complete.length} parejas: media ${lhDiff.toFixed(1)} LH, se sigue.`);
+  }
 }
