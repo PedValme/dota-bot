@@ -11,15 +11,11 @@
 - **Qué se probó:** tres revisores adversariales (datos, bot, método) corrigieron el diagnóstico: la brecha de patrimonio
   es 51 % kills y 41 % últimos golpes; el propio no activa runas, no usa TP ni Take Aim (OHA, sí); llega a las peleas sin
   haber dañado al rival; y un bloque no decide nada (±18 LH). MEDICIONES, «Revisión adversarial de la fase 1».
+- **Decidido por Pedro** (DECISIONES 2026-11-04, las seis propuestas del plan): nuevo listón, humos cortados con la
+  carga anotada, build propia, rotación apagada, confirmación de 20 parejas, y él juega 15 minutos al final de la vuelta.
 - **Siguiente acción:** leer `trabajo/fase1-plan.md` y seguirlo en orden: `--corte` y registro nuevo en el banco, con
-  revisión; defectos del bot; luego 8 partidas del propio frente a una referencia de OHA. No lanzar partidas sin la PC libre
-  de Pedro para ello.
-- Espera al dueño: el listón de la fase 1 · Recomendado: suelo de ≥45 LH y muertes ≤ OHA, patrimonio informativo, paridad con margen −15 %
-- Espera al dueño: humos cortados en el min 12 con la carga anotada, y máximo 3 vueltas · Recomendado: autorizarlo
-- Espera al dueño: apartarse de la build de Valve (Take Aim temprano, stats al inicio, Lance) · Recomendado: sí
-- Espera al dueño: apagar la rotación hasta medir el resto · Recomendado: sí, 8 de 8 terminaron sin kill
-- Espera al dueño: confirmación de 20 parejas en lugar de las 24 partidas autorizadas · Recomendado: sí, 12 parejas no contestan
-- Espera al dueño: jugar 15 minutos contra el Sniper tras esta vuelta · Recomendado: sí, es la única prueba real frente al objetivo
+  revisión; defectos del bot; mejoras decididas; luego 8 partidas del propio frente a una referencia de OHA.
+- Espera al dueño: nada
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
