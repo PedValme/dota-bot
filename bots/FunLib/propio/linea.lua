@@ -321,7 +321,10 @@ local function Decide(bot, s, p)
 	-- no enemy hero near and no recent hero or tower damage.
 	if r and not p.towerOnMe and p.enemyBurst <= K.enemyBurst * p.hpAbs then
 		local h = RuleHeal(bot, s, p)
-		if h then return h end
+		if h then
+			if s.chase ~= nil then Log(s, bot, 'persecucion', Combate.Stop(bot, s, p, 'curarse')) end
+			return h
+		end
 	end
 	if r then
 		if s.chase ~= nil then Log(s, bot, 'persecucion', Combate.Stop(bot, s, p, 'retirada')) end
@@ -404,6 +407,14 @@ local function CheckPending(bot, s, p)
 end
 
 local function Act(bot, s, p, d)
+	-- After a chase, its attack order would go on by itself (even under a tower): cancel it before anything else, and
+	-- forget the last move so the next one is really sent (review of 2026-11-03).
+	if s.stopAttack and d.intent ~= 'matar' then
+		bot:Action_ClearActions(true)
+		s.stopAttack, s.moveTo = false, nil
+		if d.to == nil and d.intent ~= 'ultimo_golpe' and d.intent ~= 'denegar' then d.to = LanePoint(p) end
+	end
+	if d.intent ~= 'matar' then s.attacking = nil end
 	if d.intent == 'comprar' then Buy(bot, s) return end
 	-- An item order is not repeated each frame while the healing buff has not appeared yet.
 	if d.intent == 'curar_salvia' then bot:Action_UseAbilityOnEntity(d.item, bot) s.busyUntil = p.now + 0.6 return end
@@ -513,6 +524,9 @@ function L.Think()
 		end
 	end
 	if not bot:IsAlive() then
+		if s.chase ~= nil then
+			Log(s, bot, 'persecucion', Combate.Stop(bot, s, { now = GameTime() }, 'muerto'))
+		end
 		-- Dead time counts too, so the calls per second compare with the other bots' (the smoke read 25 against 30).
 		s.pending, s.retreating, s.toFountain, s.lowHp, s.burstUntil = nil, false, false, false, nil
 		Cost(bot, s, DotaTime(), (RealTime() - started) * 1000)

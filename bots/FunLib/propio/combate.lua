@@ -14,7 +14,9 @@ local K = {
 	chaseMax = 8.0,       -- seconds a chase may last
 	chaseLost = 1.5,      -- seconds without seeing the target before giving up
 	chaseFar = 1400,      -- give up when the target gets this far away
-	rotateMin = 1600,     -- a kill farther than this from us is a rotation (moving out of the lane)...
+	rotateMin = 1200,     -- a kill farther than this from us is a rotation (moving out of the lane)... (below chaseFar,
+	                      -- or a rotation would end as "far" the moment it arrives: review of 2026-11-03)
+	banAfter = 12,        -- seconds a target is not chased again after a chase that ended without a kill
 	rotateMax = 4500,     -- ...and is only considered up to this distance
 	rotateTravel = 12,    -- seconds of walking allowed to reach a rotation
 	runeReach = 2500,     -- runes are checked only this close
@@ -36,10 +38,11 @@ local function VisibleEnemies()
 	return list
 end
 
+-- Towers count even in the fog (a dive check that only sees visible towers dives into fogged ones).
 local function NearestEnemyTower(loc)
 	local best, dist = nil, 1e9
 	for _, tw in ipairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS) or {}) do
-		if Seen(tw) and tw:IsTower() then
+		if tw ~= nil and not tw:IsNull() and tw:IsAlive() and tw:IsTower() then
 			local d = D2(loc, tw:GetLocation())
 			if d < dist then best, dist = tw, d end
 		end
@@ -60,11 +63,13 @@ local function SideDamage(bot, e)
 	return total, helpers
 end
 
--- Damage the enemy heroes other than the target, near us, can deal to us in 3 s.
+-- Damage the enemy heroes other than the target, near us or near the target (where a chase or rotation leads), can
+-- deal to us in 3 s.
 local function OthersBurst(bot, target, loc)
 	local dmg = 0
+	local tloc = target:GetLocation()
 	for _, o in ipairs(VisibleEnemies()) do
-		if o ~= target and D2(loc, o:GetLocation()) < 1400 then
+		if o ~= target and (D2(loc, o:GetLocation()) < 1400 or D2(tloc, o:GetLocation()) < 1200) then
 			dmg = dmg + o:GetEstimatedDamageToTarget(true, bot, 3.0, DAMAGE_TYPE_ALL)
 		end
 	end
@@ -89,6 +94,13 @@ local function Ends(bot, s, p, why)
 	local kills = GetHeroKills(bot:GetPlayerID()) - c.kills0
 	s.lastChaseEnd = p.now
 	s.chase = nil
+	-- The attack order goes on by itself: the next action must cancel it (linea.lua, Act). A chase without a kill
+	-- bans its target for a while, or it would restart two seconds later.
+	s.stopAttack = true
+	if kills == 0 then
+		s.chaseBan = s.chaseBan or {}
+		s.chaseBan[c.name] = p.now + K.banAfter
+	end
 	return string.format('%s %s duró %.1fs kills+%d motivo=%s', c.kind, c.name, p.now - c.since, kills, why)
 end
 
@@ -118,7 +130,7 @@ function C.Continue(bot, s, p)
 		return nil, Ends(bot, s, p, 'me_meteria_bajo_torre')
 	end
 	c.lastLoc = e:GetLocation()
-	if c.kind == 'rotar' and d < K.rotateMin then c.kind = 'matar' end
+	if c.kind == 'rotar' and d < K.rotateMin then c.kind = 'matar' c.since = p.now end
 	return { intent = c.kind, target = e, reason = string.format('%s vida %d a %d', c.name, e:GetHealth(), d) }, nil
 end
 
@@ -131,12 +143,15 @@ function C.Start(bot, s, p)
 	local best, bestScore = nil, 0
 	for _, e in ipairs(VisibleEnemies()) do
 		local d = D2(p.loc, e:GetLocation())
-		if d <= K.rotateMax then
+		local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
+		if d <= K.rotateMax and not banned then
 			local dmg, helpers = SideDamage(bot, e)
 			local score = dmg / math.max(e:GetHealth(), 1)
 			local travel = math.max(0, d - p.range) / math.max(p.moveSpeed, 1)
 			local kind = d > K.rotateMin and 'rotar' or 'matar'
-			if score >= K.killMargin and (kind == 'matar' or (travel <= K.rotateTravel and p.hp > 0.6))
+			-- The damage window starts when we arrive: walking time asks for a bigger margin.
+			local margin = K.killMargin * (1 + travel / K.window)
+			if score >= margin and (kind == 'matar' or (travel <= K.rotateTravel and p.hp > 0.6))
 				and Unsafe(bot, p, e) == nil and score > bestScore then
 				best, bestScore = { e = e, d = d, dmg = dmg, helpers = helpers, kind = kind }, score
 			end
@@ -153,12 +168,20 @@ end
 
 -- Runes: a visible rune near is picked up; at a power rune's spawn time (every 2 min from 6:00, as in normal Dota,
 -- which the imitated Turbo keeps: ESTADO, known problems) the nearer power rune spot is checked if the lane allows.
+-- A rune spot with a visible enemy hero near it is not worth the walk.
+local function SpotSafe(loc)
+	for _, e in ipairs(VisibleEnemies()) do
+		if D2(loc, e:GetLocation()) < 1200 then return false end
+	end
+	return true
+end
+
 function C.Rune(bot, s, p)
 	local best, bestD = nil, K.runeReach
 	for _, r in ipairs({ RUNE_POWERUP_1, RUNE_POWERUP_2, RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4 }) do
 		local loc = GetRuneSpawnLocation(r)
 		local d = D2(p.loc, loc)
-		if GetRuneStatus(r) == RUNE_STATUS_AVAILABLE and d < bestD then best, bestD = r, d end
+		if GetRuneStatus(r) == RUNE_STATUS_AVAILABLE and d < bestD and SpotSafe(loc) then best, bestD = r, d end
 	end
 	if best ~= nil then
 		return { intent = 'runa', rune = best, to = GetRuneSpawnLocation(best),
@@ -167,9 +190,12 @@ function C.Rune(bot, s, p)
 	local t = p.t
 	if t >= 355 and (t - 360) % 120 >= 110 or (t >= 360 and (t - 360) % 120 < 10) then
 		local spot, sd = nil, K.runeReach
+		-- Before the spawn the spot reads MISSING (empty): that is exactly when to go; after it, the branch above.
+		local spawned = t >= 360 and (t - 360) % 120 < 10
 		for _, r in ipairs({ RUNE_POWERUP_1, RUNE_POWERUP_2 }) do
-			local d = D2(p.loc, GetRuneSpawnLocation(r))
-			if d < sd and GetRuneStatus(r) ~= RUNE_STATUS_MISSING then spot, sd = r, d end
+			local loc = GetRuneSpawnLocation(r)
+			local d = D2(p.loc, loc)
+			if d < sd and SpotSafe(loc) and not (spawned and GetRuneStatus(r) == RUNE_STATUS_MISSING) then spot, sd = r, d end
 		end
 		if spot ~= nil then
 			return { intent = 'ir_a_runa', to = GetRuneSpawnLocation(spot),
