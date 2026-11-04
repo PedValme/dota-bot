@@ -180,6 +180,10 @@ local function Perceive(bot)
 	end
 	local oldest = s.hpHist[1]
 	p.dps = (oldest ~= nil and p.now - oldest.t >= 1.0) and math.max(0, (oldest.hp - p.hpAbs) / (p.now - oldest.t)) or 0
+	p.heroOnMe = bot:WasRecentlyDamagedByAnyHero(2.0) == true
+	for _, e in ipairs(p.enemyHeroes) do
+		if Valid(e) and D2(p.loc, e:GetLocation()) < 600 then p.heroOnMe = true end
+	end
 	p.creepsOnMe = 0
 	for _, c in ipairs(p.enemyCreeps) do
 		if Valid(c) and c:GetAttackTarget() == bot then p.creepsOnMe = p.creepsOnMe + 1 end
@@ -207,7 +211,9 @@ local function RuleRetreat(bot, s, p)
 	elseif p.hp < K.retreatHp then
 		reason = string.format('vida %.2f < %.2f', p.hp, K.retreatHp)
 		s.lowHp = true
-	elseif p.enemyBurst > K.enemyBurst * p.hpAbs then
+	-- Valve's estimate is everything the enemy could do: alone it is a false alarm (fase1d: 108 s fleeing with over 60 %
+	-- health, every 4 s). It counts only if a hero is really on us: it hit us in the last 2 s, or stands within 600.
+	elseif p.enemyBurst > K.enemyBurst * p.hpAbs and p.heroOnMe then
 		reason = string.format('daño_enemigo_3s %d > %.0f%% de %d', p.enemyBurst, K.enemyBurst * 100, p.hpAbs)
 		s.burstUntil = p.now + K.burstHold
 	elseif p.dps > 0 and p.hpAbs / p.dps < K.ttdRetreat then
@@ -298,10 +304,10 @@ local function RuleLastHit(bot, s, p)
 	return nil, ready
 end
 
--- Where to stand in lane: behind our creeps' front by our attack range (a ranged hero far behind, never closer than
--- holdBack), out of an idle enemy tower's reach.
+-- Where to stand in lane: behind our creeps' front, by holdBack or, for a long range, by range − 200 (at range − 100
+-- it made fewer last-hit attempts, fase1d: 41-56 against 62-72), out of an idle enemy tower's reach.
 local function LanePoint(p)
-	local spot = Toward(p.front, Home(p.team), math.max(K.holdBack, p.range - 100))
+	local spot = Toward(p.front, Home(p.team), math.max(K.holdBack, p.range - 200))
 	for _, tw in ipairs(p.enemyTowers) do
 		if Valid(tw) and D2(spot, tw:GetLocation()) < K.towerMargin then
 			spot = Toward(tw:GetLocation(), spot, K.towerMargin)
@@ -339,7 +345,7 @@ local function Decide(bot, s, p)
 	local r = RuleRetreat(bot, s, p)
 	-- Retreating for health alone (no tower on us, no enemy burst), healing comes first: RuleHeal itself requires
 	-- no enemy hero near and no recent hero or tower damage.
-	if r and not p.towerOnMe and p.enemyBurst <= K.enemyBurst * p.hpAbs then
+	if r and not p.towerOnMe and not (p.heroOnMe and p.enemyBurst > K.enemyBurst * p.hpAbs) then
 		local h = RuleHeal(bot, s, p)
 		if h then
 			if s.chase ~= nil then Log(s, bot, 'persecucion', Combate.Stop(bot, s, p, 'curarse')) end
@@ -352,12 +358,6 @@ local function Decide(bot, s, p)
 	end
 	r = RuleHeal(bot, s, p)
 	if r then return r end
-	-- Enemy creeps hitting us (aggro after a trade, or standing too close): one step back drops it, unless a chase
-	-- is under way.
-	if p.creepsOnMe > 0 and s.chase == nil then
-		return { intent = 'soltar_aggro', reason = string.format('%d creeps me pegan', p.creepsOnMe),
-			to = Toward(p.loc, Home(p.team), K.aggroStep) }
-	end
 	local hero = HEROES[bot:GetUnitName()]
 	if hero ~= nil then
 		r = hero.Finish(bot, s, p)
@@ -375,6 +375,12 @@ local function Decide(bot, s, p)
 	local ready
 	r, ready = RuleLastHit(bot, s, p)
 	if r then return r end
+	-- Enemy creeps hitting us: a step back drops the aggro, after the last hit that is ready and only when it matters
+	-- (two or more creeps, or health going down): one creep's hits are the price of farming (fase1d: 18 s lost to it).
+	if s.chase == nil and (p.creepsOnMe >= 2 or (p.creepsOnMe >= 1 and p.hp < 0.7)) then
+		return { intent = 'soltar_aggro', reason = string.format('%d creeps me pegan', p.creepsOnMe),
+			to = Toward(p.loc, Home(p.team), K.aggroStep) }
+	end
 	r = Combate.Rune(bot, s, p)
 	if r then return r end
 	if hero ~= nil then

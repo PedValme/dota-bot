@@ -647,3 +647,23 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
     la serie; el propio piensa 30/s);
   - quién va de verdad al mid de Valve (no se registra).
 - Máquina: se mide al lanzar y va en la entrada del resultado.
+- **No se corrió.** La máquina no se liberó en la noche (cinco Unreal Editor ajenos al banco) y, a la mañana, Pedro la
+  aplazó: una serie solo confirma lo que los humos ya muestran a la par o mejor (DECISIONES 2026-11-04).
+
+### 2026-11-04 · Diagnóstico: dónde pierde últimos golpes el Sniper propio (registros de `fase1`, `fase1c`, `fase1d`)
+- Pregunta (Pedro): ¿por qué sigue por debajo de OHA? Sin partidas nuevas; `tools/analisis/diag-linea.mjs`.
+- Resultado:
+  1. **La brecha se abre desde el min 5-6.** Hasta el min 5 van casi iguales en últimos golpes (`fase1d`: 26 y 23 el
+     propio, 27 y 20 OHA); del min 5 al 10, OHA suma 34 y 27, el propio 21 y 23. En `fase1c` igual.
+  2. **El propio sale de creepear mucho más que antes del combate:** 92-226 s de 600 en `fase1c`/`fase1d`, frente a
+     50-62 s en `fase1`. Intentos de último golpe hasta el min 10: 41-56 frente a 62-72.
+  3. **La mayor fuga, la regla de peligro.** En `fase1d` Dire: 156 s de retirada, 108 con más del 60 % de vida y 102 con
+     un héroe enemigo a la vista; de 35 a 36 decisiones de `daño_enemigo_3s` (1.009 estimados frente a 857-1.110 de vida,
+     el arsenal entero de Death Prophet, sin que le estuviera pegando), una huida cada 4 s, con vida casi llena.
+  4. **Runas:** 24-34 s hasta el min 10, justo cuando se abre la brecha (desde el min 6), con creeps a mano.
+  5. **Soltar el aggro:** 18 s en `fase1d`, con un solo creep pegando a veces y delante del último golpe.
+  6. Colocarse a `rango − 100` (`fase1d`) coincide con menos intentos; no se separa de lo anterior.
+  7. Lo que no explica la brecha: aciertos del 65-70 % de los intentos en todos los humos; 4-11 los mató otro antes.
+- Validez: descriptivo, 6 partidas del propio y 6 de OHA; héroes distintos por humo. Las posiciones de OHA no se comparan.
+- Decisión: ajustar (`daño_enemigo_3s` solo con un héroe encima de verdad; soltar el aggro tras el último golpe y solo
+  con 2 creeps o vida bajando; runas sin dejar una oleada a mano; `rango − 200`), humo `fase1e`.

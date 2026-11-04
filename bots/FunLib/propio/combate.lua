@@ -19,7 +19,8 @@ local K = {
 	banAfter = 12,        -- seconds a target is not chased again after a chase that ended without a kill
 	rotateMax = 4500,     -- ...and is only considered up to this distance
 	rotateTravel = 12,    -- seconds of walking allowed to reach a rotation
-	runeReach = 2500,     -- runes are checked only this close
+	runeReach = 1800,     -- runes are checked only this close
+	runeNear = 700,       -- with a wave to farm, only a rune this close is worth it
 }
 
 local function D2(a, b)
@@ -176,8 +177,18 @@ local function SpotSafe(loc)
 	return true
 end
 
+-- Runes never take the hero from a wave it can farm (fase1c/d: 24-34 s away from the lane up to minute 10, just when
+-- the gap against OHA opens): with enemy creeps in reach only a rune very close counts, and no trip to wait for one.
+local function WaveInReach(p)
+	for _, c in ipairs(p.enemyCreeps) do
+		if c ~= nil and not c:IsNull() and c:IsAlive() and D2(p.loc, c:GetLocation()) < p.range + 300 then return true end
+	end
+	return false
+end
+
 function C.Rune(bot, s, p)
-	local best, bestD = nil, K.runeReach
+	local wave = WaveInReach(p)
+	local best, bestD = nil, wave and K.runeNear or K.runeReach
 	for _, r in ipairs({ RUNE_POWERUP_1, RUNE_POWERUP_2, RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4 }) do
 		local loc = GetRuneSpawnLocation(r)
 		local d = D2(p.loc, loc)
@@ -188,7 +199,7 @@ function C.Rune(bot, s, p)
 			reason = string.format('runa %d disponible a %d', best, bestD) }
 	end
 	local t = p.t
-	if t >= 355 and (t - 360) % 120 >= 110 or (t >= 360 and (t - 360) % 120 < 10) then
+	if not wave and (t >= 355 and (t - 360) % 120 >= 110 or (t >= 360 and (t - 360) % 120 < 10)) then
 		local spot, sd = nil, K.runeReach
 		-- Before the spawn the spot reads MISSING (empty): that is exactly when to go; after it, the branch above.
 		local spawned = t >= 360 and (t - 360) % 120 < 10

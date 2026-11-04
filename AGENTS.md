@@ -45,6 +45,9 @@ once it exists.
     por favor de lo hecho y los pendientes»; acotado el 2026-11-01: «cuando te haga preguntas sobre el proceso en curso
     no hace falta que incluya el todo list, solo traelo a colación cuando haya un avance terminado o tenga sentido ver
     todo el mapa de tareas»).
+  - Una serie solo confirma lo que los humos ya muestran a la par o mejor: con el bot propio por debajo de OHA en la
+    mayoría de las métricas de los humos, no se lanza; primero se diagnostica en los registros y se corrige. Por qué:
+    horas de máquina midiendo algo que a todas luces sale mal (DECISIONES.md, 2026-11-04).
   - Una rama y un PR por tarea; mientras corre una serie, el trabajo paralelo va en otro worktree (DECISIONES.md,
     2026-10-31).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).
