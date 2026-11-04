@@ -826,4 +826,51 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Qué cambió desde `fase1g`: tres formas de la orden de runa (`runa_res metodo=`) y la línea `botas montadas`.
 - Predicción: LH de 50 a 62, con una media cerca de 57 si `fase1g` no fue suerte; alguna activación si una de las otras dos
   formas funciona, y si no, 0 y queda como defecto sin resolver.
-- Máquina: se anota con el resultado.
+- Máquina: CPU media 27-39 % por partida.
+- Configuración: `--etiqueta fase1h`, código `2d798f0`, 4 bloques, 8 de 8 válidas, sorteo. Rivales: Razor, Death Prophet,
+  Necrophos y Lina.
+- Resultado (min 10, `humo-linea.mjs`), frente a `ref-oha` (n=8):
+
+  | | LH | DN | Muertes | Kills | Patrimonio | Muertes de creep cerca |
+  |---|---|---|---|---|---|---|
+  | Propio | **60,1** [66 63 54 61 57 65 55 60] | 35,0 | **0,0** | 1,6 | 7.737 | 143-155, 80-105 suyas |
+  | OHA | 57,4 [53 47 57 74 57 44 65 62] | 28,8 | 1,1 | 2,4 | 7.628 | 118-143, 64-103 suyas |
+
+  - **+4,7 % en LH, suelo cumplido, muertes por debajo:** se cumple la salida a confirmación. Las 0 muertes cuadran con `kill
+    victim=sniper` y con `d=` de `obs hero` en t=600.
+  - La brecha de kills sigue: 1,6 frente a 2,4, aunque el patrimonio ya no queda por debajo.
+  - **Runas:** ninguna de las tres formas de la orden activa una (`metodo` action, cola y push): 0 en las 8 partidas enteras.
+    **Defecto sin resolver**: las runas quedan apagadas, porque cada viaje solo cuesta farm. Es una desventaja del propio frente
+    a OHA (5-13 runas), no un sesgo a su favor.
+  - **Treads:** `botas montadas` lee `stat_api=2` en 8 de 8: salen en agilidad real de la receta, y por eso no hace falta
+    cambiarlas (la partida de `fase1g` que las cambió, sin explicar).
+- Validez: **no decide**: dos corridas separadas, con sorteos distintos, y sin intervalo emparejado; a ojo, con desviaciones de
+  4,4 y 9,7 LH, la diferencia lleva unos ±8. Cumple para pasar a confirmar, que es para lo que sirve un humo.
+- Decisión: pasar a la confirmación por su puerta (DECISIONES 2026-11-04: 20 parejas).
+
+### 2026-11-04 · Confirmación de la fase 1 (`conf1-a`, `conf1-b`, `conf1-c`): pregunta escrita antes de lanzar
+- Pregunta: el Sniper propio (`control_sniper`) frente al de OHA (`base_sniper`), intercalados y emparejados por bloque y lado:
+  ¿queda en LH del min 10 por encima de −15 % de OHA (IC95), con suelo de 45 y muertes ≤ OHA? Patrimonio y kills, informativos.
+- Tamaño (DECISIONES 2026-11-04): 20 parejas, 40 partidas cortadas en el min 12, en tres tandas: 16, 12 y 12 partidas. Unas
+  3,5 h. Parada por inutilidad a 8 y 14 parejas si la media queda por debajo de −8 LH. `--mid sniper --modo turbo --observar
+  --corte 12 --repetir-invalidas 1`, sorteo.
+- Análisis fijo: `node tools/analisis/serie-fase1.mjs conf1-a conf1-b conf1-c`, ajustado al listón antes de ver estos datos;
+  rechaza `--heroes` y mezclas de código o corte.
+- Qué cambió desde `fase1h`: runas apagadas, sonda quitada; `hero_selection.lua` lee `lobby_mid` (sin efecto sin su archivo).
+- Sin comprobar: el oro pasivo sin ×2 (igual en los dos brazos); si a esta velocidad OHA piensa menos por segundo de juego (30/s
+  medidos); el corte no ve lo que pasa después del min 12: OHA ya ganaba la línea y regalaba la ventaja después (MEDICIONES
+  2026-11-02/03), así que **pasar esta confirmación es un suelo, no dice que el bot gane más**.
+- Partida completa del commit candidato (`conf1-humo`, 2 partidas, `e1744a3`, CPU 41-44 %): 2 de 2 válidas, 0 `prop error` y 0
+  `obs error`, 30 Think/s; las dos las ganó Valve (27 y 32 min). El cierre no es lo que esta serie mide.
+- Revisor adversarial (Opus, medio, sobre esos registros y `fase1h`, `ref-oha`): nada tumba la serie; tabla cotejada fila por
+  fila. Contadores de `[bench] linea` iguales a `obs hero` en 18 de 18; el registro pesa un 32 % más en el brazo propio, pero el
+  Sniper piensa 30,0/s en los dos; el corte no afecta al min 10. Sin comprobar: que los `Think` de los modos de OHA también
+  corran a 30/s (el contador va en `BuybackUsageThink`).
+- Aplicado antes de lanzar, solo en el análisis: intervalo por bloque (dos parejas de un bloque comparten héroes), «parcial, no
+  decide» hasta las tres tandas, y error si cambian versión, modo o dificultad, si una pareja no comparte héroes o si el brazo no
+  corresponde a sus líneas del bot propio; texto «no inferior a −15 %» en vez de «iguala».
+- **Potencia** (estimada por el revisor, desviación por pareja de unos 12, con 20 parejas): si los brazos son iguales, pasa el
+  71-83 % de las veces; si el propio está en −5 %, el 44 %; en −10 %, el 12 %; en −15 %, el 2,5 %. Un PASA descarta −15 % y
+  razonablemente −10 %; **no distingue 0 de −5 %**.
+- **Corrección a `fase1h`** («no un sesgo a su favor»): en ingresos es cierto, pero en LH es al revés: el propio no paga los viajes
+  a runas que OHA sí paga (OHA recoge 0-3 antes de t=600, media 0,9). Pequeño; patrimonio, kills y runas van junto a los LH.

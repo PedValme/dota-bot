@@ -285,6 +285,12 @@ if Customize then
 	end
 end
 
+-- Pedro plays against the own bot (tools/jugar-sniper.mjs): without its file this does nothing.
+local LobbyVariant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
+if type(LobbyVariant.lobby_mid) == 'string' and LobbyVariant.lobby_team == GetTeam() then
+	sSelectList[2] = LobbyVariant.lobby_mid
+end
+
 --==============================================================================
 -- Utility: customization checks & shuffles
 --==============================================================================

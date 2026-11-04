@@ -13,6 +13,7 @@
 --   api_sonda true: brain v3 game 0, FunLib/api_probe.lua via team_desires.lua and mode_attack_generic.lua
 --   api_volcado true: the first-hand map of the Bot API, FunLib/api_dump.lua via team_desires.lua
 --   control_completo "<hero>": the full-control test, that hero played by FunLib/propio/ (bot_generic.lua's Think)
+--   lobby_mid "<hero>", lobby_team: a human's lobby, that team's bots take that hero in mid, tools/jugar-sniper.mjs
 --   sin_combate true: that hero without kills, abilities on heroes or trades, FunLib/propio/linea.lua
 --   linea_heroe "<hero>": one "[bench] linea" line per minute with that hero's lane numbers, FunLib/propio/registro_linea
 --   thinkless number: overrides Customize.ThinkLess, Customize/general.lua
