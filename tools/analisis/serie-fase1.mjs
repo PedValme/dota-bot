@@ -28,27 +28,41 @@ for (const line of csv.slice(1)) {
 }
 
 const pairs = new Map(); // "bloque|team" -> { control, base }
-const files = readdirSync(dir).filter((f) => f.startsWith(tag + "-") && f.endsWith(".log")).sort();
-for (const f of files) {
-  const n = Number(f.match(/-(\d+)\.log$/)?.[1]);
-  const row = rows.get(n);
-  if (!row || row.valida !== "si") continue;
+// Only the last attempt's log of each match (a repeated invalid match leaves earlier logs with the same number; the
+// timestamp in the name orders them). Review of 2026-11-04: lost pairs are counted by arm and reason, never dropped
+// silently, and the arm in the log must match the variant in series.csv.
+const latest = new Map();
+for (const f of readdirSync(dir).filter((f) => f.startsWith(tag + "-") && f.endsWith(".log")).sort()) {
+  latest.set(Number(f.match(/-(\d+)\.log$/)?.[1]), f);
+}
+const lost = [];
+for (const [n, row] of [...rows.entries()].sort((a, b) => a[0] - b[0])) {
+  const arm0 = row.variante === "control_sniper" ? "control" : row.variante === "base_sniper" ? "base" : row.variante;
+  if (row.valida !== "si") { lost.push(`partida ${n} (${arm0}): no válida`); continue; }
+  const f = latest.get(n);
+  if (!f) { lost.push(`partida ${n} (${arm0}): sin log observado`); continue; }
   const lines = readFileSync(join(dir, f), "latin1").split(/\r?\n/).filter((l) => l.includes("[bench] linea "));
   const at10 = lines.map(kv).find((x) => Number(x.t) >= 600);
-  if (!at10) continue;
-  const key = `${row.bloque}|${at10.team}`;
+  if (!at10) { lost.push(`partida ${n} (${arm0}): sin línea del min 10`); continue; }
   const arm = at10.control === "true" ? "control" : "base";
+  if (arm !== arm0) throw new Error(`partida ${n}: series.csv dice ${row.variante} y el log dice control=${at10.control}`);
+  const key = `${row.bloque}|${at10.team}`;
+  if (pairs.get(key)?.[arm]) throw new Error(`partida ${n}: la pareja ${key} ya tiene brazo ${arm} (duplicada)`);
+  if (Number(at10.t) > 620) lost.push(`partida ${n} (${arm}): muestra tardía t=${at10.t} (contada)`);
   pairs.set(key, { ...(pairs.get(key) ?? {}), [arm]: { lh: Number(at10.lh), nw: Number(at10.nw), muertes: Number(at10.muertes), kills: Number(at10.kills), t: Number(at10.t) } });
 }
 
 const complete = [...pairs.entries()].filter(([, p]) => p.control && p.base).sort();
 console.log(`Serie ${tag}: ${complete.length} parejas completas (bloque|equipo).`);
+const incomplete = [...pairs.entries()].filter(([, p]) => !(p.control && p.base)).map(([k, p]) => `${k} sin ${p.control ? "base" : "control"}`);
+if (lost.length || incomplete.length) console.log(`  Perdidas: ${[...lost, ...incomplete].join("; ")}`);
 for (const [k, p] of complete) {
   console.log(`  ${k}: propio lh=${p.control.lh} nw=${p.control.nw} k/m=${p.control.kills}/${p.control.muertes} · OHA lh=${p.base.lh} nw=${p.base.nw} k/m=${p.base.kills}/${p.base.muertes}`);
 }
 // Two-sided 95 % t quantiles by degrees of freedom (1-30).
 const T95 = [12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228, 2.201, 2.179, 2.160, 2.145, 2.131,
   2.120, 2.110, 2.101, 2.093, 2.086, 2.080, 2.074, 2.069, 2.064, 2.060, 2.056, 2.052, 2.048, 2.045, 2.042];
+const verdicts = {};
 for (const m of ["lh", "nw"]) {
   const d = complete.map(([, p]) => p.control[m] - p.base[m]);
   const n = d.length;
@@ -57,6 +71,14 @@ for (const m of ["lh", "nw"]) {
   const sd = Math.sqrt(d.reduce((a, x) => a + (x - mean) ** 2, 0) / (n - 1));
   const half = T95[Math.min(n - 1, 30) - 1] * sd / Math.sqrt(n);
   const oha = complete.reduce((a, [, p]) => a + p.base[m], 0) / n;
-  const verdict = mean - half > -0.10 * oha ? "IGUALA (no inferior al 10 %)" : "NO se puede decir que iguale";
+  // Three verdicts, fixed before the data (MEDICIONES, the series' question): equal (lower end above −10 % of OHA),
+  // worse (upper end below 0), else undetermined.
+  const verdict = mean - half > -0.10 * oha ? "IGUALA" : mean + half < 0 ? "PEOR" : "INDETERMINADO";
+  verdicts[m] = verdict;
   console.log(`${m.toUpperCase()} min 10: diferencia media ${mean.toFixed(1)} (IC95 ${(mean - half).toFixed(1)} a ${(mean + half).toFixed(1)}), OHA media ${oha.toFixed(0)} → ${(100 * mean / oha).toFixed(1)} %: ${verdict}`);
+}
+// The joint rule: phase 1 passes when last hits IGUALA and net worth is not PEOR.
+if (verdicts.lh && verdicts.nw) {
+  const pass = verdicts.lh === "IGUALA" && verdicts.nw !== "PEOR";
+  console.log(`Fase 1: ${pass ? "PASA" : "NO PASA"} (regla: LH IGUALA y patrimonio no PEOR).`);
 }
