@@ -110,10 +110,10 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 | La partida terminó | GSI da ganador | `sin final` |
 | 5 bots por lado, humano fuera | `[dotabench] roster` | `reparto`, `humano` |
 | Cada equipo juega exactamente su grupo sorteado | cuando están los 10, `[dotabench] start` (héroe de la entidad) frente al sorteo | `héroes distintos de los sorteados`, `sin registro de inicio` |
-| Mismo patrimonio inicial (±300 por equipo) | `start ... nw=` | `patrimonio inicial R-D` |
+| Mismo patrimonio inicial (±300 por equipo, más hasta 1.100 por cada kill antes de la bocina) | `start ... nw=` | `patrimonio inicial R-D` |
 | 5 couriers vivos por lado en el minuto 1, Turbo (1100) en `--modo turbo` | `[dotabench] couriers team= n= speeds=` | `couriers R-D`, `couriers lentos` |
 | El equipo de Valve lo juega Valve | ningún `[bench] load` (una línea por bot de dota-bot, siempre) ni `[bench] mode` de un pid de ese equipo; el archivo de equipo dura toda la partida | `dota-bot jugó en el equipo de Valve`, `sin registro de carga` |
-| Todos los héroes aparecen antes del inicio | `[dotabench] spawn ... t=` (último de cada pid ≤ 0) | `héroe aparecido tras el inicio`, `sin registro de aparición` |
+| Todos los héroes aparecen antes del inicio | `[dotabench] spawn ... t=` (primero de cada pid ≤ 0: una copia como Nothl Projection aparece más tarde) | `héroe aparecido tras el inicio`, `sin registro de aparición` |
 | Sorteo por equipo | `--espejo no` (Dire al azar) es solo para depurar | `espejo apagado` |
 | Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |
 | Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |
