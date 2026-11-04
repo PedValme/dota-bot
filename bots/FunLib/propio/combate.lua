@@ -1,10 +1,13 @@
 -- dota-bot's own bot: kills, chases, runes and rotations of the laning phase (phase 1, DECISIONES 2026-11-03: «buscar
 -- kill, perseguir pertinentemente, moverse de línea»). Each rule returns a decision with its reason, or nil; a chase
 -- keeps its state in s.chase and ends with a logged reason (kill, lost sight, tower, danger, too long, too far).
--- Damage estimates are Valve's own (GetEstimatedDamageToTarget: attacks and abilities, mana and cooldowns included).
+-- The kill check is ours, from hits and abilities read live (SideDamage). Valve's estimate (GetEstimatedDamageToTarget:
+-- not supervisable) only remains for the danger of other enemies. Rotations are off until the rest is measured (K.rotar;
+-- DECISIONES 2026-11-04: 8 of 8 ended with no kill).
 local C = {}
 
 local K = {
+	rotar = false,        -- walking out of the lane for a kill
 	killMargin = 1.15,    -- go for a kill when our side's 4 s damage is this many times the target's health
 	window = 4.0,         -- seconds of damage counted for a kill
 	alliesRadius = 1200,  -- allies this close to the target help with their own estimate
@@ -51,17 +54,26 @@ local function NearestEnemyTower(loc)
 	return best, dist
 end
 
--- Our side's damage on the target in the window: ours plus that of allied heroes near it.
-local function SideDamage(bot, e)
-	local total = bot:GetEstimatedDamageToTarget(true, e, K.window, DAMAGE_TYPE_ALL)
-	local helpers = 0
+-- The hits a unit lands on the target in these seconds (the first one at once), by its real damage per hit.
+local function HitsDamage(u, e, seconds)
+	local hits = seconds > 0 and 1 + math.floor(seconds / math.max(u:GetSecondsPerAttack(), 0.1)) or 0
+	return hits * e:GetActualIncomingDamage(u:GetAttackDamage(), DAMAGE_TYPE_PHYSICAL)
+end
+
+-- Our side's damage on the target in the window: our hits and abilities, and the hits of allies already attacking it
+-- (an ally merely near may be doing anything else).
+local function SideDamage(bot, p, e)
+	local burst, casting = 0, 0
+	if p.hero ~= nil then burst, casting = p.hero.KillBurst(bot, p, e, K.window) end
+	local hits = HitsDamage(bot, e, K.window - casting)
+	local allies, helpers = 0, 0
 	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
-		if a ~= bot and Seen(a) and D2(a:GetLocation(), e:GetLocation()) < K.alliesRadius then
-			total = total + a:GetEstimatedDamageToTarget(true, e, K.window, DAMAGE_TYPE_ALL)
+		if a ~= bot and Seen(a) and a:GetAttackTarget() == e and D2(a:GetLocation(), e:GetLocation()) < K.alliesRadius then
+			allies = allies + HitsDamage(a, e, K.window)
 			helpers = helpers + 1
 		end
 	end
-	return total, helpers
+	return hits + burst + allies, helpers, hits, burst
 end
 
 -- Damage the enemy heroes other than the target, near us or near the target (where a chase or rotation leads), can
@@ -137,9 +149,9 @@ end
 
 -- What a kill on this enemy looks like now: the numbers Start() decides on.
 local function Evaluate(bot, p, e, d)
-	local dmg, helpers = SideDamage(bot, e)
+	local dmg, helpers, hits, burst = SideDamage(bot, p, e)
 	local travel = math.max(0, d - p.range) / math.max(p.moveSpeed, 1)
-	return { dmg = dmg, helpers = helpers, score = dmg / math.max(e:GetHealth(), 1), travel = travel,
+	return { dmg = dmg, helpers = helpers, hits = hits, burst = burst, score = dmg / math.max(e:GetHealth(), 1), travel = travel,
 		kind = d > K.rotateMin and 'rotar' or 'matar',
 		-- The damage window starts when we arrive: walking time asks for a bigger margin.
 		margin = K.killMargin * (1 + travel / K.window) }
@@ -158,12 +170,12 @@ function C.KillEval(bot, s, p)
 			local unsafe = Unsafe(bot, p, e)
 			local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
 			local veto = (banned and 'veto_reciente') or (v.score < v.margin and 'margen') or (unsafe and 'inseguro')
-				or (v.kind == 'rotar' and not (v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
+				or (v.kind == 'rotar' and not (K.rotar and v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
 			lines = lines or {}
 			-- intencion: the previous decision's. veto=- is not "it starts": the rules before Start() may still win.
-			table.insert(lines, string.format('objetivo=%s ilusion=%d vida=%d dist=%d dmg4s=%d aliados=%d score=%.2f margen=%.2f veto=%s intencion=%s unsafe=%s',
-				Short(e), e:IsIllusion() and 1 or 0, e:GetHealth(), d, v.dmg, v.helpers, v.score, v.margin, veto, s.intent,
-				unsafe or '-'))
+			table.insert(lines, string.format('objetivo=%s ilusion=%d vida=%d dist=%d dmg4s=%d golpes=%d habilidades=%d aliados=%d score=%.2f margen=%.2f veto=%s intencion=%s unsafe=%s',
+				Short(e), e:IsIllusion() and 1 or 0, e:GetHealth(), d, v.dmg, v.hits, v.burst, v.helpers, v.score, v.margin, veto,
+				s.intent, unsafe or '-'))
 		end
 	end
 	return lines
@@ -181,7 +193,7 @@ function C.Start(bot, s, p)
 		local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
 		if d <= K.rotateMax and not banned then
 			local v = Evaluate(bot, p, e, d)
-			if v.score >= v.margin and (v.kind == 'matar' or (v.travel <= K.rotateTravel and p.hp > 0.6))
+			if v.score >= v.margin and (v.kind == 'matar' or (K.rotar and v.travel <= K.rotateTravel and p.hp > 0.6))
 				and Unsafe(bot, p, e) == nil and v.score > bestScore then
 				best, bestScore = { e = e, d = d, dmg = v.dmg, helpers = v.helpers, kind = v.kind }, v.score
 			end
@@ -215,13 +227,19 @@ local function WaveInReach(p)
 	return false
 end
 
+C.WaveInReach = WaveInReach
+
 function C.Rune(bot, s, p)
 	local wave = WaveInReach(p)
 	local best, bestD = nil, wave and K.runeNear or K.runeReach
 	for _, r in ipairs({ RUNE_POWERUP_1, RUNE_POWERUP_2, RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4 }) do
 		local loc = GetRuneSpawnLocation(r)
 		local d = D2(p.loc, loc)
-		if GetRuneStatus(r) == RUNE_STATUS_AVAILABLE and d < bestD and SpotSafe(loc) then best, bestD = r, d end
+		-- A far rune of unknown type (seen: available with type -1 at 1.784) is no reason to leave the lane.
+		local known = d <= 300 or GetRuneType(r) ~= RUNE_INVALID
+		-- One failed try (linea.lua, Act) bans the rune for a while: the near order is still not understood.
+		local banned = s.runeBan ~= nil and (s.runeBan[r] or -1000) > p.now
+		if GetRuneStatus(r) == RUNE_STATUS_AVAILABLE and known and not banned and d < bestD and SpotSafe(loc) then best, bestD = r, d end
 	end
 	if best ~= nil then
 		return { intent = 'runa', rune = best, to = GetRuneSpawnLocation(best),

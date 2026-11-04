@@ -3,10 +3,10 @@
 -- only when the intent changes, never cutting an attack's wind-up), log ("[bench] prop ..." lines).
 -- What it does: walks to its lane behind its own creeps, predicts each creep's health when its own attack would land
 -- (attacks in flight, the next hits of the units attacking it) and hits once at the right moment, denies, retreats on
--- low health, tower aggro or the damage of enemies that can reach it, uses salve and tango, levels up with Valve's own
--- build for the hero (scripts/npc/bot_builds.txt, docs/api/README.md). Phase 1 (trabajo/bot-propio.md, signed
--- 2026-11-03) adds: Valve's item build bought by parts with the courier (compras.lua), the hero's abilities to harass
--- and finish (sniper.lua), and right-clicking the enemy laner when the trade favours it. It does not chase or roam.
+-- low health, tower aggro or the damage of enemies that can reach it, uses salve and tango and levels up by its own
+-- build. Phase 1 (trabajo/bot-propio.md, signed 2026-11-03) adds: its item build bought by parts with the courier
+-- (compras.lua), the hero's abilities to harass and finish (sniper.lua), right-clicking the enemy laner when the trade
+-- favours it, and kills, chases and runes (combate.lua). Rotations are off (DECISIONES 2026-11-04).
 -- Only the Bot API listed in docs/api/volcado.md. The team's VM is shared with OHA, whose FunLib/aba_global_overrides
 -- wraps a few calls (GetHealth, GetLocation, GetNearby*...): for visible units they answer as Valve's.
 local L = {}
@@ -17,17 +17,21 @@ local Compras = require(GetScriptDirectory()..'/FunLib/propio/compras')
 local Combate = require(GetScriptDirectory()..'/FunLib/propio/combate')
 -- Per-hero ability rules (Finish, Harass); a hero without a module plays the lane without abilities.
 local HEROES = { npc_dota_hero_sniper = require(GetScriptDirectory()..'/FunLib/propio/sniper') }
+-- Benchmark variant "sin_combate": no kills, abilities on heroes or trades, to measure what the fighting costs in farm.
+local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
+local NO_COMBAT = Variant.sin_combate == true
 
--- Valve's own level-up order for the heroes this test may take (bot_builds.txt, 7.41f).
+-- Level-up order (DECISIONES 2026-11-04: Take Aim early, departing from Valve's; talents as in bot_builds.txt, 7.41f).
 local BUILDS = {
-	npc_dota_hero_sniper = { 'sniper_shrapnel', 'sniper_headshot', 'sniper_shrapnel', 'sniper_headshot',
-		'sniper_shrapnel', 'sniper_assassinate', 'sniper_shrapnel', 'sniper_headshot', 'sniper_headshot',
-		'special_bonus_unique_sniper_headshot_damage', 'sniper_take_aim', 'sniper_take_aim', 'sniper_assassinate',
-		'sniper_take_aim', 'sniper_take_aim', 'special_bonus_unique_sniper_6', 'sniper_assassinate',
+	npc_dota_hero_sniper = { 'sniper_headshot', 'sniper_take_aim', 'sniper_headshot', 'sniper_take_aim',
+		'sniper_shrapnel', 'sniper_assassinate', 'sniper_shrapnel', 'sniper_shrapnel', 'sniper_shrapnel',
+		'special_bonus_unique_sniper_headshot_damage', 'sniper_headshot', 'sniper_headshot', 'sniper_take_aim',
+		'sniper_assassinate', 'sniper_take_aim', 'special_bonus_unique_sniper_6', 'sniper_assassinate',
 		'special_bonus_unique_sniper_4', 'special_bonus_unique_sniper_3', 'special_bonus_unique_sniper_5',
 		'special_bonus_unique_sniper_1', 'special_bonus_unique_sniper_shrapnel_damage', 'special_bonus_unique_sniper_2' },
 }
-local STARTING_ITEMS = { 'item_tango', 'item_flask', 'item_branches', 'item_branches' }
+-- All the starting gold: 300 stayed idle at t=0. Slippers and circlet are the Wraith Band (compras.lua).
+local STARTING_ITEMS = { 'item_tango', 'item_flask', 'item_branches', 'item_branches', 'item_slippers', 'item_circlet' }
 
 -- Thresholds of the rules (one place, so the log and the rules agree).
 local K = {
@@ -50,6 +54,15 @@ local K = {
 	tradeEdge = 0.15,     -- ...and if its health fraction is not above ours by more than this
 	tradeCreeps = 2,      -- ...with at most this many enemy creeps within 500 of us (they aggro on hero attacks)
 	tradeEvery = 1.5,     -- seconds between two right-clicks on a hero
+	healNear = 900,       -- no salve with an enemy hero this close, or within its attack range plus healMargin (it was 1500)
+	healMargin = 300,
+	treeSafe = 800,       -- how far a tree is worth walking to with no enemy near (OHA's distance)...
+	treeNear = 350,       -- ...and with one near
+	treeTower = 920,      -- no tree this close to an enemy tower
+	runePick = 80,        -- from this close, the order to pick up the rune: from afar it leaves the hero idle
+	runeTry = 3.0,        -- seconds of trying before giving up on a rune...
+	runeBan = 60,         -- ...and seconds before trying that one again
+	tpFrom = 3500,        -- this far from the lane's front, go back by teleport
 }
 
 local S = {} -- pid -> state of this bot
@@ -140,6 +153,7 @@ end
 local function Perceive(bot)
 	local team = GetTeam()
 	local p = {
+		hero = HEROES[bot:GetUnitName()],
 		team = team, now = GameTime(), t = DotaTime(), loc = bot:GetLocation(),
 		hp = bot:GetHealth() / math.max(bot:GetMaxHealth(), 1), hpAbs = bot:GetHealth(),
 		range = bot:GetAttackRange(), point = bot:GetAttackPoint(), projSpeed = bot:GetAttackProjectileSpeed(),
@@ -240,29 +254,65 @@ end
 
 local function RuleHeal(bot, s, p)
 	if bot:HasModifier('modifier_flask_healing') or bot:HasModifier('modifier_tango_heal') then return nil end
-	local safe = #p.enemyHeroes == 0 and not bot:WasRecentlyDamagedByAnyHero(2.0) and not bot:WasRecentlyDamagedByTower(2.0)
+	local heroNear = false
+	for _, e in ipairs(p.enemyHeroes) do
+		if Valid(e) and D2(p.loc, e:GetLocation()) < math.max(K.healNear, e:GetAttackRange() + K.healMargin) then heroNear = true end
+	end
+	local safe = not heroNear and not bot:WasRecentlyDamagedByAnyHero(2.0) and not bot:WasRecentlyDamagedByTower(2.0)
 	local salve = HasItem(bot, 'item_flask')
-	if salve ~= nil and p.hp < 0.55 and safe then
+	if salve ~= nil and salve:IsFullyCastable() and p.hp < 0.55 and safe then
 		return { intent = 'curar_salvia', reason = string.format('vida %.2f, sin enemigos cerca', p.hp), item = salve }
 	end
 	local tango = HasItem(bot, 'item_tango')
-	if tango ~= nil and bot:GetMaxHealth() - p.hpAbs > 120 then
-		local trees = bot:GetNearbyTrees(350)
-		if trees ~= nil and trees[1] ~= nil then
-			return { intent = 'curar_tango', reason = string.format('faltan %d de vida', bot:GetMaxHealth() - p.hpAbs),
-				item = tango, tree = trees[1] }
+	if tango ~= nil and tango:IsFullyCastable() and bot:GetMaxHealth() - p.hpAbs > 120 then
+		-- Far trees only with nothing to farm and no enemy near (the walk leaves the wave), and the nearest one that
+		-- is not under an enemy tower.
+		local reach = (safe and not Combate.WaveInReach(p)) and K.treeSafe or K.treeNear
+		local tree, treeD = nil, 1e9
+		for _, t in ipairs(bot:GetNearbyTrees(reach) or {}) do
+			local loc = GetTreeLocation(t)
+			local d = D2(p.loc, loc)
+			local underTower = false
+			for _, tw in ipairs(p.enemyTowers) do
+				if Valid(tw) and D2(loc, tw:GetLocation()) < K.treeTower then underTower = true end
+			end
+			if d < treeD and not underTower then tree, treeD = t, d end
+		end
+		if tree ~= nil then
+			return { intent = 'curar_tango', reason = string.format('faltan %d de vida, árbol a %d', bot:GetMaxHealth() - p.hpAbs, treeD),
+				item = tango, tree = tree }
 		end
 	end
 	return nil
 end
 
+-- Whether standing there means standing under an enemy tower that is not busy with something else: going in for a
+-- creep took health from 0,94 to 0,20 in seven seconds (fase1 m3, t=45-52).
+local function TowerBlocks(bot, p, spot)
+	for _, tw in ipairs(p.enemyTowers) do
+		if Valid(tw) and D2(spot, tw:GetLocation()) < K.towerMargin then
+			local target = tw:GetAttackTarget()
+			if not Valid(target) or target == bot then return true end
+		end
+	end
+	return false
+end
+
+-- Where the hero would attack this creep from.
+local function StandFor(p, c)
+	if D2(p.loc, c:GetLocation()) <= p.range then return p.loc end
+	return Toward(c:GetLocation(), p.loc, p.range)
+end
+
 -- Last hit (enemy creep) or deny (our creep under half health): the creep whose predicted health when our attack
 -- lands is above 0 and within our damage. Also returns the creep to stand ready for, if one is about to be killable.
+-- No deny when a last hit matures within our next attack: the deny would spend that attack.
 local function RuleLastHit(bot, s, p)
-	local best, ready = nil, nil
+	local best, ready, soon = nil, nil, false
+	local spa = bot:GetSecondsPerAttack()
 	local function consider(list, attackersFrom, deny)
 		for _, c in ipairs(list) do
-			if Valid(c) and (not deny or c:GetHealth() < 0.5 * c:GetMaxHealth()) then
+			if Valid(c) and (not deny or c:GetHealth() < 0.5 * c:GetMaxHealth()) and not TowerBlocks(bot, p, StandFor(p, c)) then
 				local d = D2(p.loc, c:GetLocation())
 				local walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1)
 				local flight = p.projSpeed > 0 and math.min(d, p.range) / p.projSpeed or 0
@@ -279,9 +329,9 @@ local function RuleLastHit(bot, s, p)
 						best = { creep = c, tLand = tLand, flight = flight, hpAt = hpAt, dmg = dmg, nProj = nProj,
 							nHits = nHits, deny = deny, dLast = dLast }
 					end
-				elseif ready == nil and hpAt > 0 then
-					local hpSoon = PredictHealth(c, tLand + K.lookAhead, attackers, p.now)
-					if hpSoon <= dmg then ready = c end
+				elseif hpAt > 0 then
+					if not deny and walk < 0.5 and PredictHealth(c, tLand + spa, attackers, p.now) <= dmg then soon = true end
+					if ready == nil and PredictHealth(c, tLand + K.lookAhead, attackers, p.now) <= dmg then ready = c end
 				end
 			end
 		end
@@ -293,7 +343,7 @@ local function RuleLastHit(bot, s, p)
 	for _, u in ipairs(p.allyCreeps) do table.insert(allies, u) end
 	for _, u in ipairs(p.allyTowers) do table.insert(allies, u) end
 	consider(p.enemyCreeps, allies, false)
-	if best == nil then consider(p.allyCreeps, enemies, true) end
+	if best == nil and not soon then consider(p.allyCreeps, enemies, true) end
 	if best ~= nil then
 		local c = best.creep
 		return { intent = best.deny and 'denegar' or 'ultimo_golpe', target = c, hit = best,
@@ -340,6 +390,33 @@ local function RuleTrade(bot, s, p)
 	return nil
 end
 
+-- Back to the lane by teleport after the fountain or a death: walking cost the time OHA spends farming (4-19 TP a match
+-- against 0). To the first standing mid tower, only from far enough and with no enemy near.
+local function RuleTeleport(bot, s, p)
+	if p.t < 0 or #p.enemyHeroes > 0 or D2(p.loc, p.front) < K.tpFrom then return nil end
+	if p.now - (s.tpAt or -1000) < 5 then return nil end -- an order the engine took and did nothing with is not repeated
+	local slot = bot:FindItemSlot('item_tpscroll')
+	if slot < 0 or (slot > 5 and slot ~= 15) then return nil end
+	local item = bot:GetItemInSlot(slot)
+	if item == nil or not item:IsFullyCastable() then return nil end
+	for _, t in ipairs({ TOWER_MID_1, TOWER_MID_2, TOWER_MID_3 }) do
+		local tower = GetTower(p.team, t)
+		if Valid(tower) then
+			if D2(p.loc, tower:GetLocation()) < K.tpFrom then return nil end
+			s.tpAt = p.now
+			return { intent = 'teleporte', item = item, at = tower:GetLocation(),
+				reason = string.format('a %d del frente, a la torre %d', D2(p.loc, p.front), t) }
+		end
+	end
+	return nil
+end
+
+-- Take Aim first, when the decision is to hit a hero.
+local function WithAim(bot, s, p, hero, r)
+	if hero == nil or r == nil or r.target == nil or (r.intent ~= 'acosar' and r.intent ~= 'matar') then return r end
+	return hero.Aim(bot, s, p, r.target) or r
+end
+
 local function Decide(bot, s, p)
 	if p.t < -5 and not s.bought then return { intent = 'comprar', reason = 'objetos iniciales' } end
 	local r = RuleRetreat(bot, s, p)
@@ -358,41 +435,50 @@ local function Decide(bot, s, p)
 	end
 	r = RuleHeal(bot, s, p)
 	if r then return r end
-	local hero = HEROES[bot:GetUnitName()]
-	if hero ~= nil then
+	r = RuleTeleport(bot, s, p)
+	if r then return r end
+	local hero = p.hero
+	if hero ~= nil and not NO_COMBAT then
 		r = hero.Finish(bot, s, p)
 		if r then return r end
 	end
-	-- Kills: a chase under way goes on (or ends with its reason), else a new kill or rotation may start.
-	local ended
-	r, ended = Combate.Continue(bot, s, p)
-	if ended then Log(s, bot, 'persecucion', ended) end
-	if r == nil then r = Combate.Start(bot, s, p) end
-	if r then
-		local cast = hero ~= nil and r.intent == 'matar' and hero.KillCast(bot, s, p, r.target) or nil
-		return cast or r
+	-- Kills: a chase under way goes on (or ends with its reason), else a new kill may start.
+	if not NO_COMBAT then
+		local ended
+		r, ended = Combate.Continue(bot, s, p)
+		if ended then Log(s, bot, 'persecucion', ended) end
+		if r == nil then r = Combate.Start(bot, s, p) end
+		if r then
+			local cast = hero ~= nil and r.intent == 'matar' and hero.KillCast(bot, s, p, r.target) or nil
+			return cast or WithAim(bot, s, p, hero, r)
+		end
 	end
 	local ready
 	r, ready = RuleLastHit(bot, s, p)
 	if r then return r end
-	-- Enemy creeps hitting us: a step back drops the aggro, after the last hit that is ready and only when it matters
-	-- (two or more creeps, or health going down): one creep's hits are the price of farming (fase1d: 18 s lost to it).
-	if s.chase == nil and (p.creepsOnMe >= 2 or (p.creepsOnMe >= 1 and p.hp < 0.7)) then
+	-- Enemy creeps hitting us: a step back drops the aggro, after the last hit that is ready and only with two or more:
+	-- one creep's hits are the price of farming (fase1d: 18 s lost to it; fase1f-reg: 18 of 22 decisions with one).
+	if s.chase == nil and p.creepsOnMe >= 2 then
 		return { intent = 'soltar_aggro', reason = string.format('%d creeps me pegan', p.creepsOnMe),
 			to = Toward(p.loc, Home(p.team), K.aggroStep) }
 	end
 	r = Combate.Rune(bot, s, p)
 	if r then return r end
-	if hero ~= nil then
-		r = hero.Harass(bot, s, p)
+	if not NO_COMBAT then
+		if hero ~= nil then
+			r = hero.Harass(bot, s, p)
+			if r then return r end
+		end
+		r = WithAim(bot, s, p, hero, RuleTrade(bot, s, p))
 		if r then return r end
 	end
-	r = RuleTrade(bot, s, p)
-	if r then return r end
 	if ready ~= nil then
 		local spot = Toward(ready:GetLocation(), p.loc, p.range * 0.9)
-		return { intent = 'preparar_golpe', reason = string.format('%s cae en ~%.0fs', string.gsub(ready:GetUnitName(), 'npc_dota_', ''), K.lookAhead),
-			to = D2(p.loc, ready:GetLocation()) > p.range and spot or nil }
+		local moves = D2(p.loc, ready:GetLocation()) > p.range
+		if not moves or not TowerBlocks(bot, p, spot) then
+			return { intent = 'preparar_golpe', reason = string.format('%s cae en ~%.0fs', string.gsub(ready:GetUnitName(), 'npc_dota_', ''), K.lookAhead),
+				to = moves and spot or nil }
+		end
 	end
 	return { intent = 'linea', reason = string.format('detrás del frente a %d', K.holdBack), to = LanePoint(p) }
 end
@@ -457,8 +543,9 @@ end
 -- What each rune order found and left, since the far orders leave the hero idle and the near ones took nothing:
 -- the line that tells the cause (trabajo/fase1-plan.md, step 3).
 local function RuneOrder(bot, s, p, d)
-	Log(s, bot, 'runa_res', string.format('runa=%d d=%d estado=%d tipo=%d accion=%d visto=%.1f', d.rune, D2(p.loc, d.to),
-		GetRuneStatus(d.rune), GetRuneType(d.rune), bot:GetCurrentActionType(), GetRuneTimeSinceSeen(d.rune)))
+	Log(s, bot, 'runa_res', string.format('runa=%d d=%d x=%d y=%d estado=%d tipo=%d accion=%d visto=%.1f intento=%s', d.rune,
+		D2(p.loc, d.to), p.loc.x, p.loc.y, GetRuneStatus(d.rune), GetRuneType(d.rune), bot:GetCurrentActionType(),
+		GetRuneTimeSinceSeen(d.rune), s.runeTry ~= nil and 'si' or 'no'))
 end
 
 local function Act(bot, s, p, d)
@@ -470,6 +557,7 @@ local function Act(bot, s, p, d)
 		if d.to == nil and d.intent ~= 'ultimo_golpe' and d.intent ~= 'denegar' then d.to = LanePoint(p) end
 	end
 	if d.intent ~= 'matar' then s.attacking = nil end
+	if d.intent ~= 'runa' then s.runeTry = nil end
 	if d.intent == 'comprar' then Buy(bot, s) return end
 	-- An item order is not repeated each frame while the healing buff has not appeared yet.
 	if d.intent == 'curar_salvia' then bot:Action_UseAbilityOnEntity(d.item, bot) s.busyUntil = p.now + 0.6 return end
@@ -482,6 +570,18 @@ local function Act(bot, s, p, d)
 		s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
 			hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
 			illusion = d.target:IsIllusion() }
+		return
+	end
+	if d.intent == 'apuntar' then
+		bot:Action_UseAbility(d.ability)
+		s.busyUntil, s.moveTo = p.now + d.castPoint + 0.05, nil
+		Log(s, bot, 'habilidad', 'take_aim: ' .. d.reason)
+		return
+	end
+	if d.intent == 'teleporte' then
+		bot:Action_UseAbilityOnLocation(d.item, d.at)
+		s.busyUntil, s.moveTo = p.now + 0.5, nil -- then IsChanneling holds the decisions (L.Think)
+		Log(s, bot, 'habilidad', 'tp: ' .. d.reason)
 		return
 	end
 	if d.intent == 'shrapnel' then
@@ -524,9 +624,25 @@ local function Act(bot, s, p, d)
 	if d.intent == 'runa' then
 		if p.now - (s.runeOrderAt or -1000) > 1.0 then
 			pcall(RuneOrder, bot, s, p, d) -- a logging failure must not stop the order
-			bot:Action_PickUpRune(d.rune)
 			s.runeOrderAt = p.now
 		end
+		-- From afar the order leaves the hero idle (accion=1 in 111 of 125 samples, MEDICIONES fase1f-reg): walk first.
+		if s.runeTry == nil and D2(p.loc, d.to) > K.runePick then
+			MoveTo(bot, s, p, d.to)
+			return
+		end
+		-- Near, the order every tick as OHA does, without walking back: at d=0-57 it took the hero away and nothing was
+		-- picked up (fase1 to fase1e), cause unknown. Three seconds, then that rune is left alone for a minute.
+		s.runeTry = s.runeTry or p.now
+		if p.now - s.runeTry > K.runeTry then
+			s.runeBan = s.runeBan or {}
+			s.runeBan[d.rune] = p.now + K.runeBan
+			Log(s, bot, 'runa_res', string.format('runa=%d abandono tras %.0fs, d=%d', d.rune, K.runeTry, D2(p.loc, d.to)))
+			s.runeTry = nil
+			return
+		end
+		bot:Action_PickUpRune(d.rune)
+		s.moveTo = nil
 		return
 	end
 	-- No destination: no order (clearing the queue would leave the hero idle, free to auto-attack).
@@ -590,8 +706,8 @@ function L.Think()
 	-- Purchases, courier and inventory run dead or alive (OHA also buys while dead).
 	if s.bought then
 		local now = GameTime()
-		for _, line in ipairs({ Compras.Buy(bot, s, now) or false, Compras.Courier(bot, s, now) or false,
-			Compras.Arrange(bot, s, now) or false }) do
+		for _, line in ipairs({ Compras.Consumables(bot, s, now) or false, Compras.Buy(bot, s, now) or false,
+			Compras.Courier(bot, s, now) or false, Compras.Arrange(bot, s, now) or false }) do
 			if line then Log(s, bot, 'compra', line) end
 		end
 	end
@@ -611,7 +727,14 @@ function L.Think()
 	for _, line in ipairs(evalOk and evalLines or {}) do Log(s, bot, 'kill_eval', line) end
 	WatchAutoAttack(bot, s, p)
 	LevelUp(bot, s)
-	if p.now >= s.busyUntil then
+	local treads = (p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.TreadsToAgility(bot, s, p.now) or nil
+	if treads ~= nil then
+		-- Each change logs the attributes: the proof that the API's reading of the stat is the way round OHA says.
+		Log(s, bot, 'compra', string.format('botas cambio stat_api=%d agi=%d int=%d', treads:GetPowerTreadsStat(),
+			bot:GetAttributeValue(ATTRIBUTE_AGILITY), bot:GetAttributeValue(ATTRIBUTE_INTELLECT)))
+		bot:Action_UseAbility(treads)
+		s.busyUntil, s.moveTo = p.now + 0.05, nil
+	elseif p.now >= s.busyUntil and not bot:IsChanneling() then
 		local d = Decide(bot, s, p)
 		-- Logged when the intent or the kind of reason changes (its first word), not each time a number in it moves.
 		local kind = string.match(d.reason, '^(%S+)') or ''
