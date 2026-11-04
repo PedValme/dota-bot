@@ -30,20 +30,13 @@ K/D/A, posición, vida e ítems de los 10 héroes, y cada lanzamiento, compra, r
 - **Desacuerdo entre revisores:** el del bot pone primero un Assassinate más liberal; el de datos midió que solo 3 de 23
   kills de OHA lo llevan. No va primero: se mira con `assassinate_res` y `kill_eval`.
 
-## Decide Pedro (preguntado el 2026-11-04; mira DECISIONES antes de asumir nada)
-1. **Listón de la fase 1.** Recomendado: suelo de ≥45 LH (a criterio) y muertes ≤ OHA, con patrimonio solo informativo;
-   la paridad se lee con margen −15 %. Por qué: el patrimonio depende de pocas partidas con kills. Cambia lo firmado.
-2. **Humos cortos y tope.** Recomendado: humos cortados en el min 12 con la carga anotada (autorización permanente),
-   máximo 3 vueltas, y al final pasar a la fase 2 con la brecha anotada si está entre −5 % y −15 %.
-3. **Apartarse de la build de Valve.** Recomendado: Take Aim temprano, stats al inicio, Treads en agilidad, Dragon Lance
-   pronto, como ideas leídas en OHA. Cambia «datos de Valve» del diseño (`trabajo/bot-propio.md`).
-4. **Rotación.** Recomendado: apagarla hasta medir el resto (8 de 8 terminaron sin kill). Él la pidió («moverse de
-   linea»): sin su palabra sigue encendida.
-5. **Confirmación.** Recomendado: 20 parejas (unas 4 h con corte) con parada por inutilidad a 8 y 14, en vez de las 24
-   partidas autorizadas: con 12 parejas el intervalo es ±8 LH y el resultado casi seguro sería indeterminado.
-6. **Jugar contra el Sniper, 15 minutos.** Recomendado: sí, tras esta vuelta: es la única prueba real frente al objetivo.
-
-Sin respuesta a 1-5, se hace lo que ya está firmado y se le pregunta al llegar a cada punto.
+## Decidido por Pedro (DECISIONES 2026-11-04: «ok si a todo lo que propones, lo abordamos en sesion fresca»)
+1. **Listón de la fase 1:** suelo de ≥45 LH y muertes ≤ OHA; paridad con margen −15 %; patrimonio solo informativo.
+2. **Humos cortados en el min 12** con la carga anotada, sin preguntar; máximo 3 vueltas, con la salida del paso 5.
+3. **La build se aparta de Valve:** Take Aim temprano, stats al inicio, Treads en agilidad, Dragon Lance pronto.
+4. **Rotación apagada** hasta medir lo demás.
+5. **Confirmación:** 20 parejas (unas 4 h con corte), con parada por inutilidad a 8 y 14, en vez de las 24 partidas.
+6. **Pedro juega 15 minutos** contra el Sniper tras esta vuelta.
 
 ## Lo que hace la sesión nueva, en orden
 Una rama y un PR por paso. Antes de cada humo, por escrito en MEDICIONES: la predicción de mecanismo (qué línea del
@@ -80,20 +73,20 @@ aparece en 2 o más partidas. Un defecto visible en el registro se arregla y se 
 7. Denegar: no gastar el ataque si un último golpe madura dentro del enfriamiento.
 8. Simplificar si la predicción no los defiende: `burstHold`, `soltar_aggro` con un solo creep.
 
-**Paso 4. Mejoras con decisión de Pedro** (si las aprueba): build y Take Aim (alcance, y con él vuelven los acosos que
-cayeron), apagar la rotación, TP de vuelta tras fuente o muerte. Ya con `kill_eval`: prueba de kill propia (golpes por
+**Paso 4. Mejoras decididas:** build y Take Aim (alcance, y con él vuelven los acosos que cayeron), apagar la rotación,
+TP de vuelta tras fuente o muerte. Ya con `kill_eval`: prueba de kill propia (golpes por
 daño real, Assassinate, aliados) en lugar de `GetEstimatedDamageToTarget`, que no es supervisable.
 
 **Paso 5. Medir.** Prueba de ablación, combate encendido y apagado (4+4, propio). Después 8 partidas del propio frente a
 la referencia de OHA.
-- Máximo 3 vueltas (si Pedro lo aprueba).
+- Máximo 3 vueltas.
 - **Media ≥ −5 % en LH y muertes ≤ OHA:** confirmación.
 - **Entre −5 % y −15 %, con el suelo cumplido y Pedro conforme:** fase 2, con la brecha anotada como defecto.
 - **Peor de −15 %, o sin combate rinde claramente mejor y no se arregla:** cuestionar el diseño (orden de reglas, o
   adelantar el medio juego) y llevárselo a Pedro. OHA ya gana la línea y regala la ventaja después (MEDICIONES
   2026-11-02/03): empatarle en línea no ataca esa causa, solo es un suelo.
 
-**Paso 6.** Pedro juega contra el Sniper, si lo aprueba. La confirmación pasa por la puerta de `bench/README.md` y su
+**Paso 6.** Pedro juega contra el Sniper (avisarle cuando esté listo). La confirmación pasa por la puerta de `bench/README.md` y su
 análisis (`tools/analisis/serie-fase1.mjs`) se ajusta antes al listón decidido; su tamaño de ±5 LH quedó desfasado.
 
 ## Ya no se hace

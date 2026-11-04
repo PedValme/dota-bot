@@ -43,6 +43,8 @@ Hasta la fase 2, OHA juega el resto del equipo; en ningún momento el bot por de
 
 - 2026-11-04: la cifra de arriba dependía de una pareja; revisión adversarial y plan de la siguiente vuelta en
   `trabajo/fase1-plan.md` (MEDICIONES, «Revisión adversarial de la fase 1»). La serie, aplazada (DECISIONES 2026-11-04).
+  Pedro cambió ese día la meta de la fase 1 (suelo y paridad a −15 %, patrimonio informativo), la build (se aparta de
+  Valve) y la confirmación (20 parejas): manda DECISIONES sobre lo escrito arriba.
 
 ## Lo que pide la firma
 - Este orden de fases y la meta de la fase 1.
