@@ -688,3 +688,38 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Validez: un bloque, máquina cargada. Las dos parejas se parecen poco: la varianza entre líneas es enorme.
 - Decisión: la serie sigue aplazada (DECISIONES 2026-11-04). Siguiente vuelta, para que Pedro decida: reponer salvia y
   tango, Shrapnel a corta distancia, y por qué casi no empieza kills.
+
+### 2026-11-04 · Revisión adversarial de la fase 1 (lectura de `prueba-control` a `fase1e`, sin partidas nuevas)
+- Pregunta (Pedro): antes de relanzar humos, ¿qué dicen de verdad los datos y qué mejorar en el bot propio?
+- Tres revisores (Opus, esfuerzo alto), por separado: datos, bot y método. Scripts en
+  `tools/analisis/revision-2026-11-04/`. Fuente que estas entradas no usaron: las líneas `[dotabench] obs`.
+- **Correcciones a las entradas de arriba** (no se reescriben):
+  - «La brecha se abre desde el min 5-6»: solo de media. Por pareja hay −8 y −10 en el min 5. El patrimonio salta en los
+    min 7 y 9, con las rachas: 21 de 23 kills de OHA son posteriores al min 6.
+  - «La mayor fuga, la regla de peligro»: se midió en `fase1d` Dire, la pareja con −1 LH; no es la causa de esa brecha.
+    Correlación tiempo fuera-LH −0,54 (n=8): 226 s fuera dieron 46 LH, 98 s dieron 39.
+  - «Aciertos 65-70 %»: son 56-70 %, y `golpe_res` pisa el intento pendiente; OHA no tiene dato comparable, así que
+    «no explica la brecha» no está probado.
+  - «Runas 24-34 s»: 24-40 s, y faltó lo importante: **0 activaciones del propio** en partidas enteras.
+  - «Shrapnel derrochado» (`fase1e`): 1.228 y 38 de 46 son de la partida entera; hasta el min 10, 14 lanzamientos, 1.168
+    y 10 de 13. OHA lanzó 13 en la misma línea. Los registros no dicen si acierta.
+  - «6 kills en esa misma línea» y «casi toda su ventaja»: 4 fueron a Axe y Lion, héroes que no son el mid; kills 55 %,
+    últimos golpes 38 %.
+  - «Cumple la meta» (`fase1`): depende de un +12 frente al OHA más bajo de los 10 (41; media 52,8).
+  - «NO PASA» con un bloque: el análisis da INDETERMINADO (IC −211 a +182).
+  - Potencia escrita para la serie (±5 LH, ±730): desfasada; con 12 parejas sería ±8 LH y ±1.460.
+  - «Declarado sin dato»: las posiciones de OHA están en `obs`, el Sniper de OHA piensa 30,0/s en las 10 partidas, y el mid
+    rival es el sorteado en pos 2 (primer ocupante en 20 de 20, muestras cada 30 s).
+- **Resultado:**
+  - Brecha media de patrimonio −1.581 en 10 parejas: kills −801 (51 %), LH −648 (41 %), asistencias −127 (8 %), por
+    regresión de ΔNW por 30 s en 4.000 ventanas (76 por LH, 534 por kill, 159 por asistencia), residuo hasta ±700. Tres
+    parejas con OHA ≥5 kills suman el 72 %; las otras cinco con habilidades dan −296.
+  - Asimetrías no declaradas (cotejadas a mano, partidas enteras): runas 0 frente a 5-13; TP 0 frente a 4-19; Take Aim 0
+    frente a 7-15. Torres enemigas caídas 1 frente a 10; T1 mid propia perdida 3 frente a 0. OHA compra Lance, varita y MoM.
+  - Enemigo a menos de 1.200 con vida bajo 400: 2 de 63 fotos el propio, 11 de 48 OHA. Acosos 38→26→9→5 por humo.
+  - Muertes 6 frente a 7; tiempo muerto 134 s frente a 182 s: no explican la brecha. Los LH de OHA: 515 de 528 en el
+    corredor mid. Los bloques no se distinguen del azar: dentro de bloque 8,2 LH, entre bloques 3,8 (F 0,22).
+- Validez: descriptivo, código del propio cambiando entre humos, muestras de 30 s. Un bloque: ±18 LH al 95 %. Emparejar
+  no reduce ruido aquí (desviación por pareja 13 LH, sin emparejar ~11,5; correlación entre brazos −0,30, n=8).
+- Decisión: plan en `trabajo/fase1-plan.md`; lo que cambia lo firmado espera a Pedro. El desacuerdo entre revisores
+  (Assassinate más liberal como mejora número 1 frente a 3 de 23 kills de OHA con él) queda abierto: se mide antes.
