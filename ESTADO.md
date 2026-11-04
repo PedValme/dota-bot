@@ -5,17 +5,16 @@
 - **Qué se estaba haciendo:** el bot propio con control completo (DECISIONES 2026-11-03; diseño en `trabajo/bot-propio.md`).
   Fase 1: un Sniper en mid con `Think()` propio (`bots/FunLib/propio/`, variante `control_sniper`, `--mid sniper`), frente
   al Sniper de OHA (`base_sniper`).
-- **Dónde quedó:** el control completo funciona (el motor no actúa solo; de OHA solo queda `ItemPurchaseThink`,
-  neutralizado). En cinco humos el propio sigue por debajo de OHA en la mayoría de las métricas, así que la serie queda
-  aplazada (DECISIONES 2026-11-04: solo confirma lo que los humos ya muestran a la par o mejor).
-- **Qué se probó:** tres revisores adversariales (datos, bot, método) corrigieron el diagnóstico: la brecha de patrimonio
-  es 51 % kills y 41 % últimos golpes; el propio no activa runas, no usa TP ni Take Aim (OHA, sí); llega a las peleas sin
-  haber dañado al rival; y un bloque no decide nada (±18 LH). MEDICIONES, «Revisión adversarial de la fase 1».
-- **Decidido por Pedro** (DECISIONES 2026-11-04, las seis propuestas del plan): nuevo listón, humos cortados con la
-  carga anotada, build propia, rotación apagada, confirmación de 20 parejas, y él juega 15 minutos al final de la vuelta.
-- **Siguiente acción:** leer `trabajo/fase1-plan.md` y seguirlo en orden: `--corte` y registro nuevo en el banco, con
-  revisión; defectos del bot; mejoras decididas; luego 8 partidas del propio frente a una referencia de OHA.
-- Espera al dueño: nada
+- **Dónde quedó:** el propio pasó el listón en humo a la primera vuelta: 60,1 últimos golpes en el min 10 frente a 57,4 de
+  OHA, 0 muertes frente a 1,1 y patrimonio 7.737 frente a 7.628, en 8 y 8 partidas de corridas separadas (MEDICIONES,
+  `fase1h`, `ref-oha`). Puerta de la confirmación cumplida. Corre `conf1-a`.
+- **Qué se probó:** banco con `--corte` (5 min por partida) y registro nuevo; defectos y mejoras de `trabajo/fase1-plan.md`.
+  La ablación no ve coste de farm del combate. `kill_eval`: casi todas las kills las frena el margen, por falta de daño.
+- **Siguiente acción:** la confirmación son 3 tandas seguidas, mismo commit de `bots/` y `tools/bench/`: `conf1-a` (16
+  partidas), `conf1-b` y `conf1-c` (12 y 12), con el comando de MEDICIONES y `--etiqueta` de cada una. Tras cada tanda,
+  `node tools/analisis/serie-fase1.mjs conf1-a [conf1-b [conf1-c]]`: para si dice inutilidad. Con las tres, leer el veredicto,
+  anotarlo en MEDICIONES y, si pasa, a la fase 2 (`trabajo/bot-propio.md`), borrando `trabajo/fase1-plan.md`.
+- Espera al dueño: jugar 15 minutos contra el Sniper: `node tools/jugar-sniper.mjs`, Custom Lobby con Local Host y Local Dev Script, y al acabar `node tools/jugar-sniper.mjs quitar`; con Dota libre, entre tandas de la confirmación.
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -32,9 +31,11 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-02/03 · Cerebro v3, medido y apagado (#42, #43); diagnóstico de ventajas regaladas; nuevo rumbo (#45).
 - 2026-11-03/04 · Base de primera mano de la API: `docs/api/`, wiki de Valve, API y OHA, D2AI y Tinkering (#46-#49).
   Prueba de control completo (#50); fase 1 y fase 1 completa (#51, #52); diagnóstico y ajustes (#53).
+- 2026-11-04 · Vuelta de la fase 1: banco con `--corte` y `--heroes` (#56), registro (#57), defectos y build (#58, #59),
+  puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 
 ## Siguientes pasos
-1. Fase 1 del bot propio: `trabajo/fase1-plan.md`.
+1. Fase 1 del bot propio: terminar la confirmación (`trabajo/fase1-plan.md`, paso 6).
 2. Fase 2, los cinco en línea: `trabajo/bot-propio.md`.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
@@ -52,13 +53,14 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
 - **Banco, sin comprobar:**
   - si a ×4 los bots de Lua piensan menos por segundo de juego que los de Valve;
   - el Turbo imitado no es el Turbo real: torres y runas son las normales.
-- **Bot propio** (`bots/FunLib/propio/`; plan en `trabajo/fase1-plan.md`):
-  - nunca activa una runa, con 116 decisiones de ir a por ella; causa sin comprobar;
-  - no usa TP, y Take Aim no llega hasta el nivel 11;
-  - `compras.lua` registra ventas que no ocurren (4 ventas con 2 ramas), deja oro ocioso, no compra en la tienda secreta
-    ni repone salvia;
-  - último golpe y `preparar_golpe` no miran el margen de torre;
-  - `golpe_res` pisa el intento pendiente: su porcentaje de aciertos está sesgado.
+- **Banco, sin comprobar:** el oro pasivo parece no llevar el ×2 del Turbo imitado (ningún `GameTick` en `obs ingresos`);
+  igual en los dos lados.
+- **Bot propio** (`bots/FunLib/propio/`):
+  - no puede activar runas: de pie sobre la runa, con su tipo leído, ni `Action_`, ni `ActionQueue_`, ni `ActionPush_PickUpRune`
+    hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
+  - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
+  - no compra en la tienda secreta: Crystalys y Satanic se saltan, ya pasado el min 10;
+  - `VisibleEnemies` no filtra ilusiones: se persigue y se lanza Assassinate a ilusiones (inferido, sin comprobar).
 - **Bot OHA:**
   - la defensa se apaga cuando 3 aliados empujan (`FunLib/aba_defend.lua:~915-937`);
   - la recompra por el Ancient está rota (`ability_item_usage_generic.lua:569`);
