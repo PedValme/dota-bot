@@ -131,6 +131,8 @@ Mientras corre una serie, el trabajo en paralelo va en otro worktree, en su prop
 Sin comprobar (supuestos a la vista):
 - El sorteo de héroes sale de una lista recordada de los que saben jugar los bots de Valve, no de `BotImplemented`.
 - El Turbo imitado (couriers, oro y experiencia ×2, reaparición) no es el Turbo real: torres y runas son las normales.
+  El oro pasivo no pasa por el filtro (ningún `GameTick` en `obs ingresos`; la suma se queda 1.000 por debajo del patrimonio
+  en t=600): parece que no se dobla, igual en los dos lados; inferido, no probado.
 - La velocidad: `--velocidad 4` da en la práctica ×1,6 a ×3,4 de tiempo de juego por tiempo real, según cuántos
   héroes juega dota-bot (su Lua frena el servidor: cientos de avisos «took 2-4 ms»). Falta saber si a esa carga los
   bots de Lua piensan menos veces por segundo de juego que los de Valve. La cadencia de `[bench] mode` no sirve para

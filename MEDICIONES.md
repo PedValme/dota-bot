@@ -723,3 +723,43 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   no reduce ruido aquí (desviación por pareja 13 LH, sin emparejar ~11,5; correlación entre brazos −0,30, n=8).
 - Decisión: plan en `trabajo/fase1-plan.md`; lo que cambia lo firmado espera a Pedro. El desacuerdo entre revisores
   (Assassinate más liberal como mejora número 1 frente a 3 de 23 kills de OHA con él) queda abierto: se mide antes.
+
+### 2026-11-04 · Humo del banco y del registro (`fase1f-reg`, 1 bloque, 4 partidas cortadas en el min 12)
+- Pregunta: ¿funcionan `--corte` y las líneas nuevas en los dos brazos, y qué dicen de por qué el propio no activa runas?
+  No compara LH: un bloque no decide nada (±18).
+- Qué cambió: `--corte` y `--heroes` (#56); `creepkill`, `ingresos`, `dano`, `linea` en el custom game; `kill_eval`, `pos`,
+  `runa_res`, `assassinate_res` y `golpe_res` en cola en el propio; `x`, `y` y `obj` en `mode` de OHA. Comportamiento del
+  bot, sin cambios.
+- Ya medido en los registros, antes del humo (fase1 a fase1e, 92 decisiones `runa`): con la runa a más de 700,
+  `Action_PickUpRune` deja al héroe parado (`accion=1` en 111 de 125 muestras); a menos de 100, 12 intentos, `accion=2`,
+  nunca 7, y ninguna activación.
+- Predicción de mecanismo:
+  - cada partida acaba con `resultado=corte` y `valida=si`, con la línea `[bench] linea t=720` en el registro, en
+    6-8 min reales cada una (estimación del plan: 23 min por humo de 4);
+  - `obs creepkill` distingue clic de Shrapnel y da decenas de creeps por partida en los dos brazos;
+  - `obs dano` dice si Shrapnel hiere (`sniper_shrapnel` como fuente) y `kill_eval` qué veto frena las kills (lectura de la
+    revisión: `margen`, por falta de daño previo);
+  - `runa_res` a poca distancia muestra `estado=1` y un `tipo` válido; si es así, el fallo está en la orden y no en el dato.
+- Máquina: 63 % de memoria libre al lanzar; CPU media 33-48 % por partida, con Chrome y otras tareas: humo cortado,
+  corre con la carga anotada (DECISIONES 2026-11-04).
+- Configuración: `--etiqueta fase1f-reg`, código `f50d4d2`. Héroes: chaos_knight sniper sand_king bane warlock contra
+  phantom_assassin lina axe skywrath_mage lich.
+- Resultado:
+  - `--corte`: 4 de 4 válidas con `resultado=corte`, y **unos 5 min reales por partida** (20 por humo de 4; el plan
+    estimaba 23).
+  - Líneas nuevas: 0 `obs error` y 0 `prop error`, con los «error in error handling» de siempre (1-2 por partida).
+    `creepkill` 146-178 por partida, distingue ataque, Shrapnel, Maelstrom y habilidades de aliados.
+  - Min 10, solo mecanismo (no compara): propio 50 y 49 LH, muertes 1 y 1; OHA 49 y 61, muertes 3 y 2.
+  - **`kill_eval`** (659 líneas): `margen` 559, `veto_reciente` 43, `inseguro` 31, sin veto 26. Coincide con la lectura de
+    la revisión: con el daño de 4 s el propio llega a ×0,4-0,5 de la vida del rival, frente a un margen de 1,2-2.
+  - **`dano`:** Shrapnel sí hiere (54-59 por tanda en esta partida); algunas tandas dan total 0 con golpes (sin explicar).
+  - **Runas:** `runa_res` confirma que de lejos la orden no hace andar al héroe: a 1.734-1.799, `accion=1` (parado) tras la
+    primera orden, con `estado=1`. No hubo intento cerca en este humo. A veces `tipo=-1` con `estado=1`.
+  - **`ingresos`:** sin `GameTick`: el oro pasivo no pasa por el filtro (ver `bench/README.md`, «Sin comprobar»).
+- Revisión (Opus, sobre `f50d4d2`, con este humo a la vista): solo registro, `C.Start` igual línea a línea, coste de `Think`
+  dentro de lo habitual (0,148 ms, 30/s). Aplicado después: errores de notas a la vista, `ilusion` en `kill_eval` y
+  `assassinate_res`, veto `rotacion`, `orden` en `golpe_res`.
+- Validez: un bloque, no decide nada. **El porcentaje de aciertos no es comparable con los humos anteriores:** los que antes
+  salían `reemplazado` ahora cuentan, y `acierto` solo dice que el contador subió (en la partida 1, 56 aciertos frente a 49
+  muertes por ataque; el resto, Shrapnel y Maelstrom): la tasa de remate se calcula con `creepkill inflictor=ataque`.
+- Decisión: el registro vale; pasar a los defectos del bot.

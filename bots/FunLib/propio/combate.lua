@@ -135,6 +135,40 @@ function C.Continue(bot, s, p)
 	return { intent = c.kind, target = e, reason = string.format('%s vida %d a %d', c.name, e:GetHealth(), d) }, nil
 end
 
+-- What a kill on this enemy looks like now: the numbers Start() decides on.
+local function Evaluate(bot, p, e, d)
+	local dmg, helpers = SideDamage(bot, e)
+	local travel = math.max(0, d - p.range) / math.max(p.moveSpeed, 1)
+	return { dmg = dmg, helpers = helpers, score = dmg / math.max(e:GetHealth(), 1), travel = travel,
+		kind = d > K.rotateMin and 'rotar' or 'matar',
+		-- The damage window starts when we arrive: walking time asks for a bigger margin.
+		margin = K.killMargin * (1 + travel / K.window) }
+end
+
+-- One line per second with an enemy hero within 1500, whatever rule is deciding: why a kill does not start, or does
+-- (no line of the log said it, trabajo/fase1-plan.md). Returns the lines to log.
+function C.KillEval(bot, s, p)
+	if p.now - (s.killEvalAt or -1000) < 1 then return nil end
+	local lines = nil
+	for _, e in ipairs(VisibleEnemies()) do
+		local d = D2(p.loc, e:GetLocation())
+		if d <= 1500 then
+			s.killEvalAt = p.now
+			local v = Evaluate(bot, p, e, d)
+			local unsafe = Unsafe(bot, p, e)
+			local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
+			local veto = (banned and 'veto_reciente') or (v.score < v.margin and 'margen') or (unsafe and 'inseguro')
+				or (v.kind == 'rotar' and not (v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
+			lines = lines or {}
+			-- intencion: the previous decision's. veto=- is not "it starts": the rules before Start() may still win.
+			table.insert(lines, string.format('objetivo=%s ilusion=%d vida=%d dist=%d dmg4s=%d aliados=%d score=%.2f margen=%.2f veto=%s intencion=%s unsafe=%s',
+				Short(e), e:IsIllusion() and 1 or 0, e:GetHealth(), d, v.dmg, v.helpers, v.score, v.margin, veto, s.intent,
+				unsafe or '-'))
+		end
+	end
+	return lines
+end
+
 -- Starts a kill (in reach) or a rotation (farther), when our side's damage kills it and it is safe.
 function C.Start(bot, s, p)
 	if p.now - (s.lastChaseEnd or -1000) < 2 then return nil end
@@ -146,15 +180,10 @@ function C.Start(bot, s, p)
 		local d = D2(p.loc, e:GetLocation())
 		local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
 		if d <= K.rotateMax and not banned then
-			local dmg, helpers = SideDamage(bot, e)
-			local score = dmg / math.max(e:GetHealth(), 1)
-			local travel = math.max(0, d - p.range) / math.max(p.moveSpeed, 1)
-			local kind = d > K.rotateMin and 'rotar' or 'matar'
-			-- The damage window starts when we arrive: walking time asks for a bigger margin.
-			local margin = K.killMargin * (1 + travel / K.window)
-			if score >= margin and (kind == 'matar' or (travel <= K.rotateTravel and p.hp > 0.6))
-				and Unsafe(bot, p, e) == nil and score > bestScore then
-				best, bestScore = { e = e, d = d, dmg = dmg, helpers = helpers, kind = kind }, score
+			local v = Evaluate(bot, p, e, d)
+			if v.score >= v.margin and (v.kind == 'matar' or (v.travel <= K.rotateTravel and p.hp > 0.6))
+				and Unsafe(bot, p, e) == nil and v.score > bestScore then
+				best, bestScore = { e = e, d = d, dmg = v.dmg, helpers = v.helpers, kind = v.kind }, v.score
 			end
 		end
 	end
