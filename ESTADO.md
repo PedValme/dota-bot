@@ -26,12 +26,15 @@
     (muertes quieto en línea), corregido (`283f763`) y humo `fase1d` limpio (−14 % LH, −13 % patrimonio frente a OHA,
     un bloque). Puerta de medición pasada: revisor adversarial, pregunta y análisis fijo escritos (MEDICIONES, «Serie
     de la fase 1»; `tools/analisis/serie-fase1.mjs`).
-  - **La serie no se corrió**: la máquina no se liberó en toda la noche (01:40-07:40, muestras cada 2 min: cinco
-    Unreal Editor al 100 % de un núcleo cada uno, Chrome al 85 %, CPU 28-60 %, 37 % de memoria libre), y la regla de
-    medición prohíbe correr con carga sin la palabra de Pedro.
-  - Siguiente acción: con la respuesta de Pedro, la serie `serie-fase1` (24 partidas); leerla con
-    `node tools/analisis/serie-fase1.mjs serie-fase1`, entrada en MEDICIONES y PR de la rama.
-- Espera al dueño: correr la serie de la fase 1 con la máquina cargada por los Unreal Editor (ajenos al banco) o liberarla primero · Recomendado: lanzarla con la carga anotada, como el 2026-11-02, porque la métrica es de tiempo de juego (LH y patrimonio del min 10) y los dos brazos se intercalan por bloque; o cerrar los Unreal si no se usan
+  - **La serie no se corrió y queda aplazada** (DECISIONES 2026-11-04): solo confirma lo que los humos ya muestran a
+    la par o mejor, y el propio sigue por debajo de OHA. La máquina tampoco se liberó en la noche (cinco Unreal Editor
+    ajenos al banco).
+  - Diagnóstico hecho (MEDICIONES, «Diagnóstico: dónde pierde últimos golpes»; `tools/analisis/diag-linea.mjs`): la
+    brecha se abre desde el min 5-6; la mayor fuga es huir con vida casi llena por la estimación de daño de Valve (108 s
+    en una partida), luego runas y soltar el aggro. Ajustes en la rama `claude/diagnostico-lh` (`cd9e90e`), sin probar.
+  - Siguiente acción: humo `fase1e` (4 partidas) y leerlo con `serie-fase1.mjs fase1e` y `diag-linea.mjs fase1e`; si
+    sigue por debajo, otra vuelta de diagnóstico; a la par o mejor en los humos, la serie `serie-fase1`.
+- Espera al dueño: decir cuándo se puede usar la PC para el humo `fase1e` (4 partidas, 70-80 min, Dota ocupa la pantalla) · Recomendado: en cuanto no la necesite, y cerrando los Unreal Editor si no se usan
 - El código de v3 está en `main` apagado por defecto (variante `cerebro_v3`), con las mejoras del banco
   (`--repetir-invalidas`, contador de Think, `tools/analisis/n3-v3.mjs`). La fase de líneas queda como está
   (DECISIONES 2026-11-02).
