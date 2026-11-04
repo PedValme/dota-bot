@@ -590,4 +590,60 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Defecto visto: al saltar el Hyperstone (tienda secreta) compraba igual la receta de Mjollnir; corregido después.
 - Validez: humo, un bloque, máquina cargada; mismo sesgo declarado (OHA usa objetos activos y persigue). Cumple la meta
   del diseño en últimos golpes; en patrimonio queda al 96 %, dentro del ruido de un bloque.
-- Decisión: pendiente de Pedro (la serie de la fase 1, con su puerta de medición).
+- Decisión: pendiente de Pedro (la serie de la fase 1, con su puerta de medición). Pedro acotó la meta: antes de la
+  serie, el héroe completo (DECISIONES 2026-11-03).
+
+### 2026-11-04 · Fase 1 completa, humo (`fase1c`, 1 bloque, 4 partidas)
+- Pregunta: con buscar kills, perseguir con criterio, rotar y runas (`combate.lua`, revisado y corregido antes), ¿el
+  mecanismo funciona limpio y cómo queda frente a OHA en el min 10?
+- Configuración: `--etiqueta fase1c`, código `ba765cc`. Héroes: phantom_assassin sniper sand_king skywrath_mage dazzle
+  contra chaos_knight viper kunkka vengefulspirit warlock (Viper en mid). Análisis fijo: `tools/analisis/serie-fase1.mjs`
+  (escrito antes de ver estos datos) y `prueba-control.mjs`.
+- Máquina: CPU 48-70 % al lanzar (tres Unreal Editor, Chrome y un script de Python que no son del banco), 49 % de
+  memoria libre.
+- Resultado (min 10): propio 39 y 47 LH, 5.985 y 6.166 de patrimonio, 2 y 2 muertes; OHA 59 y 53 LH, 7.611 y 9.354,
+  0 muertes. Diferencia media: −23 % en LH y −28 % en patrimonio. Mecanismo limpio: 0 errores, 0 ataques automáticos,
+  30 Think/s; las persecuciones empiezan con motivo (daño de su lado ×1,4-1,6) y terminan por kill, muerte del
+  objetivo, torre o retirada; 5-6 runas buscadas hasta el min 10.
+- Diagnóstico (registro): las muertes revisadas son iguales: el héroe quieto en la línea pierde vida 6-8 s seguidos
+  (creeps con aggro tras acosar, o un héroe con poco daño por golpe que no dispara la regla de daño de golpe) y solo se
+  retira con 0,30, tarde. Además se colocaba a 350 del frente, cerca para un héroe de rango largo.
+- Validez: humo de un bloque, máquina cargada; no decide nada, solo bloquea la serie.
+- Decisión (dentro de la autorización de Pedro, «si el humo falla corrige hasta que salga limpio»): no se lanza la
+  serie; se corrige (`283f763`: retirada por daño sostenido, soltar el aggro de creeps, colocarse según el rango) y se
+  repite el humo (`fase1d`).
+
+### 2026-11-04 · Fase 1 completa, humo tras las correcciones (`fase1d`, 1 bloque, 4 partidas)
+- Pregunta: ¿sale limpio el mecanismo con `283f763`, para pasar a la serie autorizada?
+- Configuración: `--etiqueta fase1d`, código `283f763`. Héroes: chaos_knight sniper bristleback jakiro lich contra sven
+  death_prophet tidehunter bane dazzle (Death Prophet en mid). Máquina: CPU 26-44 % al lanzar, 49 % de memoria libre.
+- Resultado (min 10, `serie-fase1.mjs`): propio 47 y 46 LH, 6.088 y 5.944, muertes 1 y 0; OHA 61 y 47 LH, 7.383 y
+  6.387, muertes 0 y 2. Diferencia media −14 % en LH y −13 % en patrimonio (en `fase1c`, −23 % y −28 %). Las 4
+  válidas; 0 errores, 0 ataques automáticos.
+- Lectura: el propio gasta hasta el min 10 unos 24 s en runas, 18 s soltando aggro y 34 s retirándose, y hace menos
+  intentos de último golpe que en `fase1` (56 frente a 62-72); con un bloque y héroes distintos en cada humo no se
+  separa eso del rival de línea.
+- Decisión: mecanismo limpio; se pasa a la puerta de medición de la serie autorizada (DECISIONES 2026-11-04).
+
+### 2026-11-04 · Serie de la fase 1 (`serie-fase1`): pregunta escrita antes de lanzar
+- Pregunta: ¿el Sniper propio (`control_sniper`, código `283f763`) iguala al Sniper de OHA (`base_sniper`) en últimos
+  golpes (principal) y patrimonio (secundaria) del min 10?
+- Tamaño (autorizado por Pedro, DECISIONES 2026-11-04): 6 bloques, 24 partidas, `--mid sniper --modo turbo --observar
+  --repetir-invalidas 1`. Las partidas de los humos no se suman.
+- Análisis fijo: `tools/analisis/serie-fase1.mjs serie-fase1` (revisado). Una pareja por bloque y lado; diferencia media
+  propio − OHA con intervalo del 95 %. Veredictos por métrica: **IGUALA** si el extremo inferior queda por encima del
+  −10 % de la media de OHA; **PEOR** si el extremo superior queda por debajo de 0; si no, **INDETERMINADO**. Regla
+  conjunta: la fase 1 **PASA** si LH IGUALA y el patrimonio no es PEOR.
+- Potencia (revisor adversarial): con la dispersión de los humos (desviación ~8 LH y ~1.150 de patrimonio por pareja,
+  de solo 4 parejas) el intervalo sale de unos ±5 LH y ±730; el margen del 10 % es de unos 5,5 LH y 770. Si los dos
+  brazos fueran iguales, la serie diría IGUALA solo la mitad de las veces: un INDETERMINADO no es «peor», es que 12
+  parejas no alcanzan. Solo PEOR dice que el propio es peor.
+- Qué cambió desde los humos: nada en el código; el análisis cuenta parejas perdidas por brazo y motivo, lee solo el
+  último intento de cada partida y coteja la variante del csv con la del log.
+- Sin comprobar (no bloquean; ruido más que sesgo, según el revisor):
+  - si el brazo propio cambia lo que hacen los 9 compañeros de OHA (leen modo, objetivo y posición del Sniper) y el mid
+    rival; se puede mirar después en los registros sin cambiar la regla;
+  - si a esta velocidad OHA piensa menos veces por segundo de juego (no hay contador de Think de OHA para el Sniper de
+    la serie; el propio piensa 30/s);
+  - quién va de verdad al mid de Valve (no se registra).
+- Máquina: se mide al lanzar y va en la entrada del resultado.
