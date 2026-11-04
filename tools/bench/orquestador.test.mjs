@@ -2,7 +2,45 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroes, matchConfigLua, HERO_POOL, TOKEN, PORT,
   parseTimeline, summarizeTimeline, timelineCsv, parseRoster, parseVariant, parseVersion, validity, parseStart, sameSet, sideGroups, parseCouriers, valveIntruders, lateSpawns, codeState, codeTree, tooManyInvalid, killsBeforeHorn, variantLua,
-  VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName, shouldRepeat } from "./orquestador.mjs";
+  VARIANTS, summarize, parseModo, observationLines, rivalSchedule, rivalVariantLua, rivalName, shouldRepeat,
+  cutReached, parseFixedHeroes, laneHeroProblem } from "./orquestador.mjs";
+
+test("a variant that follows a hero needs dota-bot to have that hero", () => {
+  const conSniper = parseFixedHeroes("luna,sniper,axe,lion,lich/sven,razor,kunkka,bane,oracle");
+  const sinSniper = parseFixedHeroes("luna,lina,axe,lion,lich/sven,razor,kunkka,bane,oracle");
+  const rivalSniper = parseFixedHeroes("luna,lina,axe,lion,lich/sven,sniper,kunkka,bane,oracle");
+  assert.equal(laneHeroProblem(["control_sniper"], "sniper", undefined), "");
+  assert.equal(laneHeroProblem(["control_sniper", "base_sniper"], undefined, conSniper), "");
+  assert.equal(laneHeroProblem(["base"], undefined, undefined), "");
+  assert.match(laneHeroProblem(["control_sniper"], undefined, undefined), /sniper/);
+  assert.match(laneHeroProblem(["base_sniper"], undefined, sinSniper), /sniper/);
+  assert.match(laneHeroProblem(["base_sniper"], undefined, rivalSniper), /sniper/);
+});
+
+test("--corte fires only with the option, from its minute on, never in the pre-game", () => {
+  assert.equal(cutReached(720, undefined), false);
+  assert.equal(cutReached(-30, 12), false);
+  assert.equal(cutReached(719, 12), false);
+  assert.equal(cutReached(720, 12), true);
+  assert.equal(cutReached(725, 12), true);
+});
+
+test("--heroes takes the two groups a draw would give, and nothing else", () => {
+  const [a, b] = parseFixedHeroes("luna,sniper,axe,lion,lich/sven,razor,kunkka,bane,oracle");
+  assert.deepEqual(a, ["luna", "sniper", "axe", "lion", "lich"].map((h) => "npc_dota_hero_" + h));
+  assert.equal(b[1], "npc_dota_hero_razor");
+  assert.throws(() => parseFixedHeroes("luna,sniper,axe,lion,lich"), /dos grupos/);
+  assert.throws(() => parseFixedHeroes("luna,sniper,axe,lion/sven,razor,kunkka,bane,oracle"), /dos grupos/);
+  assert.throws(() => parseFixedHeroes("sniper,luna,axe,lion,lich/sven,razor,kunkka,bane,oracle"), /posición 1/);
+  assert.throws(() => parseFixedHeroes("luna,sniper,axe,lion,lich/luna,razor,kunkka,bane,oracle"), /repetidos/);
+});
+
+test("a match cut at --corte is valid, has no winner, and shows apart in the summary", () => {
+  const rows = [{ bloque: 1, variante: "base", valida: "si", ganador: "", dotabot: "radiant", resultado: "corte" },
+    { bloque: 1, variante: "base", valida: "si", ganador: "", dotabot: "dire", resultado: "corte" }];
+  const [s] = summarize(rows, ["base"]);
+  assert.deepEqual([s.ganadas, s.validas, s.cortes, s.topes], [0, 2, 2, 0]);
+});
 
 test("only a set-up failure is repeated, up to the limit; never a valid match, one broken in play, or after sin-gsi", () => {
   const late = "héroe aparecido tras el inicio (npc_dota_hero_axe)";
@@ -97,6 +135,7 @@ test("a match counts only if it ended, 5v5 bots, human out, the right variant an
   assert.equal(validity({ ...ok, modo: "turbo", loggedModo: "turbo",
     couriers: { radiant: 5, dire: 5, slowRadiant: 1100, slowDire: 1100 } }), "");
   assert.equal(validity({ ...ok, outcome: "tope" }), "");
+  assert.equal(validity({ ...ok, outcome: "corte" }), "");
   assert.match(validity({ ...ok, outcome: "timeout" }), /sin final/);
   assert.match(validity({ ...ok, codigo: "abc123@t1.t2+cambios" }), /código sin commit/);
   assert.match(validity({ ...ok, codigo: undefined }), /código sin commit/);
@@ -148,8 +187,8 @@ test("the summary counts only complete, fully valid blocks", () => {
   ];
   // A capped match is valid with no winner: it counts as played and not won.
   assert.deepEqual(summarize(results, ["base", "empuje"]), [
-    { variante: "base", ganadas: 2, validas: 4, jugadas: 6, topes: 1 },
-    { variante: "empuje", ganadas: 4, validas: 4, jugadas: 6, topes: 0 },
+    { variante: "base", ganadas: 2, validas: 4, jugadas: 6, topes: 1, cortes: 0 },
+    { variante: "empuje", ganadas: 4, validas: 4, jugadas: 6, topes: 0, cortes: 0 },
   ]);
 });
 
@@ -241,7 +280,7 @@ test("a finished match needs post-game and a winner", () => {
 
 test("CSV rows keep their columns", () => {
   const row = csvRow({ fecha: "2026-10-28T19:00", etiqueta: "a,b", partida: 1, dotabot: "radiant", ganador: "dire" });
-  assert.equal(row.split(",").length, 27); // 27th: "intento" (--repetir-invalidas, 2026-11-02)
+  assert.equal(row.split(",").length, 29); // 28th and 29th: "corte" and "heroes_fijos" (humos, 2026-11-04)
   assert.ok(row.includes("a;b"));
 });
 

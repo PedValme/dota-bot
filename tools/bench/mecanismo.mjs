@@ -23,6 +23,7 @@ const obsFiles = readdirSync(obsDir);
 const ownHalf = (team, x, y) => (team === "2" ? x + y < 0 : x + y > 0);
 
 const agg = {};
+if (matches.some((m) => m.resultado === "corte")) console.log("Aviso: hay partidas cortadas con --corte: no tienen ganador, sus victorias no dicen nada.");
 for (const m of matches) {
   // By date and match number: a repeated match (--repetir-invalidas) has the same number as the invalid one.
   const file = obsFiles.find((f) => f === `${m.etiqueta}-${String(m.fecha).replace(/[-:T]/g, "")}-${m.partida}.log`);

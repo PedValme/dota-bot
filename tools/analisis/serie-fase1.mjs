@@ -24,7 +24,16 @@ const rows = new Map();
 for (const line of csv.slice(1)) {
   const f = line.split(",");
   if (f[col("etiqueta")] !== tag) continue;
-  rows.set(Number(f[col("partida")]), { bloque: Number(f[col("bloque")]), valida: f[col("valida")], variante: f[col("variante")] });
+  rows.set(Number(f[col("partida")]), { bloque: Number(f[col("bloque")]), valida: f[col("valida")], variante: f[col("variante")],
+    fijos: f[col("heroes_fijos")] ?? "", corte: f[col("corte")] ?? "", arboles: (f[col("codigo")] ?? "").split("@")[1] ?? "" });
+}
+// What decides must be one draw-based run: fixed heroes (development only) give a single match-up, and a reused label
+// would mix commits or cuts, which the orchestrator only checks within one run (review of 2026-11-04).
+const series = [...rows.values()];
+if (series.some((r) => r.fijos === "si")) throw new Error(`${tag}: tiene partidas con --heroes; una serie que decide mantiene el sorteo`);
+for (const [name, key] of [["código", "arboles"], ["corte", "corte"]]) {
+  const distinct = new Set(series.map((r) => r[key]));
+  if (distinct.size > 1) throw new Error(`${tag}: mezcla más de un ${name}: ${[...distinct].join(", ")}`);
 }
 
 const pairs = new Map(); // "bloque|team" -> { control, base }
