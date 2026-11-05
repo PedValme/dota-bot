@@ -950,4 +950,35 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - LH bajan algo de 59,4 y las muertes suben de 0,20: **es el coste que se espera**; `alejarse` lo limita;
   - `ratio` de `kill_eval` por encima de 1 en buena parte de las líneas. Si casi nunca lo supera, los factores de
     `intercambio.lua`, que son criterio y no datos, hay que revisarlos.
+- Máquina: CPU media 31 %. Código `eccf2c7`, 8 de 8 válidas, sorteo. Rivales: Zeus, Razor, Necrophos y otros.
+- Resultado, min 10 (`humo-linea.mjs`, `conducta-linea.mjs`), frente a la referencia:
+
+  | | `fase1i` | Listón | Antes (`conf1`) | OHA (`conf1`) |
+  |---|---|---|---|---|
+  | LH | **62,6** | ≥ 52,3 | 59,4 | 55 |
+  | Muertes | **0,1** | ≤ 1,00 | 0,20 | 1,00 |
+  | Sin devolver | 31 % (9 de 29) | ≤ 17 % | 44 % | 17 % |
+  | LH del rival de mid | 11,6 | ≤ 11 | 15,3 | 10,8 |
+  | Daño a héroes | 4.589 | | 2.983 | 6.315 |
+  | Muertes del rival | 2,88 | | 1,10 | 1,70 |
+  | Kills | 2,6 | | 1,25 | 2,35 |
+  | Patrimonio | 8.240 | | 6.990 aprox. | 7.422 |
+
+  - **La predicción falló a favor:** se esperaba perder algo de farm a cambio de pelear, y suben los LH, las kills y el patrimonio.
+  - Mecanismo: 29 `contesto` y 440 `presiono` hasta t=720; 0 errores. `ratio` > 1,2 en el 77 % de las líneas.
+  - Sin cumplir: sin devolver (31 %) y rival (11,6, a 0,6 del listón; n=8).
+  - De las 9 ventanas sin respuesta: **3 son el ulti global de Zeus**, sin nadie a quien contestar (la métrica las excluye desde
+    ahora, en los dos brazos); otras pasan antes de t=50 con `ratio` 0,3 y el héroe alejándose.
+  - **Defecto encontrado:** la API no distingue una ilusión enemiga (`ilusion=0` en 2.114 de 2.114 líneas, con tres Zeus a la vez
+    tras una runa), y cada copia contaba como un héroe entero: bajaba el `ratio` y provocaba huidas en falso. Corregido: una unidad
+    por héroe, la más cercana.
+- Validez: corridas separadas, sorteo distinto: las diferencias con `conf1` son descriptivas.
+- Decisión: repetir con el arreglo (`fase1j`, segunda vuelta).
+
+### 2026-11-05 · Humo tras el arreglo de las ilusiones (`fase1j`, 8 partidas del propio): predicción antes de lanzar
+- Pregunta: ¿cumple ahora los cuatro números del listón, con la métrica sin el ulti global?
+- Qué cambió: `OnePerHero` en `intercambio.lua` y en el peligro de `combate.lua`. `conducta-linea.mjs` excluye el ulti global de Zeus;
+  la referencia de OHA se recalcula con la misma definición.
+- Predicción: menos `alejarse` en los primeros 60 s de las partidas con ilusiones; sin devolver por debajo del 31 %; LH del rival en
+  torno a 11, sin separarse del ruido de 8 partidas; LH y muertes, sin cambios grandes.
 - Máquina: se anota con el resultado.

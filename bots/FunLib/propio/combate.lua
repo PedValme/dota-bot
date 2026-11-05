@@ -87,7 +87,8 @@ local function OthersBurst(bot, target, loc)
 	local dmg = 0
 	local tloc = target:GetLocation()
 	for _, o in ipairs(VisibleEnemies()) do
-		if o ~= target and (D2(loc, o:GetLocation()) < 1400 or D2(tloc, o:GetLocation()) < 1200) then
+		if o ~= target and o:GetUnitName() ~= target:GetUnitName()
+			and (D2(loc, o:GetLocation()) < 1400 or D2(tloc, o:GetLocation()) < 1200) then
 			dmg = dmg + Intercambio.Threat(o, bot, 3.0)
 		end
 	end

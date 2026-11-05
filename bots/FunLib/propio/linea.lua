@@ -156,6 +156,7 @@ end
 
 local function Perceive(bot)
 	local team = GetTeam()
+	local p0 = bot:GetLocation()
 	local p = {
 		hero = HEROES[bot:GetUnitName()],
 		team = team, now = GameTime(), t = DotaTime(), loc = bot:GetLocation(),
@@ -165,7 +166,7 @@ local function Perceive(bot)
 		dmgMin = bot:GetAttackDamage() - bot:GetBaseDamageVariance(),
 		enemyCreeps = bot:GetNearbyLaneCreeps(1500, true) or {},
 		allyCreeps = bot:GetNearbyLaneCreeps(1500, false) or {},
-		enemyHeroes = bot:GetNearbyHeroes(1500, true, BOT_MODE_NONE) or {},
+		enemyHeroes = Intercambio.OnePerHero(p0, bot:GetNearbyHeroes(1500, true, BOT_MODE_NONE) or {}),
 		enemyTowers = bot:GetNearbyTowers(1500, true) or {},
 		allyTowers = bot:GetNearbyTowers(1500, false) or {},
 		front = GetLaneFrontLocation(team, LANE_MID, 0),

@@ -21,6 +21,21 @@ local function D2(a, b)
 end
 local function Valid(u) return u ~= nil and not u:IsNull() and u:IsAlive() and u:CanBeSeen() end
 
+-- One unit per hero, the nearest. The API does not tell an enemy illusion from its hero (fase1i: three Zeus from a rune,
+-- IsIllusion false in 2.114 of 2.114 lines), and each copy counted as a whole hero sank the trade: a false flight.
+function I.OnePerHero(loc, heroes)
+	local nearest = {}
+	for _, h in ipairs(heroes) do
+		if Valid(h) then
+			local name = h:GetUnitName()
+			if nearest[name] == nil or D2(loc, h:GetLocation()) < D2(loc, nearest[name]:GetLocation()) then nearest[name] = h end
+		end
+	end
+	local list = {}
+	for _, h in pairs(nearest) do table.insert(list, h) end
+	return list
+end
+
 -- One attacker's damage per second on a target, armour included.
 local function Dps(attacker, target)
 	return target:GetActualIncomingDamage(attacker:GetAttackDamage(), DAMAGE_TYPE_PHYSICAL) / math.max(attacker:GetSecondsPerAttack(), 0.1)
