@@ -6,7 +6,7 @@
 //   node tools/jugar-sniper.mjs [dire|radiant]     the team of the Sniper (dire by default; you take the other one)
 //   node tools/jugar-sniper.mjs quitar
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { observationLines } from "./bench/orquestador.mjs";
@@ -16,13 +16,17 @@ const variant = join(root, "bots", "Customize", "bench_variant.lua");
 const observe = join(root, "bots", "Customize", "bench_observe.lua");
 const dota = "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta";
 const exe = resolve(dota, "game/bin/win64/dota2.exe");
-const consoleLog = resolve(dota, "game/dota/console.log");
+// In a lobby, Dota "tears off" its log when the match starts and goes on in console.<match id>.log: the newest one counts.
+const consoleDir = resolve(dota, "game/dota");
+const newestLog = () => readdirSync(consoleDir).filter((f) => /^console(\.\d+)?\.log$/.test(f)).map((f) => join(consoleDir, f))
+  .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
 const running = (image) => execFileSync("tasklist", ["/FI", `IMAGENAME eq ${image}`, "/FO", "CSV", "/NH"]).toString().toLowerCase().includes(`"${image}"`);
 
 const side = process.argv[2] ?? "dire";
 if (side === "quitar") {
   // The log of the match just played: only if the lobby's files were there, and it is newer than them.
-  if (existsSync(observe) && existsSync(consoleLog) && statSync(consoleLog).mtimeMs >= statSync(observe).mtimeMs) {
+  const consoleLog = newestLog();
+  if (existsSync(observe) && consoleLog && statSync(consoleLog).mtimeMs >= statSync(observe).mtimeMs) {
     const text = readFileSync(consoleLog, "latin1");
     if (text.includes("[bench] prop ")) {
       const out = join(root, "bench", "observaciones", `lobby-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.log`);

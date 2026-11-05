@@ -1015,3 +1015,20 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - El rival muere el doble que con OHA y aun así farmea algo más: lo mata, pero no le quita creeps entre muertes.
 - Validez: corridas separadas de `conf1`, con sorteos distintos; sin serie emparejada. Sin partida completa de este commit.
 - Decisión: **se agotan las 3 vueltas**. El listón no se da por cumplido: el rival queda para Pedro, con la partida contra el Sniper.
+
+### 2026-11-05 · Segunda partida de Pedro contra el Sniper propio (lobby, con registro: `lobby-202611052104.log`)
+- Pregunta: tras el intercambio, ¿sigue siendo nefasto? Pedro, de Viper en mid (Radiant), con el Sniper propio en Dire. Código `7371db2`.
+- Lo que contó: «se comportó muchisimo mejor en early game, en late igual que antes haciendo combos, pero en el juego intermedio y
+  en late se posiciona muy mal, nuevamente cae en lo de no aprovechar sus ventajas con el rsngo que tiene deberia entrar oculto
+  siempre, pero se pasea campante por las lineas, no se hace invisible, no salta mo se oculta ese criterio de riesgo-taque-sigilo es
+  lo que falta».
+- Resultado del registro, partida de 36 min:
+  - Min 10: 40 LH, 27 DN, 2 kills, 1 muerte, patrimonio 7.122 (bajo presión humana, por debajo de los 61,5 LH frente a bots de Valve).
+  - **De 1 muerte en los primeros 10 min a 10 al final**; kills de 2 a 5.
+  - **Oro sin gastar: 6.575 en el min 24, 17.087 en el min 36.** La última compra es del min 19,6: la lista se acaba, porque las
+    piezas de tienda secreta se saltan (Crystalys y Satanic), y no hay nada después.
+  - **Hace lo mismo toda la partida:** `linea` y `preparar_golpe` son las decisiones más frecuentes en los tres tramos (0-10, 10-25, 25+).
+- Lectura: confirma a Pedro, y la causa es de diseño: **el Sniper propio no tiene medio juego.** Sus reglas son las de la línea; las fases 3 y 4
+  aún no existen. No hay objetos de movilidad o sigilo en la lista, ni reglas para usarlos, ni colocación según riesgo.
+- Validez: una partida, un rival humano. Es la única prueba frente al objetivo; no se generaliza a números.
+- Decisión: pendiente de Pedro, en ESTADO.
