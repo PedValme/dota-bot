@@ -296,6 +296,8 @@ end
 --==============================================================================
 
 function X.IsInCustomizedPicks(name)
+	-- A preselected hero not in this list is replaced by the matchup scoring: the lobby's hero must count as customized.
+	if name ~= nil and name == LobbyVariant.lobby_mid and LobbyVariant.lobby_team == GetTeam() then return true end
 	if not Customize then return false end
 	local heroes = {}
 	if GetTeam() == TEAM_RADIANT and Customize.Radiant_Heros then
@@ -443,6 +445,9 @@ end
 -- Single source of truth whether a hero can be picked *right now* by this team
 function X.CanPickHero(team, sHero)
 	if not sHero then return false end
+
+	-- The lobby's hero is kept for its team: the other team's bots picking it first would leave it without.
+	if sHero == LobbyVariant.lobby_mid and team ~= LobbyVariant.lobby_team then return false end
 
 	-- Bans always block
 	if X.IsBannedHero(sHero) then return false end
