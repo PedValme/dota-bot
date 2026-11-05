@@ -995,4 +995,23 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Qué cambió: al recibir golpes, o se aleja (`ratio` bajo 0,7 y vida bajo 0,8) o contesta; no hay tercera opción.
 - Predicción: `contesto` sube de unas decenas; sin devolver baja de 23-43 % hacia 17 %, salvo golpes recibidos fuera de alcance; LH y
   muertes sin grandes cambios, con algo más de daño recibido. El rival de mid puede no moverse: esto no toca la presión.
-- Máquina: se anota con el resultado.
+- Máquina: CPU media 32 %. Código `0af27b8`, 8 de 8 válidas, sorteo, 0 errores; 47 `contesto` y 367 `presiono` hasta t=720.
+- Resultado (min 10), frente al listón (DECISIONES 2026-11-05):
+
+  | | `fase1k` | Listón | ¿Cumple? | `fase1i`+`j`+`k` (n=24) | OHA (`conf1`) |
+  |---|---|---|---|---|---|
+  | LH | 61,5 [60 62 62 65 63 59 57 64] | ≥ 52,3 | sí | 60,7 | 55 |
+  | Muertes | 0,0 | ≤ 1,00 | sí | 0,04 | 1,00 |
+  | Sin devolver | 13 % (2 de 16) | ≤ 17 % | sí, con muy pocas ventanas | 28 %, mezcla reglas | 15 % |
+  | LH del rival de mid | 12,1 | ≤ 11 | **no** | 12,1 | 10,8 |
+  | Kills | 3,0 | | | 2,8 | 2,35 |
+  | Muertes del rival | 3,50 | | | 2,75 | 1,70 |
+  | Patrimonio | 8.252 | | | 8.178 | 7.422 |
+
+- Lectura:
+  - Tres de los cuatro números. El rival va **un LH por encima del listón en las tres vueltas** (11,6, 12,5, 12,1): no es solo ruido de 8
+    partidas, aunque OHA oscila mucho por tanda (9,5, 8,2 y 15,0 con las mismas reglas). Antes del intercambio, 15,3.
+  - «Sin devolver» se apoya en 16 ventanas: con tan pocas, el 13 % puede moverse mucho.
+  - El rival muere el doble que con OHA y aun así farmea algo más: lo mata, pero no le quita creeps entre muertes.
+- Validez: corridas separadas de `conf1`, con sorteos distintos; sin serie emparejada. Sin partida completa de este commit.
+- Decisión: **se agotan las 3 vueltas**. El listón no se da por cumplido: el rival queda para Pedro, con la partida contra el Sniper.
