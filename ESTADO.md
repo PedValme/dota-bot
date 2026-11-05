@@ -14,11 +14,11 @@
   los bots lo son, solo empiezan a ser competentes en late porque usan bien sus poders». La partida no dejó registro.
   Sus quejas se ven en los registros (MEDICIONES 2026-11-05): sin devolver nada en el 44 % de los acosos (OHA 17 %), menos de la
   mitad de daño a héroes, y el rival de mid hace 15,3 LH frente a 10,8. El banco no reproduce la presión de un humano.
-  Hecho, con el listón nuevo (DECISIONES 2026-11-05): `intercambio.lua` y registro de sus partidas. Primer humo, `fase1i`: 62,6 LH,
-  0,1 muertes, 2,6 kills, patrimonio 8.240; falta sin devolver (31 %) y rival (11,6).
-- **Siguiente acción:** humo `fase1j` tras arreglar las ilusiones. Cuando cumpla los números (referencia con
-  `node tools/analisis/conducta-linea.mjs conf1-a conf1-b conf1-c`), avisar a Pedro para que juegue; su visto bueno decide.
-- Espera al dueño: nada
+  Hecho, con el listón nuevo (DECISIONES 2026-11-05): `intercambio.lua` y registro de sus partidas. Tras 3 vueltas, `fase1k`: 61,5 LH,
+  0,0 muertes, 13 % sin devolver (2 de 16), 3,0 kills, patrimonio 8.252; **sin cumplir: rival de mid 12,1 LH frente a ≤ 11**.
+- **Siguiente acción:** la partida de Pedro, con registro; `tools/jugar-sniper.mjs` abre Dota con él (sin probar aún). Revisar
+  `bench/observaciones/lobby-*.log`. Con su visto bueno y lo que decida del rival, cerrar la fase 1 y pasar a la fase 2.
+- Espera al dueño: jugar contra el Sniper y decidir qué hacer con el rival de mid (12,1 LH frente a ≤ 11) · Recomendado: jugar ya sin más vueltas, y que tu partida decida si ese número importa
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
