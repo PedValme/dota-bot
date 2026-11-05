@@ -53,11 +53,13 @@ local K = {
 	reachCap = 1200,      -- cast ranges above this (global ultimates) count as this
 	tradeHp = 0.35,       -- no trade below this health
 	tradeEvery = 1.0,     -- seconds between two right-clicks on a hero
-	answerEdge = 1.0,     -- hit back when hit, if the trade (intercambio.lua: his time to kill us over ours) reaches this
-	pressEdge = 1.2,      -- step forward and hit, with nothing else to do, if it reaches this
+	pressEdge = 1.2,      -- step forward and hit, with nothing else to do, if the trade (intercambio.lua: his time to kill
+	                      -- us over ours) reaches this
 	pressReach = 300,     -- how far beyond our range we walk to press him
-	loseEdge = 0.7,       -- step away when hit, if it falls below this...
-	loseHp = 0.8,         -- ...and we are under this health: the sooner, the less it costs
+	-- When hit there is no third way: step away if the trade is below loseEdge and we are under loseHp, else hit back.
+	-- With a gap between both it stood there taking hits (fase1j: 10 of 23 harassed windows with no answer, ratio 0,5-0,8).
+	loseEdge = 0.7,
+	loseHp = 0.8,
 	healNear = 900,       -- no salve with an enemy hero this close, or within its attack range plus healMargin (it was 1500)
 	healMargin = 300,
 	treeSafe = 800,       -- how far a tree is worth walking to with no enemy near (OHA's distance)...
@@ -406,7 +408,7 @@ local function RuleTrade(bot, s, p, ready, soon)
 			if d <= p.range + K.pressReach and (inRange or not TowerBlocks(bot, p, Toward(e:GetLocation(), p.loc, p.range))) then
 				local v = Intercambio.Eval(bot, p, e)
 				local kind = nil
-				if inRange and hit and v.ratio >= K.answerEdge then kind = 'contesto'
+				if inRange and hit and (v.ratio >= K.loseEdge or p.hp >= K.loseHp) then kind = 'contesto'
 				elseif ready == nil and v.ratio >= K.pressEdge then kind = 'presiono' end
 				if kind ~= nil then
 					return { intent = 'acosar', target = e, walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1),
