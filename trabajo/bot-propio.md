@@ -49,6 +49,10 @@ Hasta la fase 2, OHA juega el resto del equipo; en ningún momento el bot por de
 - 2026-11-04: confirmación de la fase 1 aprobada en la línea (MEDICIONES, «Confirmación de la fase 1»): 59,4 últimos golpes
   frente a 55, IC95 +1,2 a +7,6. Falta la partida de Pedro. Defectos abiertos en ESTADO: runas y menos kills.
 
+- 2026-11-05: línea de la fase 1 cerrada, con el rival de mid como deuda (12,1 LH frente a ≤ 11). **Orden cambiado por Pedro:** antes de los
+  cinco en línea, el medio juego del Sniper (`bots/FunLib/propio/medio.lua`): gastar el oro, tienda secreta, Shadow Blade/Silver Edge,
+  Force Staff/Hurricane Pike, y el criterio de riesgo, ataque y sigilo. Humos cortados en el min 25; su partida sigue decidiendo.
+
 ## Lo que pide la firma
 - Este orden de fases y la meta de la fase 1.
 - Que la fase 1 empiece ya, con Sniper, sin serie hasta igualar a OHA en humo.

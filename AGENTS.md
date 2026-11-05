@@ -48,9 +48,11 @@ once it exists.
   - Una serie solo confirma lo que los humos ya muestran a la par o mejor: con el bot propio por debajo de OHA en la
     mayoría de las métricas de los humos, no se lanza; primero se diagnostica en los registros y se corrige. Por qué:
     horas de máquina midiendo algo que a todas luces sale mal (DECISIONES.md, 2026-11-04).
-  - Los humos cortados en el min 12 se corren con la carga anotada, aunque la PC esté ocupada, sin preguntar: por qué, la
-    PC se comparte con otro trabajo y esperarla costó una noche; miden mecanismo y no sustituyen a la serie, que sigue
-    pidiendo máquina libre (DECISIONES.md, 2026-11-04).
+  - Los humos cortados (min 12 la línea, min 25 el medio juego) se corren con la carga anotada, aunque la PC esté ocupada,
+    sin preguntar: por qué, la PC se comparte con otro trabajo y esperarla costó una noche; miden mecanismo y no sustituyen
+    a la serie, que sigue pidiendo máquina libre (DECISIONES.md, 2026-11-04 y 2026-11-05).
+  - La partida de Pedro decide por encima de los números: la confirmación de la línea pasó y él vio el bot «nefasto»; por
+    qué, los bots de Valve no presionan como un humano (DECISIONES.md, 2026-11-05).
   - Una rama y un PR por tarea; mientras corre una serie, el trabajo paralelo va en otro worktree (DECISIONES.md,
     2026-10-31).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).
