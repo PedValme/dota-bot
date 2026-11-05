@@ -16,9 +16,11 @@
   mitad de daño a héroes, y el rival de mid hace 15,3 LH frente a 10,8. El banco no reproduce la presión de un humano.
   Hecho, con el listón nuevo (DECISIONES 2026-11-05): `intercambio.lua` y registro de sus partidas. Tras 3 vueltas, `fase1k`: 61,5 LH,
   0,0 muertes, 13 % sin devolver (2 de 16), 3,0 kills, patrimonio 8.252; **sin cumplir: rival de mid 12,1 LH frente a ≤ 11**.
-- **Siguiente acción:** la partida de Pedro, con registro; `tools/jugar-sniper.mjs` abre Dota con él (sin probar aún). Revisar
-  `bench/observaciones/lobby-*.log`. Con su visto bueno y lo que decida del rival, cerrar la fase 1 y pasar a la fase 2.
-- Espera al dueño: jugar contra el Sniper y decidir qué hacer con el rival de mid (12,1 LH frente a ≤ 11) · Recomendado: jugar ya sin más vueltas, y que tu partida decida si ese número importa
+  Segunda partida de Pedro, con registro: «muchisimo mejor en early game», pero en medio juego y late «se posiciona muy mal» y falta el
+  «criterio de riesgo-taque-sigilo». El registro lo confirma: 1 muerte hasta el min 10, 10 al final, 17.087 de oro sin gastar y las
+  mismas reglas de línea toda la partida (MEDICIONES 2026-11-05): el Sniper no tiene medio juego.
+- **Siguiente acción:** según lo que decida Pedro: medio juego del Sniper con objetos, colocación por riesgo y sigilo, antes de la fase 2.
+- Espera al dueño: cerrar la línea de la fase 1 aceptando el rival en 12,1 LH, y adelantar el medio juego del Sniper a los cinco en línea · Recomendado: las dos cosas
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -63,7 +65,8 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
   - no puede activar runas: de pie sobre la runa, con su tipo leído, ni `Action_`, ni `ActionQueue_`, ni `ActionPush_PickUpRune`
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
-  - no compra en la tienda secreta: Crystalys y Satanic se saltan, ya pasado el min 10;
+  - sin medio juego: mismas reglas de línea toda la partida, lista de compras agotada en el min 20 (17.087 de oro sin gastar en el
+    min 36), sin tienda secreta ni objetos de movilidad o sigilo, sin usar objetos activos;
   - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
     `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.
 - **Bot OHA:**
