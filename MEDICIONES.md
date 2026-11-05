@@ -1046,4 +1046,23 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - muertes desde el min 10 por debajo de las de OHA; de partida contra un humano, 6 entre el min 10 y el 24;
   - sin ir y volver: menos de 20 cambios de línea por partida; `a_la_pelea` no alterna con `retirada` en menos de 3 s.
 - Sin medir: si el Sniper rinde mejor en una pelea: los bots de Valve no castigan como un humano. Eso lo dirá Pedro.
-- Máquina: se anota con el resultado.
+- Máquina: CPU media 31-79 % por partida, no intercalada de forma pareja (propio 31-71 %, OHA 32-79 %).
+- Configuración: `--etiqueta medio1`, código `3b9553b`, 8 de 8 válidas, sorteo. 1 partida de OHA acabó antes del corte (ganó su equipo).
+- Resultado:
+
+  | | Propio (n=4) | OHA (n=3) |
+  |---|---|---|
+  | Min 10: LH / muertes / kills | 59,3 / 0,0 / 1,8 | 54,3 / 0,3 / 3,5 (n=4) |
+  | Min 25: LH | 175,5 | 156,3 |
+  | **Muertes desde el min 10** | **0,0** | 1,0 |
+  | Kills desde el min 10 | 8,5 | 8,0 |
+  | Patrimonio | 26.448 | 24.553 |
+  | **Oro sin gastar** | **476** | 8.967 |
+
+  - Cumplido: medio juego desde t=681-718, tras el min 10; LH del min 10 sin salir de lo esperado; oro por debajo de 1.500; tienda secreta con
+    2-3 compras por partida; a t=1500 ya lleva Silver Edge, Pike y BKB, y en 3 de 4 Mjollnir. 0 errores; 0 cambios de línea (**ni una vez cambió:
+    la regla no actúa o el margen es muy alto**, sin comprobar); 0 saltos de `a_la_pelea` a retirada.
+  - Objetos usados: Blade 8-17 veces por partida, casi siempre para «entro oculto». Pike 0-4: **Force Staff y Pike se usan poco**.
+  - `prop nivel` salta del 14 al 18 también en OHA (`learn`, de t=654 a t=889): **lo hace el motor**, no es un defecto. Corrección a lo anotado.
+- Validez: 4 partidas por brazo, sin intervalos, bots de Valve que no castigan como un humano. Las 0 muertes no se trasladan a una partida contra Pedro.
+- Decisión: mecanismo limpio; avisar a Pedro para que juegue.
