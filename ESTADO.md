@@ -14,9 +14,11 @@
   los bots lo son, solo empiezan a ser competentes en late porque usan bien sus poders». La partida no dejó registro.
   Sus quejas se ven en los registros (MEDICIONES 2026-11-05): sin devolver nada en el 44 % de los acosos (OHA 17 %), menos de la
   mitad de daño a héroes, y el rival de mid hace 15,3 LH frente a 10,8. El banco no reproduce la presión de un humano.
-- **Siguiente acción:** según lo que decida Pedro: un intercambio en línea con números propios (alcance, daño, vida, altura) y
-  registro de sus partidas (`tools/jugar-sniper.mjs` con `-condebug` y `bench_observe`), aún sin hacer.
-- Espera al dueño: nuevo listón del Sniper antes de la fase 2 · Recomendado: sin perder la línea (LH −5 %, muertes ≤ OHA), devolver el golpe tanto como OHA, frenar al rival como OHA, y que Pedro juegue otra vez y dé el visto bueno
+  Hecho, con el listón nuevo (DECISIONES 2026-11-05): `intercambio.lua` y registro de sus partidas. Primer humo, `fase1i`: 62,6 LH,
+  0,1 muertes, 2,6 kills, patrimonio 8.240; falta sin devolver (31 %) y rival (11,6).
+- **Siguiente acción:** humo `fase1j` tras arreglar las ilusiones. Cuando cumpla los números (referencia con
+  `node tools/analisis/conducta-linea.mjs conf1-a conf1-b conf1-c`), avisar a Pedro para que juegue; su visto bueno decide.
+- Espera al dueño: nada
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -62,7 +64,8 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
   - no compra en la tienda secreta: Crystalys y Satanic se saltan, ya pasado el min 10;
-  - `VisibleEnemies` no filtra ilusiones: se persigue y se lanza Assassinate a ilusiones (inferido, sin comprobar).
+  - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
+    `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.
 - **Bot OHA:**
   - la defensa se apaga cuando 3 aliados empujan (`FunLib/aba_defend.lua:~915-937`);
   - la recompra por el Ancient está rota (`ability_item_usage_generic.lua:569`);

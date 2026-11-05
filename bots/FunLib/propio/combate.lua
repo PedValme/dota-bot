@@ -1,10 +1,11 @@
 -- dota-bot's own bot: kills, chases, runes and rotations of the laning phase (phase 1, DECISIONES 2026-11-03: «buscar
 -- kill, perseguir pertinentemente, moverse de línea»). Each rule returns a decision with its reason, or nil; a chase
 -- keeps its state in s.chase and ends with a logged reason (kill, lost sight, tower, danger, too long, too far).
--- The kill check is ours, from hits and abilities read live (SideDamage). Valve's estimate (GetEstimatedDamageToTarget:
--- not supervisable) only remains for the danger of other enemies. Rotations are off until the rest is measured (K.rotar;
--- DECISIONES 2026-11-04: 8 of 8 ended with no kill).
+-- The kill check and the danger are ours, from hits and abilities read live (SideDamage, intercambio.lua), not Valve's
+-- estimate, which cannot be supervised. Rotations are off until the rest is measured (K.rotar; DECISIONES 2026-11-04:
+-- 8 of 8 ended with no kill).
 local C = {}
+local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
 
 local K = {
 	rotar = false,        -- walking out of the lane for a kill
@@ -86,8 +87,9 @@ local function OthersBurst(bot, target, loc)
 	local dmg = 0
 	local tloc = target:GetLocation()
 	for _, o in ipairs(VisibleEnemies()) do
-		if o ~= target and (D2(loc, o:GetLocation()) < 1400 or D2(tloc, o:GetLocation()) < 1200) then
-			dmg = dmg + o:GetEstimatedDamageToTarget(true, bot, 3.0, DAMAGE_TYPE_ALL)
+		if o ~= target and o:GetUnitName() ~= target:GetUnitName()
+			and (D2(loc, o:GetLocation()) < 1400 or D2(tloc, o:GetLocation()) < 1200) then
+			dmg = dmg + Intercambio.Threat(o, bot, 3.0)
 		end
 	end
 	return dmg
@@ -177,9 +179,10 @@ function C.KillEval(bot, s, p)
 				or (v.kind == 'rotar' and not (K.rotar and v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
 			lines = lines or {}
 			-- intencion: the previous decision's. veto=- is not "it starts": the rules before Start() may still win.
-			table.insert(lines, string.format('objetivo=%s ilusion=%d vida=%d dist=%d dmg4s=%d golpes=%d habilidades=%d aliados=%d score=%.2f margen=%.2f veto=%s intencion=%s unsafe=%s',
+			local trade = Intercambio.Eval(bot, p, e)
+			table.insert(lines, string.format('objetivo=%s ilusion=%d vida=%d dist=%d dmg4s=%d golpes=%d habilidades=%d aliados=%d score=%.2f margen=%.2f veto=%s intencion=%s ratio=%.2f mi_dps=%d su_dps=%d altura=%d fuera_de_alcance=%s unsafe=%s',
 				Short(e), e:IsIllusion() and 1 or 0, e:GetHealth(), d, v.dmg, v.hits, v.burst, v.helpers, v.score, v.margin, veto,
-				s.intent, unsafe or '-'))
+				s.intent, trade.ratio, trade.mine, trade.against, trade.height, tostring(trade.outranged), unsafe or '-'))
 		end
 	end
 	return lines

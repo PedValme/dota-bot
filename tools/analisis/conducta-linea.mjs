@@ -16,6 +16,8 @@ const head = csv[0].split(",");
 const rows = csv.slice(1).filter(Boolean).map((l) => Object.fromEntries(l.split(",").map((v, i) => [head[i], v])));
 const HARASS = 50;
 const END = 600;
+// Damage from anywhere on the map is not harassment: there is nobody to answer (fase1i, 3 of 9 windows with no answer).
+const GLOBAL = new Set(["zuus_thundergods_wrath"]);
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(xs.length, 1);
 
 const arms = new Map();
@@ -47,7 +49,7 @@ for (const tag of tags) {
           if (!m) continue;
           if (m[1] === hero) w(at).dealt += Number(m[4]);
           // Only enemy heroes: creeps and towers are the lane's price, not harassment.
-          else if (m[2] === hero && m[1] !== "creep" && m[1] !== "torre") w(at).taken += Number(m[4]);
+          else if (m[2] === hero && m[1] !== "creep" && m[1] !== "torre" && !GLOBAL.has(m[3])) w(at).taken += Number(m[4]);
         }
       }
       if (l.includes(" creepkill ")) {

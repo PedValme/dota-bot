@@ -15,6 +15,7 @@ local out = BenchRawPrint or print
 local Registro = require(GetScriptDirectory()..'/FunLib/propio/registro_linea')
 local Compras = require(GetScriptDirectory()..'/FunLib/propio/compras')
 local Combate = require(GetScriptDirectory()..'/FunLib/propio/combate')
+local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
 -- Per-hero ability rules (Finish, Harass); a hero without a module plays the lane without abilities.
 local HEROES = { npc_dota_hero_sniper = require(GetScriptDirectory()..'/FunLib/propio/sniper') }
 -- Benchmark variant "sin_combate": no kills, abilities on heroes or trades, to measure what the fighting costs in farm.
@@ -50,10 +51,13 @@ local K = {
 	aggroStep = 350,      -- step back this far to drop the aggro of enemy creeps hitting us
 	reachMargin = 150,    -- an enemy hero counts as dangerous within its reach plus this, plus half a second walking
 	reachCap = 1200,      -- cast ranges above this (global ultimates) count as this
-	tradeHp = 0.50,       -- right-click the enemy laner only above this health...
-	tradeEdge = 0.15,     -- ...and if its health fraction is not above ours by more than this
-	tradeCreeps = 2,      -- ...with at most this many enemy creeps within 500 of us (they aggro on hero attacks)
-	tradeEvery = 1.5,     -- seconds between two right-clicks on a hero
+	tradeHp = 0.35,       -- no trade below this health
+	tradeEvery = 1.0,     -- seconds between two right-clicks on a hero
+	answerEdge = 1.0,     -- hit back when hit, if the trade (intercambio.lua: his time to kill us over ours) reaches this
+	pressEdge = 1.2,      -- step forward and hit, with nothing else to do, if it reaches this
+	pressReach = 300,     -- how far beyond our range we walk to press him
+	loseEdge = 0.7,       -- step away when hit, if it falls below this...
+	loseHp = 0.8,         -- ...and we are under this health: the sooner, the less it costs
 	healNear = 900,       -- no salve with an enemy hero this close, or within its attack range plus healMargin (it was 1500)
 	healMargin = 300,
 	treeSafe = 800,       -- how far a tree is worth walking to with no enemy near (OHA's distance)...
@@ -152,6 +156,7 @@ end
 
 local function Perceive(bot)
 	local team = GetTeam()
+	local p0 = bot:GetLocation()
 	local p = {
 		hero = HEROES[bot:GetUnitName()],
 		team = team, now = GameTime(), t = DotaTime(), loc = bot:GetLocation(),
@@ -161,18 +166,18 @@ local function Perceive(bot)
 		dmgMin = bot:GetAttackDamage() - bot:GetBaseDamageVariance(),
 		enemyCreeps = bot:GetNearbyLaneCreeps(1500, true) or {},
 		allyCreeps = bot:GetNearbyLaneCreeps(1500, false) or {},
-		enemyHeroes = bot:GetNearbyHeroes(1500, true, BOT_MODE_NONE) or {},
+		enemyHeroes = Intercambio.OnePerHero(p0, bot:GetNearbyHeroes(1500, true, BOT_MODE_NONE) or {}),
 		enemyTowers = bot:GetNearbyTowers(1500, true) or {},
 		allyTowers = bot:GetNearbyTowers(1500, false) or {},
 		front = GetLaneFrontLocation(team, LANE_MID, 0),
 	}
-	-- Damage the visible enemy heroes can deal to us in 3 s (Valve's own estimate, mana and cooldowns included), counted
+	-- Damage the visible enemy heroes can deal to us in 3 s (intercambio.lua: their hits and ready abilities), counted
 	-- only for those that can reach us: within their attack range or the cast range of a ready ability, plus a margin
 	-- and half a second walking. The smoke of 2026-11-03 retreated from an enemy far out of reach (MEDICIONES).
 	p.enemyBurst, p.enemyBurstAll = 0, 0
 	for _, e in ipairs(p.enemyHeroes) do
 		if Valid(e) then
-			local dmg = e:GetEstimatedDamageToTarget(true, bot, 3.0, DAMAGE_TYPE_ALL)
+			local dmg = Intercambio.Threat(e, bot, 3.0)
 			p.enemyBurstAll = p.enemyBurstAll + dmg
 			local reach = e:GetAttackRange()
 			for slot = 0, 5 do
@@ -225,8 +230,8 @@ local function RuleRetreat(bot, s, p)
 	elseif p.hp < K.retreatHp then
 		reason = string.format('vida %.2f < %.2f', p.hp, K.retreatHp)
 		s.lowHp = true
-	-- Valve's estimate is everything the enemy could do: alone it is a false alarm (fase1d: 108 s fleeing with over 60 %
-	-- health, every 4 s). It counts only if a hero is really on us: it hit us in the last 2 s, or stands within 600.
+	-- The burst alone was a false alarm (fase1d: 108 s fleeing with over 60 % health, every 4 s). It counts only if a hero
+	-- is really on us: it hit us in the last 2 s, or stands within 600.
 	elseif p.enemyBurst > K.enemyBurst * p.hpAbs and p.heroOnMe then
 		reason = string.format('daño_enemigo_3s %d > %.0f%% de %d', p.enemyBurst, K.enemyBurst * 100, p.hpAbs)
 		s.burstUntil = p.now + K.burstHold
@@ -236,10 +241,28 @@ local function RuleRetreat(bot, s, p)
 	elseif p.now < (s.burstUntil or -1000) then
 		reason = string.format('peligro_reciente %.1fs', s.burstUntil - p.now)
 	-- Only a retreat for low health waits to recover up to returnHp; one for danger ends when the danger does.
-	elseif s.lowHp and p.hp < K.returnHp then reason = string.format('recuperando %.2f < %.2f', p.hp, K.returnHp) end
+	elseif s.lowHp and p.hp < K.returnHp then reason = string.format('recuperando %.2f < %.2f', p.hp, K.returnHp)
+	-- A trade we are losing: a step out, early and short, not the whole way to the tower: the farm is still there
+	-- (Pedro, 2026-11-05: «asume mas daño [d]el necesario antes de escapar»).
+	elseif p.hp < K.loseHp and bot:WasRecentlyDamagedByAnyHero(2.0) then
+		for _, e in ipairs(p.enemyHeroes) do
+			if Valid(e) and D2(p.loc, e:GetLocation()) <= e:GetAttackRange() + 200 then
+				local trade = Intercambio.Eval(bot, p, e)
+				if trade.ratio < K.loseEdge then
+					reason = string.format('intercambio_perdido %.2f < %.2f frente a %s', trade.ratio, K.loseEdge,
+						(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')))
+					s.burstUntil, s.stepBack = p.now + K.burstHold, true
+					break
+				end
+			end
+		end
+	end
 	if p.hp >= K.returnHp then s.lowHp = false end
 	s.retreating = reason ~= nil
-	if reason == nil then s.toFountain = false return nil end
+	if reason == nil then s.toFountain, s.stepBack = false, false return nil end
+	if s.stepBack and not p.towerOnMe and p.hp >= K.retreatHp then
+		return { intent = 'alejarse', reason = reason, to = Toward(p.loc, Home(p.team), K.aggroStep) }
+	end
 	-- Once heading for the fountain it keeps going until healed (returnHp), not back and forth with the tower.
 	if s.toFountain or (p.hp < K.fountainHp and HasItem(bot, 'item_flask') == nil) then
 		s.toFountain = true
@@ -351,7 +374,7 @@ local function RuleLastHit(bot, s, p)
 				(string.gsub(c:GetUnitName(), 'npc_dota_', '')), c:GetHealth(), best.hpAt, best.tLand, best.nProj,
 				best.nHits, best.dLast, best.dmg) }
 	end
-	return nil, ready
+	return nil, ready, soon
 end
 
 -- Where to stand in lane: behind our creeps' front, by holdBack or, for a long range, by range − 200 (at range − 100
@@ -366,24 +389,30 @@ local function LanePoint(p)
 	return spot
 end
 
--- Right-click the enemy laner when the trade favours us: it is in our attack range, we are healthy and not worse off
--- than it, few enemy creeps near us (they switch to us when we hit a hero) and no enemy tower near.
-local function RuleTrade(bot, s, p)
-	if p.now - (s.tradeAt or -1000) < K.tradeEvery or p.hp < K.tradeHp then return nil end
+-- Hit the enemy laner when the numbers favour us (intercambio.lua), in two ways. Answer: it hit us, it is in range and
+-- we win the trade (44 % of harassed windows got no answer against OHA's 17 %). Press: nothing to farm right now and we
+-- win it clearly: walk in and hit, to make it back off (its farm: 15,3 last hits against 10,8 with OHA). No last hit
+-- about to mature is given up for it, and no enemy tower is walked under.
+local function RuleTrade(bot, s, p, ready, soon)
+	if soon or p.now - (s.tradeAt or -1000) < K.tradeEvery or p.hp < K.tradeHp then return nil end
 	for _, tw in ipairs(p.enemyTowers) do
 		if Valid(tw) and D2(p.loc, tw:GetLocation()) < K.towerMargin + 50 then return nil end
 	end
-	local creepsNear = 0
-	for _, c in ipairs(p.enemyCreeps) do
-		if Valid(c) and D2(p.loc, c:GetLocation()) < 500 then creepsNear = creepsNear + 1 end
-	end
-	if creepsNear > K.tradeCreeps then return nil end
+	local hit = bot:WasRecentlyDamagedByAnyHero(2.0)
 	for _, e in ipairs(p.enemyHeroes) do
-		if Valid(e) and D2(p.loc, e:GetLocation()) <= p.range + 50 then
-			local ehp = e:GetHealth() / math.max(e:GetMaxHealth(), 1)
-			if ehp <= p.hp + K.tradeEdge then
-				return { intent = 'acosar', target = e, reason = string.format('%s vida %.2f frente a la mía %.2f, creeps cerca %d',
-					(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')), ehp, p.hp, creepsNear) }
+		if Valid(e) and not e:IsIllusion() and not e:IsAttackImmune() then
+			local d = D2(p.loc, e:GetLocation())
+			local inRange = d <= p.range + 50
+			if d <= p.range + K.pressReach and (inRange or not TowerBlocks(bot, p, Toward(e:GetLocation(), p.loc, p.range))) then
+				local v = Intercambio.Eval(bot, p, e)
+				local kind = nil
+				if inRange and hit and v.ratio >= K.answerEdge then kind = 'contesto'
+				elseif ready == nil and v.ratio >= K.pressEdge then kind = 'presiono' end
+				if kind ~= nil then
+					return { intent = 'acosar', target = e, walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1),
+						reason = string.format('%s a %s: ratio %.2f, mi_dps %d, su_dps %d, altura %d, a %d', kind,
+							(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')), v.ratio, v.mine, v.against, v.height, d) }
+				end
 			end
 		end
 	end
@@ -453,9 +482,13 @@ local function Decide(bot, s, p)
 			return cast or WithAim(bot, s, p, hero, r)
 		end
 	end
-	local ready
-	r, ready = RuleLastHit(bot, s, p)
+	local ready, soon
+	r, ready, soon = RuleLastHit(bot, s, p)
 	if r then return r end
+	if not NO_COMBAT then
+		r = WithAim(bot, s, p, hero, RuleTrade(bot, s, p, ready, soon))
+		if r then return r end
+	end
 	-- Enemy creeps hitting us: a step back drops the aggro, after the last hit that is ready and only with two or more:
 	-- one creep's hits are the price of farming (fase1d: 18 s lost to it; fase1f-reg: 18 of 22 decisions with one).
 	if s.chase == nil and p.creepsOnMe >= 2 then
@@ -464,12 +497,8 @@ local function Decide(bot, s, p)
 	end
 	r = Combate.Rune(bot, s, p)
 	if r then return r end
-	if not NO_COMBAT then
-		if hero ~= nil then
-			r = hero.Harass(bot, s, p)
-			if r then return r end
-		end
-		r = WithAim(bot, s, p, hero, RuleTrade(bot, s, p))
+	if not NO_COMBAT and hero ~= nil then
+		r = hero.Harass(bot, s, p)
 		if r then return r end
 	end
 	if ready ~= nil then
@@ -593,7 +622,8 @@ local function Act(bot, s, p, d)
 	if d.intent == 'acosar' then
 		bot:Action_AttackUnit(d.target, true)
 		s.lastAttackOrder, s.tradeAt = p.now, p.now
-		s.busyUntil = p.now + p.point + K.windUp + math.max(0, bot:GetLastAttackTime() + bot:GetSecondsPerAttack() - p.now)
+		s.busyUntil = p.now + p.point + K.windUp + (d.walk or 0) + math.max(0, bot:GetLastAttackTime() + bot:GetSecondsPerAttack() - p.now)
+		s.moveTo = nil
 		Log(s, bot, 'acoso', d.reason)
 		return
 	end
