@@ -10,9 +10,11 @@
   (MEDICIONES, «Confirmación de la fase 1»). Solo mide la línea: las 2 partidas completas de este commit las ganó Valve.
 - **Qué se probó:** banco con `--corte` (5 min por partida) y registro nuevo; defectos y mejoras de `trabajo/fase1-plan.md`.
   La ablación no ve coste de farm del combate. `kill_eval`: casi todas las kills las frena el margen, por falta de daño.
-- **Siguiente acción:** la partida de Pedro contra el Sniper; con lo que vea, cerrar la fase 1 (borrar `trabajo/fase1-plan.md`)
-  y empezar la fase 2 (`trabajo/bot-propio.md`). `tools/jugar-sniper.mjs` no se ha probado todavía en un lobby real.
-- Espera al dueño: jugar 15 minutos contra el Sniper: `node tools/jugar-sniper.mjs`, Custom Lobby con Local Host y Local Dev Script, y al acabar `node tools/jugar-sniper.mjs quitar`. Dota está libre.
+  Pedro jugó contra el Sniper (2026-11-05): «la subnormalidad de nuestro sniper es inconmensurable jajajajaja es nefasto, todos
+  los bots lo son, solo empiezan a ser competentes en late porque usan bien sus poders». La partida no dejó registro.
+- **Siguiente acción:** no empezar la fase 2 todavía: pasar el listón no resuelve lo que ve un humano. Con lo que Pedro cuente,
+  una lista corta de conductas y una forma de medirlas; sus partidas, con registro (`-condebug`, `bench_observe`).
+- Espera al dueño: contar 2 o 3 cosas concretas que hizo mal el Sniper en su partida · Recomendado: no empezar la fase 2 hasta tener esa lista y registrar la siguiente partida
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -33,7 +35,7 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 
 ## Siguientes pasos
-1. Fase 1 del bot propio: la partida de Pedro contra el Sniper (`trabajo/fase1-plan.md`, paso 6).
+1. Fase 1 del bot propio: traducir la partida de Pedro en conductas medibles, antes de la fase 2 (`trabajo/fase1-plan.md`, paso 6).
 2. Fase 2, los cinco en línea: `trabajo/bot-propio.md`.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
