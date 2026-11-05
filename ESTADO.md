@@ -5,21 +5,19 @@
 - **Qué se estaba haciendo:** el bot propio con control completo (DECISIONES 2026-11-03; diseño en `trabajo/bot-propio.md`).
   Fase 1: un Sniper en mid con `Think()` propio (`bots/FunLib/propio/`, variante `control_sniper`, `--mid sniper`), frente
   al Sniper de OHA (`base_sniper`).
-- **Dónde quedó:** el propio pasó el listón en humo a la primera vuelta: 60,1 últimos golpes en el min 10 frente a 57,4 de
-  OHA, 0 muertes frente a 1,1 y patrimonio 7.737 frente a 7.628, en 8 y 8 partidas de corridas separadas (MEDICIONES,
-  `fase1h`, `ref-oha`). Puerta de la confirmación cumplida. Corre `conf1-a`.
+- **Dónde quedó:** **la confirmación pasó** (20 parejas, 40 de 40 válidas): 59,4 últimos golpes en el min 10 frente a 55, +4,4
+  con IC95 +1,2 a +7,6, y 0,20 muertes frente a 1,00. Patrimonio −193 (informativo), kills 1,25 frente a 2,35 y 0 runas
+  (MEDICIONES, «Confirmación de la fase 1»). Solo mide la línea: las 2 partidas completas de este commit las ganó Valve.
 - **Qué se probó:** banco con `--corte` (5 min por partida) y registro nuevo; defectos y mejoras de `trabajo/fase1-plan.md`.
   La ablación no ve coste de farm del combate. `kill_eval`: casi todas las kills las frena el margen, por falta de daño.
-- **Siguiente acción:** la confirmación son 3 tandas seguidas, mismo commit de `bots/` y `tools/bench/`: `conf1-a` (16
-  partidas), `conf1-b` y `conf1-c` (12 y 12), con el comando de MEDICIONES y `--etiqueta` de cada una. Tras cada tanda,
-  `node tools/analisis/serie-fase1.mjs conf1-a [conf1-b [conf1-c]]`: para si dice inutilidad. Con las tres, leer el veredicto,
-  anotarlo en MEDICIONES y, si pasa, a la fase 2 (`trabajo/bot-propio.md`), borrando `trabajo/fase1-plan.md`.
-- Espera al dueño: jugar 15 minutos contra el Sniper: `node tools/jugar-sniper.mjs`, Custom Lobby con Local Host y Local Dev Script, y al acabar `node tools/jugar-sniper.mjs quitar`; con Dota libre, entre tandas de la confirmación.
+- **Siguiente acción:** la partida de Pedro contra el Sniper; con lo que vea, cerrar la fase 1 (borrar `trabajo/fase1-plan.md`)
+  y empezar la fase 2 (`trabajo/bot-propio.md`). `tools/jugar-sniper.mjs` no se ha probado todavía en un lobby real.
+- Espera al dueño: jugar 15 minutos contra el Sniper: `node tools/jugar-sniper.mjs`, Custom Lobby con Local Host y Local Dev Script, y al acabar `node tools/jugar-sniper.mjs quitar`. Dota está libre.
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
-activos por defecto: todo lo nuevo, también el bot propio, va apagado tras variantes del banco. Ninguna serie aún sin
-contaminación. Rumbo: bot propio (DECISIONES 2026-11-03); OHA no se sigue parcheando: `cerebro_v3` quedó apagado tras no
+activos por defecto: todo lo nuevo, también el bot propio, va apagado tras variantes del banco. Primera serie limpia que
+decide: la confirmación de la línea del Sniper (2026-11-04). Rumbo: bot propio (DECISIONES 2026-11-03); OHA no se sigue parcheando: `cerebro_v3` quedó apagado tras no
 mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MEDICIONES 2026-11-03).
 
 ## Entregado
@@ -35,7 +33,7 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 
 ## Siguientes pasos
-1. Fase 1 del bot propio: terminar la confirmación (`trabajo/fase1-plan.md`, paso 6).
+1. Fase 1 del bot propio: la partida de Pedro contra el Sniper (`trabajo/fase1-plan.md`, paso 6).
 2. Fase 2, los cinco en línea: `trabajo/bot-propio.md`.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).

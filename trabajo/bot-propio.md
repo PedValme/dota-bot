@@ -46,6 +46,9 @@ Hasta la fase 2, OHA juega el resto del equipo; en ningún momento el bot por de
   Pedro cambió ese día la meta de la fase 1 (suelo y paridad a −15 %, patrimonio informativo), la build (se aparta de
   Valve) y la confirmación (20 parejas): manda DECISIONES sobre lo escrito arriba.
 
+- 2026-11-04: confirmación de la fase 1 aprobada en la línea (MEDICIONES, «Confirmación de la fase 1»): 59,4 últimos golpes
+  frente a 55, IC95 +1,2 a +7,6. Falta la partida de Pedro. Defectos abiertos en ESTADO: runas y menos kills.
+
 ## Lo que pide la firma
 - Este orden de fases y la meta de la fase 1.
 - Que la fase 1 empiece ya, con Sniper, sin serie hasta igualar a OHA en humo.
