@@ -2,25 +2,16 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Qué se estaba haciendo:** el bot propio con control completo (DECISIONES 2026-11-03; diseño en `trabajo/bot-propio.md`).
-  Fase 1: un Sniper en mid con `Think()` propio (`bots/FunLib/propio/`, variante `control_sniper`, `--mid sniper`), frente
-  al Sniper de OHA (`base_sniper`).
-- **Dónde quedó:** **la confirmación pasó** (20 parejas, 40 de 40 válidas): 59,4 últimos golpes en el min 10 frente a 55, +4,4
-  con IC95 +1,2 a +7,6, y 0,20 muertes frente a 1,00. Patrimonio −193 (informativo), kills 1,25 frente a 2,35 y 0 runas
-  (MEDICIONES, «Confirmación de la fase 1»). Solo mide la línea: las 2 partidas completas de este commit las ganó Valve.
-- **Qué se probó:** banco con `--corte` (5 min por partida) y registro nuevo; defectos y mejoras de `trabajo/fase1-plan.md`.
-  La ablación no ve coste de farm del combate. `kill_eval`: casi todas las kills las frena el margen, por falta de daño.
-  Pedro jugó contra el Sniper (2026-11-05): «la subnormalidad de nuestro sniper es inconmensurable jajajajaja es nefasto, todos
-  los bots lo son, solo empiezan a ser competentes en late porque usan bien sus poders». La partida no dejó registro.
-  Sus quejas se ven en los registros (MEDICIONES 2026-11-05): sin devolver nada en el 44 % de los acosos (OHA 17 %), menos de la
-  mitad de daño a héroes, y el rival de mid hace 15,3 LH frente a 10,8. El banco no reproduce la presión de un humano.
-  Hecho, con el listón nuevo (DECISIONES 2026-11-05): `intercambio.lua` y registro de sus partidas. Tras 3 vueltas, `fase1k`: 61,5 LH,
-  0,0 muertes, 13 % sin devolver (2 de 16), 3,0 kills, patrimonio 8.252; **sin cumplir: rival de mid 12,1 LH frente a ≤ 11**.
-  Segunda partida de Pedro, con registro: «muchisimo mejor en early game», pero en medio juego y late «se posiciona muy mal» y falta el
-  «criterio de riesgo-taque-sigilo». El registro lo confirma: 1 muerte hasta el min 10, 10 al final, 17.087 de oro sin gastar y las
-  mismas reglas de línea toda la partida (MEDICIONES 2026-11-05): el Sniper no tiene medio juego.
-- **Siguiente acción:** según lo que decida Pedro: medio juego del Sniper con objetos, colocación por riesgo y sigilo, antes de la fase 2.
-- Espera al dueño: cerrar la línea de la fase 1 aceptando el rival en 12,1 LH, y adelantar el medio juego del Sniper a los cinco en línea · Recomendado: las dos cosas
+- **Qué se estaba haciendo:** el medio juego del Sniper propio (`bots/FunLib/propio/medio.lua`), que Pedro adelantó a los cinco en línea
+  (DECISIONES 2026-11-05): gastar el oro, tienda secreta, Shadow Blade/Silver Edge, Force Staff/Hurricane Pike y el «criterio de
+  riesgo-taque-sigilo». Variante `control_sniper`, `--mid sniper`, frente a `base_sniper`.
+- **Dónde quedó:** línea cerrada: `fase1k`, 61,5 últimos golpes y 0 muertes en el min 10 (OHA 55 y 1,00); el rival de mid en 12,1 frente a
+  ≤ 11, como deuda. Pedro: «muchisimo mejor en early game». Contra él: 40 LH en el min 10, 10 muertes y 17.087 de oro sin gastar en 36 min
+  (MEDICIONES 2026-11-05). Medio juego escrito y revisado; corre el primer humo, `medio1`, cortado en el min 25.
+- **Qué se probó:** partidas de Pedro con registro: `node tools/jugar-sniper.mjs` y `quitar`; `bench/observaciones/lobby-*.log`.
+- **Siguiente acción:** leer `medio1` con `node tools/analisis/humo-linea.mjs --min 25 medio1` y la predicción de MEDICIONES; corregir por
+  mecanismo; cuando salga limpio, avisar a Pedro para que juegue. Su partida decide.
+- Espera al dueño: nada
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -41,7 +32,7 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 
 ## Siguientes pasos
-1. Fase 1 del bot propio: intercambio en línea según lo que vio Pedro, antes de la fase 2 (`trabajo/fase1-plan.md`, paso 6).
+1. Medio juego del Sniper propio, hasta el visto bueno de Pedro: `trabajo/bot-propio.md`.
 2. Fase 2, los cinco en línea: `trabajo/bot-propio.md`.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
@@ -65,8 +56,8 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
   - no puede activar runas: de pie sobre la runa, con su tipo leído, ni `Action_`, ni `ActionQueue_`, ni `ActionPush_PickUpRune`
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
-  - sin medio juego: mismas reglas de línea toda la partida, lista de compras agotada en el min 20 (17.087 de oro sin gastar en el
-    min 36), sin tienda secreta ni objetos de movilidad o sigilo, sin usar objetos activos;
+  - el rival de mid farmea más que contra OHA (12,1 LH frente a 10,8): deuda aceptada por Pedro al cerrar la línea (DECISIONES 2026-11-05);
+  - entre los niveles 14 y 18 no gasta puntos (`prop nivel` salta de t=608 a t=1089, con `puntos=0`): causa sin comprobar;
   - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
     `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.
 - **Bot OHA:**

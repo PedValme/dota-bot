@@ -16,6 +16,7 @@ local Registro = require(GetScriptDirectory()..'/FunLib/propio/registro_linea')
 local Compras = require(GetScriptDirectory()..'/FunLib/propio/compras')
 local Combate = require(GetScriptDirectory()..'/FunLib/propio/combate')
 local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
+local Medio = require(GetScriptDirectory()..'/FunLib/propio/medio')
 -- Per-hero ability rules (Finish, Harass); a hero without a module plays the lane without abilities.
 local HEROES = { npc_dota_hero_sniper = require(GetScriptDirectory()..'/FunLib/propio/sniper') }
 -- Benchmark variant "sin_combate": no kills, abilities on heroes or trades, to measure what the fighting costs in farm.
@@ -69,6 +70,7 @@ local K = {
 	runeTry = 3.0,        -- seconds of trying before giving up on a rune...
 	runeBan = 60,         -- ...and seconds before trying that one again
 	tpFrom = 3500,        -- this far from the lane's front, go back by teleport
+	tpRisk = 2,           -- no teleport to a tower with this risk (medio.lua)
 }
 
 local S = {} -- pid -> state of this bot
@@ -105,11 +107,18 @@ end
 local function Home(team) return GetAncient(team):GetLocation() end
 local function Fountain(team) return GetShopLocation(team, SHOP_HOME) end
 
--- Where to stand safe: behind our first standing mid tower, else the ancient.
-local function SafeSpot(team)
-	for _, t in ipairs({ TOWER_MID_1, TOWER_MID_2, TOWER_MID_3 }) do
+-- The towers of a lane, from the front back.
+local function LaneTowers(lane)
+	if lane == LANE_TOP then return { TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3 } end
+	if lane == LANE_BOT then return { TOWER_BOT_1, TOWER_BOT_2, TOWER_BOT_3 } end
+	return { TOWER_MID_1, TOWER_MID_2, TOWER_MID_3 }
+end
+
+-- Where to stand safe: behind the first standing tower of the lane we play, else the ancient.
+local function SafeSpot(team, lane)
+	for _, t in ipairs(LaneTowers(lane or LANE_MID)) do
 		local tower = GetTower(team, t)
-		if Valid(tower) then return Toward(tower:GetLocation(), Home(team), 250), 'torre_mid_' .. t end
+		if Valid(tower) then return Toward(tower:GetLocation(), Home(team), 250), 'torre_' .. t end
 	end
 	return Home(team), 'ancient'
 end
@@ -171,7 +180,7 @@ local function Perceive(bot)
 		enemyHeroes = Intercambio.OnePerHero(p0, bot:GetNearbyHeroes(1500, true, BOT_MODE_NONE) or {}),
 		enemyTowers = bot:GetNearbyTowers(1500, true) or {},
 		allyTowers = bot:GetNearbyTowers(1500, false) or {},
-		front = GetLaneFrontLocation(team, LANE_MID, 0),
+		front = GetLaneFrontLocation(team, State(bot).lane or LANE_MID, 0),
 	}
 	-- Damage the visible enemy heroes can deal to us in 3 s (intercambio.lua: their hits and ready abilities), counted
 	-- only for those that can reach us: within their attack range or the cast range of a ready ability, plus a margin
@@ -244,6 +253,10 @@ local function RuleRetreat(bot, s, p)
 		reason = string.format('peligro_reciente %.1fs', s.burstUntil - p.now)
 	-- Only a retreat for low health waits to recover up to returnHp; one for danger ends when the danger does.
 	elseif s.lowHp and p.hp < K.returnHp then reason = string.format('recuperando %.2f < %.2f', p.hp, K.returnHp)
+	-- Once the lane is over, more enemies than friends on us is reason enough, before any damage.
+	elseif s.late and Medio.Outnumbered(bot, p) ~= nil then
+		reason = Medio.Outnumbered(bot, p)
+		s.burstUntil = p.now + K.burstHold
 	-- A trade we are losing: a step out, early and short, not the whole way to the tower: the farm is still there
 	-- (Pedro, 2026-11-05: «asume mas daño [d]el necesario antes de escapar»).
 	elseif p.hp < K.loseHp and bot:WasRecentlyDamagedByAnyHero(2.0) then
@@ -266,14 +279,17 @@ local function RuleRetreat(bot, s, p)
 		return { intent = 'alejarse', reason = reason, to = Toward(p.loc, Home(p.team), K.aggroStep) }
 	end
 	-- Once heading for the fountain it keeps going until healed (returnHp), not back and forth with the tower.
-	if s.toFountain or (p.hp < K.fountainHp and HasItem(bot, 'item_flask') == nil) then
+	-- Once the lane is over nothing heals it at a tower (2.000 of health at 5 a second): any retreat for health ends at home.
+	if s.toFountain or ((p.hp < K.fountainHp or (s.late and p.hp < K.retreatHp)) and HasItem(bot, 'item_flask') == nil) then
 		s.toFountain = true
 		return { intent = 'retirada_fuente', reason = reason .. ', sin salvia', to = Fountain(p.team) }
 	end
 	if p.towerOnMe then
 		return { intent = 'salir_de_torre', reason = reason, to = Toward(p.loc, Home(p.team), 500) }
 	end
-	local spot, name = SafeSpot(p.team)
+	local spot, name = SafeSpot(p.team, s.lane)
+	local nearest = s.late and Medio.NearestTower(p.loc) or nil
+	if nearest ~= nil then spot, name = Toward(nearest:GetLocation(), Home(p.team), 250), 'torre_cercana' end
 	return { intent = 'retirada', reason = reason .. ' -> ' .. name, to = spot }
 end
 
@@ -422,7 +438,7 @@ local function RuleTrade(bot, s, p, ready, soon)
 end
 
 -- Back to the lane by teleport after the fountain or a death: walking cost the time OHA spends farming (4-19 TP a match
--- against 0). To the first standing mid tower, only from far enough and with no enemy near.
+-- against 0). To the first standing tower of the lane we play, only from far enough and with no enemy near.
 local function RuleTeleport(bot, s, p)
 	if p.t < 0 or #p.enemyHeroes > 0 or D2(p.loc, p.front) < K.tpFrom then return nil end
 	if p.now - (s.tpAt or -1000) < 5 then return nil end -- an order the engine took and did nothing with is not repeated
@@ -430,10 +446,11 @@ local function RuleTeleport(bot, s, p)
 	if slot < 0 or (slot > 5 and slot ~= 15) then return nil end
 	local item = bot:GetItemInSlot(slot)
 	if item == nil or not item:IsFullyCastable() then return nil end
-	for _, t in ipairs({ TOWER_MID_1, TOWER_MID_2, TOWER_MID_3 }) do
+	for _, t in ipairs(LaneTowers(s.lane or LANE_MID)) do
 		local tower = GetTower(p.team, t)
 		if Valid(tower) then
 			if D2(p.loc, tower:GetLocation()) < K.tpFrom then return nil end
+			if s.late and Medio.Risk(bot, tower:GetLocation()) >= K.tpRisk then return nil end
 			s.tpAt = p.now
 			return { intent = 'teleporte', item = item, at = tower:GetLocation(),
 				reason = string.format('a %d del frente, a la torre %d', D2(p.loc, p.front), t) }
@@ -442,14 +459,26 @@ local function RuleTeleport(bot, s, p)
 	return nil
 end
 
--- Take Aim first, when the decision is to hit a hero.
+-- Take Aim first, when the decision is to hit a hero. Not while hidden: the first thing out of the stealth is the hit that
+-- carries its bonus.
 local function WithAim(bot, s, p, hero, r)
-	if hero == nil or r == nil or r.target == nil or (r.intent ~= 'acosar' and r.intent ~= 'matar') then return r end
+	if hero == nil or r == nil or r.target == nil or (r.intent ~= 'acosar' and r.intent ~= 'matar') or bot:IsInvisible() then return r end
 	return hero.Aim(bot, s, p, r.target) or r
 end
 
 local function Decide(bot, s, p)
 	if p.t < -5 and not s.bought then return { intent = 'comprar', reason = 'objetos iniciales' } end
+	local late = not NO_COMBAT and Medio.Late(bot, s, p)
+	if late then
+		if not s.lateLogged then
+			s.lateLogged = true
+			Log(s, bot, 'medio', 'empieza el medio juego: ' .. s.lateWhy)
+		end
+		local changed = Medio.ChooseLane(bot, s, p)
+		if changed then Log(s, bot, 'medio', changed) end
+		local bkb = Medio.Bkb(bot, s, p)
+		if bkb then return bkb end
+	end
 	local r = RuleRetreat(bot, s, p)
 	-- Retreating for health alone (no tower on us, no enemy burst), healing comes first: RuleHeal itself requires
 	-- no enemy hero near and no recent hero or tower damage.
@@ -462,7 +491,7 @@ local function Decide(bot, s, p)
 	end
 	if r then
 		if s.chase ~= nil then Log(s, bot, 'persecucion', Combate.Stop(bot, s, p, 'retirada')) end
-		return r
+		return (late and Medio.Escape(bot, s, p, Home(p.team))) or r
 	end
 	r = RuleHeal(bot, s, p)
 	if r then return r end
@@ -484,9 +513,21 @@ local function Decide(bot, s, p)
 			return cast or WithAim(bot, s, p, hero, r)
 		end
 	end
+	if late then
+		r = Medio.Kite(bot, s, p, Home(p.team))
+		if r then return r end
+		r = Medio.Fight(bot, s, p)
+		if r then
+			local cast = hero ~= nil and r.intent == 'acosar' and not bot:IsInvisible() and hero.KillCast(bot, s, p, r.target) or nil
+			return cast or WithAim(bot, s, p, hero, r)
+		end
+	end
+	local hidden = bot:IsInvisible()
 	local ready, soon
-	r, ready, soon = RuleLastHit(bot, s, p)
-	if r then return r end
+	if not hidden then
+		r, ready, soon = RuleLastHit(bot, s, p)
+		if r then return r end
+	end
 	if not NO_COMBAT then
 		r = WithAim(bot, s, p, hero, RuleTrade(bot, s, p, ready, soon))
 		if r then return r end
@@ -499,7 +540,7 @@ local function Decide(bot, s, p)
 	end
 	r = Combate.Rune(bot, s, p)
 	if r then return r end
-	if not NO_COMBAT and hero ~= nil then
+	if not NO_COMBAT and hero ~= nil and not hidden then
 		r = hero.Harass(bot, s, p)
 		if r then return r end
 	end
@@ -511,7 +552,10 @@ local function Decide(bot, s, p)
 				to = moves and spot or nil }
 		end
 	end
-	return { intent = 'linea', reason = string.format('detrás del frente a %d', K.holdBack), to = LanePoint(p) }
+	local spot = LanePoint(p)
+	local hide = late and Medio.Hide(bot, s, p, spot)
+	if hide then return hide end
+	return { intent = 'linea', reason = string.format('detrás del frente a %d', K.holdBack), to = spot }
 end
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -601,6 +645,12 @@ local function Act(bot, s, p, d)
 		s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
 			hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
 			illusion = d.target:IsIllusion() }
+		return
+	end
+	if d.intent == 'usar_objeto' then
+		if d.target ~= nil then bot:Action_UseAbilityOnEntity(d.item, d.target) else bot:Action_UseAbility(d.item) end
+		s.busyUntil, s.moveTo = p.now + 0.1, nil
+		Log(s, bot, 'objeto', string.format('%s: %s', d.item:GetName(), d.reason))
 		return
 	end
 	if d.intent == 'apuntar' then
@@ -747,6 +797,8 @@ function L.Think()
 		if s.chase ~= nil then
 			Log(s, bot, 'persecucion', Combate.Stop(bot, s, { now = GameTime() }, 'muerto'))
 		end
+		local backLine = s.bought and Compras.Buyback(bot, s, GameTime()) or nil
+		if backLine then Log(s, bot, 'compra', backLine) end
 		-- Dead time counts too, so the calls per second compare with the other bots' (the smoke read 25 against 30).
 		s.pending, s.retreating, s.toFountain, s.lowHp, s.burstUntil = nil, false, false, false, nil
 		Cost(bot, s, DotaTime(), (RealTime() - started) * 1000)
@@ -767,7 +819,12 @@ function L.Think()
 			bot:GetAttributeValue(ATTRIBUTE_AGILITY), bot:GetAttributeValue(ATTRIBUTE_INTELLECT)))
 	end
 	local treads = (p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.TreadsToAgility(bot, s, p.now) or nil
-	if treads ~= nil then
+	local filler = (s.late and treads == nil and p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.FillerToDrop(bot, s, p.now) or nil
+	if filler ~= nil then
+		bot:Action_DropItem(filler, p.loc)
+		s.busyUntil, s.moveTo = p.now + 0.05, nil
+		Log(s, bot, 'compra', 'tiro ' .. filler:GetName() .. ': inventario casi lleno')
+	elseif treads ~= nil then
 		-- Each change logs the attributes: the proof that the API's reading of the stat is the way round OHA says.
 		Log(s, bot, 'compra', string.format('botas cambio stat_api=%d agi=%d int=%d', treads:GetPowerTreadsStat(),
 			bot:GetAttributeValue(ATTRIBUTE_AGILITY), bot:GetAttributeValue(ATTRIBUTE_INTELLECT)))

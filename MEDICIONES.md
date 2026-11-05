@@ -1031,4 +1031,19 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Lectura: confirma a Pedro, y la causa es de diseño: **el Sniper propio no tiene medio juego.** Sus reglas son las de la línea; las fases 3 y 4
   aún no existen. No hay objetos de movilidad o sigilo en la lista, ni reglas para usarlos, ni colocación según riesgo.
 - Validez: una partida, un rival humano. Es la única prueba frente al objetivo; no se generaliza a números.
-- Decisión: pendiente de Pedro, en ESTADO.
+- Decisión: cerrar la línea con el rival como deuda y adelantar el medio juego (DECISIONES 2026-11-05: «si a las dos»).
+
+### 2026-11-05 · Humo del medio juego (`medio1`, 4+4, cortado en el min 25): predicción antes de lanzar
+- Pregunta: ¿el Sniper propio gasta el oro, usa los objetos y muere menos que antes desde el min 10, frente a OHA en las mismas partidas?
+- Qué cambió: `medio.lua` (entra por nivel 15 o T1 de mid caída: elegir línea por riesgo, unirse a peleas, kite, irse en inferioridad, Blade, Pike,
+  BKB), compras (Blade, Pike, Silver Edge, tienda secreta con el mensajero, recompra, tirar ramas). Revisado por un subagente antes de lanzar.
+- Comando: `--variantes control_sniper,base_sniper --partidas 8 --corte 25 --mid sniper --modo turbo --observar --repetir-invalidas 1`. Autorizado
+  el corte en el min 25 (DECISIONES 2026-11-05). `humo-linea.mjs --min 25` y `--min 10`.
+- Predicción, hasta el min 25:
+  - `empieza el medio juego` después de t=600, y LH y muertes del min 10 sin separarse de `fase1k` (61,5 y 0,0);
+  - oro sin gastar bajo 1.500 de media (en la partida de Pedro, 6.575 en el min 24);
+  - `prop objeto` con los tres tipos: escapar, entrar oculto y BKB; `mensajero a la tienda secreta` y compra de Demon Edge o Reaver;
+  - muertes desde el min 10 por debajo de las de OHA; de partida contra un humano, 6 entre el min 10 y el 24;
+  - sin ir y volver: menos de 20 cambios de línea por partida; `a_la_pelea` no alterna con `retirada` en menos de 3 s.
+- Sin medir: si el Sniper rinde mejor en una pelea: los bots de Valve no castigan como un humano. Eso lo dirá Pedro.
+- Máquina: se anota con el resultado.
