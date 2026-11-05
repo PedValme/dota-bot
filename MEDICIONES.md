@@ -906,3 +906,34 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Lectura: **contradice lo que el listón parecía decir**: el propio va por delante de OHA en últimos golpes y muertes, frente a
   bots de Valve, y aun así un humano lo ve nefasto. El listón compara bots entre sí: pasarlo era un suelo, no jugar bien.
 - Decisión: pendiente de Pedro; recomendado no empezar la fase 2 hasta traducir lo que vio en conductas medibles.
+
+### 2026-11-05 · Lo que vio Pedro, cotejado con la confirmación (`conducta-linea.mjs`, 40 partidas ya jugadas)
+- Pregunta: ¿los registros muestran lo que Pedro vio? Sin partidas nuevas.
+- Lo que contó: «no mide correctamente el riesgo, asume mas daño [d]el necesario antes de escapar o no contraresta con sus propios
+  ataques aun teniendo ventaja de highground incluso, no tiene en cuenta sus propias ventajas, rango skills, etc. Y tampoco ataca
+  por iniciativa propia para provocar que el heroe enemigo retroceda, si deniega decentemente y da last hit tambien pero solo
+  cuando no lo estan molestando». Él iba de Viper en mid, y su equipo ganó «con relativa facilidad».
+- Resultado hasta el min 10, 20 partidas por brazo, rival bot de Valve:
+
+  | | Propio | OHA |
+  |---|---|---|
+  | Daño a héroes | 2.983 | 6.315 |
+  | Daño recibido de héroes | 901 | 2.211 |
+  | Ventanas de 10 s acosado (≥50 de daño de héroes) | 8 % | 14 % |
+  | De ellas, sin devolver nada | **44 %** | 17 % |
+  | Últimos golpes del rival de mid | **15,3** | 10,8 |
+  | Muertes del rival de mid | 1,10 | 1,70 |
+  | Últimos golpes por ventana: acosado / tranquilo | 1,60 / 1,66 | 1,00 / 1,59 |
+  | Creeps cercanos rematados: acosado / tranquilo | 56 % / 64 % | 44 % / 64 % |
+
+- Lectura:
+  - **Confirmado, no contesta:** casi la mitad de las veces que le pegan no devuelve nada, y hace menos de la mitad de daño a héroes.
+  - **Confirmado, sin iniciativa:** el rival de mid farmea un 42 % más contra el propio que contra OHA. Eso no lo miraba el listón:
+    **parte de los LH del propio es no pelear.**
+  - **Confirmado en el código:** nada compara su alcance o su daño con los del rival; `GetHeightLevel` no se usa nunca; el peligro
+    `daño_enemigo_3s` sale de la estimación de Valve, y la decisión de pegar (`RuleTrade`) solo mira vida y creeps cercanos.
+  - **No se ve, «solo cuando no lo molestan»:** bajo acoso rinde casi igual, pero un bot de Valve casi no acosa (8 % de ventanas).
+    **El banco no reproduce la presión de un humano:** por eso no se veía.
+- Validez: descriptivo, sin intervalos. Daño según lo recibe el filtro. La lectura de «asume más daño» como «pierde más vida de la
+  necesaria antes de irse» es del agente; sin medir, porque no hay registro de la vida al empezar cada intercambio.
+- Decisión: propuesta a Pedro, en ESTADO.
