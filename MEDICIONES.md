@@ -936,4 +936,18 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
     **El banco no reproduce la presión de un humano:** por eso no se veía.
 - Validez: descriptivo, sin intervalos. Daño según lo recibe el filtro. La lectura de «asume más daño» como «pierde más vida de la
   necesaria antes de irse» es del agente; sin medir, porque no hay registro de la vida al empezar cada intercambio.
-- Decisión: propuesta a Pedro, en ESTADO.
+- Decisión: Pedro aprueba el listón nuevo (DECISIONES 2026-11-05). Referencia: `base_sniper` de la confirmación, 55 LH (−5 % son
+  52,3), 1,00 muertes, 17 % sin devolver, rival 10,8 LH.
+
+### 2026-11-05 · Humo del intercambio (`fase1i`, 8 partidas del propio): predicción antes de lanzar
+- Pregunta: con el intercambio por números propios, ¿cumple el listón: LH ≥ 52,3, muertes ≤ 1,00, sin devolver ≤ 17 %, rival ≤ 11 LH?
+- Qué cambió: `intercambio.lua` (quién mata antes a quién, con alcance, altura, creeps y otros héroes); contestar y presionar en
+  vez de `RuleTrade` por vida; `alejarse` al perder el intercambio; el peligro, sin `GetEstimatedDamageToTarget`.
+- Predicción, por línea del registro:
+  - `prop acoso contesto` y `presiono`, decenas por partida; sin devolver baja de 44 %;
+  - daño a héroes sube de 2.983 hacia 6.315, y el daño recibido, de 901 hacia 2.211;
+  - rival de mid baja de 15,3 LH hacia 11;
+  - LH bajan algo de 59,4 y las muertes suben de 0,20: **es el coste que se espera**; `alejarse` lo limita;
+  - `ratio` de `kill_eval` por encima de 1 en buena parte de las líneas. Si casi nunca lo supera, los factores de
+    `intercambio.lua`, que son criterio y no datos, hay que revisarlos.
+- Máquina: se anota con el resultado.
