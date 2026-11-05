@@ -894,3 +894,15 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Validez: sin sesgo conocido entre brazos salvo los viajes a runas, pequeños, a favor del propio en LH. **Solo mide el min 10:**
   no dice nada de victorias; las 2 partidas completas de este commit las ganó Valve.
 - Decisión: cumplido el listón de Pedro (DECISIONES 2026-11-04). Queda su partida contra el Sniper antes de la fase 2.
+
+### 2026-11-05 · Partida de Pedro contra el Sniper propio (lobby Local Host, sin banco)
+- Pregunta: ¿qué ve un humano jugando contra él? Es la única prueba real frente al objetivo (DECISIONES 2026-11-04).
+- Configuración: `tools/jugar-sniper.mjs`, código `970b7c5`, Sniper propio en Dire con cuatro de OHA. Pedro no detalló modo,
+  duración ni resultado.
+- Resultado, con sus palabras: «la subnormalidad de nuestro sniper es inconmensurable jajajajaja es nefasto, todos los bots lo
+  son, solo empiezan a ser competentes en late porque usan bien sus poders».
+- Validez: una partida, sin registro: el lobby no corre con `-condebug` ni observador (`console.log` sigue siendo del 2026-11-04).
+  No dice qué conductas fallan.
+- Lectura: **contradice lo que el listón parecía decir**: el propio va por delante de OHA en últimos golpes y muertes, frente a
+  bots de Valve, y aun así un humano lo ve nefasto. El listón compara bots entre sí: pasarlo era un suelo, no jugar bien.
+- Decisión: pendiente de Pedro; recomendado no empezar la fase 2 hasta traducir lo que vio en conductas medibles.
