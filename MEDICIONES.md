@@ -981,4 +981,18 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   la referencia de OHA se recalcula con la misma definición.
 - Predicción: menos `alejarse` en los primeros 60 s de las partidas con ilusiones; sin devolver por debajo del 31 %; LH del rival en
   torno a 11, sin separarse del ruido de 8 partidas; LH y muertes, sin cambios grandes.
+- Máquina: CPU media 31 %. Código `751f66c`, 8 de 8 válidas, sorteo. Rivales: Death Prophet en varias, Razor.
+- Resultado (min 10): LH 58,1 ✓ [56 56 47 61 60 57 64 64], muertes 0,0 ✓, **sin devolver 43 % (10 de 23) ✗**, **rival 12,5 LH ✗**. Kills 2,8,
+  patrimonio 8.044, daño a héroes 5.176, muertes del rival 1,88. 0 errores; `alejarse` antes de t=60: 35 frente a 40.
+- Lectura: la predicción de «sin devolver» falló. Las ventanas son casi todas de los primeros 140 s frente a Death Prophet: a nivel 1
+  (50 de daño, 0,79 ataques/s) el `ratio` queda entre 0,5 y 0,8. **Había un hueco en las reglas:** bajo 1 no contesta, y solo se aleja
+  bajo 0,7 y con vida menor de 0,8; entre medias se queda parado recibiendo, lo que vio Pedro. Con tan pocas ventanas (23) esta
+  cifra se mueve mucho entre humos: 23 % y 43 %.
+- Decisión: cerrar el hueco (`fase1k`, tercera vuelta).
+
+### 2026-11-05 · Humo tras cerrar el hueco (`fase1k`, 8 partidas del propio): predicción antes de lanzar
+- Pregunta: ¿cumple los cuatro números del listón?
+- Qué cambió: al recibir golpes, o se aleja (`ratio` bajo 0,7 y vida bajo 0,8) o contesta; no hay tercera opción.
+- Predicción: `contesto` sube de unas decenas; sin devolver baja de 23-43 % hacia 17 %, salvo golpes recibidos fuera de alcance; LH y
+  muertes sin grandes cambios, con algo más de daño recibido. El rival de mid puede no moverse: esto no toca la presión.
 - Máquina: se anota con el resultado.
