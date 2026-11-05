@@ -874,3 +874,23 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   razonablemente −10 %; **no distingue 0 de −5 %**.
 - **Corrección a `fase1h`** («no un sesgo a su favor»): en ingresos es cierto, pero en LH es al revés: el propio no paga los viajes
   a runas que OHA sí paga (OHA recoge 0-3 antes de t=600, media 0,9). Pequeño; patrimonio, kills y runas van junto a los LH.
+- Máquina: al lanzar, CPU 26 % y 59 % de memoria libre, sin Unreal; CPU media por partida 27-69 %.
+- Configuración: `conf1-a`, `conf1-b`, `conf1-c`, 40 de 40 válidas sin repetir ninguna, un solo árbol (`a139fd9.3d57f56`), 10
+  sorteos, unas 3,5 h. Miradas a 8 y 14 parejas: +4,5 y +5,5 LH, sin parada.
+- **Resultado (20 parejas, min 10, `serie-fase1.mjs`): Fase 1 PASA.**
+
+  | | Propio | OHA | Diferencia |
+  |---|---|---|---|
+  | **LH** (principal) | **59,4** | 55 | **+4,4, IC95 +1,2 a +7,6 (10 bloques), +8,0 %** |
+  | Muertes | 0,20 | 1,00 | |
+  | Patrimonio (informativo) | | 7.422 | −193, IC95 −862 a +475, −2,6 % |
+  | Kills (informativo) | 1,25 | 2,35 | |
+  | Runas (informativo) | 0 | 1,65 | |
+
+  Suelo de 45 cumplido; Think/s mínimo, 30 en los dos brazos; 0 `prop error`.
+- Lectura: el intervalo queda entero por encima de 0: en últimos golpes y muertes el propio no solo no es inferior, va por
+  delante de OHA en la línea. Pero recoge la mitad de kills y ninguna runa, y por eso el patrimonio se queda en un empate
+  ligeramente por debajo.
+- Validez: sin sesgo conocido entre brazos salvo los viajes a runas, pequeños, a favor del propio en LH. **Solo mide el min 10:**
+  no dice nada de victorias; las 2 partidas completas de este commit las ganó Valve.
+- Decisión: cumplido el listón de Pedro (DECISIONES 2026-11-04). Queda su partida contra el Sniper antes de la fase 2.
