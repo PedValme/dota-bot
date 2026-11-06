@@ -1174,4 +1174,12 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 
 ### 2026-11-06 · Vuelta 2 con héroes fijos (`fijo-p3-a`/`-b`): predicción antes de lanzar
 - Predicción: ventanas con daño de 20 % hacia 25 %; kills de 8,8 a 10 o más; sin devolver por debajo de 30 %; muertes por encima de 1,3, sin pasar de 2.
+- Máquina: CPU media 50-58 %. Código `203593f`, 4 de 4 válidas, 0 errores.
+- Resultado: **mucho peor.** LH 137,3; muertes 5,8; kills 1,8; patrimonio 15.553; daño a héroes 7.713; sin devolver 17,2 %; rival 39,8 LH. Predicción fallida, salvo en contestar.
+- Lectura: las muertes empiezan en línea (t=310-540 contra Viper y Lina), antes del medio juego. El único cambio que toca esa fase es contestar aunque madure un último golpe: **supuesto, sin aislar**. Contestar más se paga caro: el listón de 17 % quizá pide algo que no conviene (OHA está en 27 %).
+- Decisión: revertir solo ese cambio y repetir (`fijo-p4`), para aislar.
+
+### 2026-11-06 · Vuelta 3 con héroes fijos (`fijo-p4-a`/`-b`): predicción antes de lanzar
+- Qué cambió desde `fijo-p3`: solo revertir contestar con un último golpe por madurar.
+- Predicción: muertes y rival vuelven cerca de `fijo-p2` (1,3 y 27,5). Si no, la causa está en otra parte y el supuesto era falso. Kills por encima de 8,8 si cazar con compañía ayuda.
 - Máquina: se anota con el resultado.

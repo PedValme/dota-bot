@@ -450,8 +450,9 @@ end
 -- win it clearly: walk in and hit, to make it back off (its farm: 15,3 last hits against 10,8 with OHA). No last hit
 -- about to mature is given up for it, and no enemy tower is walked under.
 local function RuleTrade(bot, s, p, ready, soon)
-	-- A last hit about to mature keeps the attack, unless a hero is hitting us: then it is answered (no answer in 30 %, fijo-p2).
-	if (soon and not bot:WasRecentlyDamagedByAnyHero(2.0)) or p.now - (s.tradeAt or -1000) < K.tradeEvery or p.hp < K.tradeHp then return nil end
+	-- A last hit about to mature keeps the attack, also when hit: answering anyway lowered the unanswered to 17 % but lost the lane
+	-- (fijo-p3: 5,8 deaths from minute 5 on, rival 39,8 last hits; fijo-p2: 1,3 and 27,5).
+	if soon or p.now - (s.tradeAt or -1000) < K.tradeEvery or p.hp < K.tradeHp then return nil end
 	for _, tw in ipairs(p.enemyTowers) do
 		if Valid(tw) and D2(p.loc, tw:GetLocation()) < K.towerMargin + 50 then return nil end
 	end
