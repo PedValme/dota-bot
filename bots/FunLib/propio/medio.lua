@@ -20,7 +20,15 @@ local K = {
 	laneEvery = 15,      -- seconds between changes of lane
 	laneGain = 1.0,      -- a lane must be this much safer to walk to it
 	laneTravel = 6000,   -- each this many units of walking cost 1 of risk
-	fightReach = 2500,   -- a fight this far is worth joining
+	fightReach = 3500,   -- a fight this far is worth walking to; farther, by teleport
+	fightTpAllies = 2,   -- ...with this many allies in it
+	fightTpTower = 2000, -- ...and one of our towers this close to it
+	fightTpHp = 0.6,
+	farmHp = 0.5,        -- no neutrals below this health
+	neutralNear = 900,   -- neutrals this close are hit
+	ancientLevel = 20,   -- ancients from this level on
+	campReach = 3000,    -- camps this far are worth walking to
+	campArrive = 300,    -- this close to a camp is being there
 	allyEngaged = 1100,  -- an ally this close to a visible enemy, and hitting or being hit, is fighting
 	fightOdds = 0,       -- join with at most this many enemies above our heroes there, ourselves counted
 	fightHp = 0.5,       -- no walking into a fight below this health
@@ -255,12 +263,11 @@ end
 
 -- The fight worth joining: allies with enemies on them, near enough, and odds we can live with. Shoot the weakest enemy in
 -- range; if none is, walk to the nearest one's edge of our range, on our side, hidden when the item is ready.
-function M.Fight(bot, s, p)
-	local enemies = VisibleEnemies(p.loc)
-	if #enemies == 0 then return nil end
+-- Allies fighting within this reach of us: how many, around which enemy, and how many enemies there.
+local function FightWithin(bot, p, enemies, reach)
 	local engaged, center = 0, nil
 	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
-		if a ~= bot and Valid(a) and not a:IsIllusion() and D2(p.loc, a:GetLocation()) < K.fightReach then
+		if a ~= bot and Valid(a) and not a:IsIllusion() and D2(p.loc, a:GetLocation()) < reach then
 			-- Hitting or being hit: an enemy merely in sight of an ally is no reason to drop the farm.
 			local target = a:GetAttackTarget()
 			local hurt = a:WasRecentlyDamagedByAnyHero(2.0)
@@ -272,16 +279,25 @@ function M.Fight(bot, s, p)
 			end
 		end
 	end
-	if engaged == 0 then return nil end
 	local near = 0
-	for _, e in ipairs(enemies) do
-		if D2(center:GetLocation(), e:GetLocation()) < K.riskRadius then near = near + 1 end
+	if center ~= nil then
+		for _, e in ipairs(enemies) do
+			if D2(center:GetLocation(), e:GetLocation()) < K.riskRadius then near = near + 1 end
+		end
 	end
-	if near - (engaged + 1) > K.fightOdds then return nil end
+	return engaged, center, near
+end
+
+function M.Fight(bot, s, p)
+	local enemies = VisibleEnemies(p.loc)
+	if #enemies == 0 then return nil end
+	local engaged, center, near = FightWithin(bot, p, enemies, K.fightReach)
+	if engaged == 0 or near - (engaged + 1) > K.fightOdds then return nil end
 	local weakest, weakestHp, nearest, nearestD = nil, 1e9, nil, 1e9
 	for _, e in ipairs(enemies) do
 		local d = D2(p.loc, e:GetLocation())
-		if d < nearestD and not e:IsAttackImmune() then nearest, nearestD = e, d end
+		-- The one to walk to is in that fight, not the nearest enemy anywhere on the map.
+		if d < nearestD and not e:IsAttackImmune() and D2(center:GetLocation(), e:GetLocation()) < K.riskRadius then nearest, nearestD = e, d end
 		if d <= p.range and e:GetHealth() < weakestHp and not e:IsAttackImmune() then weakest, weakestHp = e, e:GetHealth() end
 	end
 	if weakest ~= nil then
@@ -297,6 +313,54 @@ function M.Fight(bot, s, p)
 		if blade ~= nil then return { intent = 'usar_objeto', item = blade, reason = string.format('entro oculto a la pelea, a %d', nearestD) } end
 	end
 	return { intent = 'a_la_pelea', to = spot, reason = string.format('a %d de %s, %d aliados, %d enemigos', nearestD, Short(nearest), engaged, near) }
+end
+
+-- A fight of two or more allies too far to walk to: by teleport to our tower next to it. It kept farming alone while the team
+-- fought: 1,5 kills from minute 10 against OHA's 9,5 (presion-propio, presion-oha).
+function M.TeleportToFight(bot, s, p)
+	if p.hp < K.fightTpHp or #p.enemyHeroes > 0 or p.now - (s.tpAt or -1000) < 5 then return nil end
+	local slot = bot:FindItemSlot('item_tpscroll')
+	if slot < 0 or (slot > 5 and slot ~= 15) then return nil end
+	local item = bot:GetItemInSlot(slot)
+	if item == nil or not item:IsFullyCastable() then return nil end
+	local enemies = VisibleEnemies(p.loc)
+	local engaged, center, near = FightWithin(bot, p, enemies, 1e9)
+	if engaged < K.fightTpAllies or near - (engaged + 1) > K.fightOdds or D2(p.loc, center:GetLocation()) < K.fightReach then return nil end
+	local tower = M.NearestTower(center:GetLocation())
+	if tower == nil or D2(tower:GetLocation(), center:GetLocation()) > K.fightTpTower then return nil end
+	s.tpAt = p.now
+	return { intent = 'teleporte', item = item, at = tower:GetLocation(),
+		reason = string.format('a la pelea: %d aliados, %d enemigos, a %d', engaged, near, D2(p.loc, center:GetLocation())) }
+end
+
+-- With no creeps in the lane, neutrals: the one in reach, else the nearest camp on our side with no risk. It spent 62 % of the time
+-- from minute 12 standing in the lane (presion-propio), and OHA's Sniper takes 53 neutrals in a match. Returns a decision or nil.
+function M.Neutrals(bot, s, p)
+	if p.hp < K.farmHp or #p.enemyCreeps > 0 then return nil end
+	local best, bestHp = nil, 1e9
+	local ancients = bot:GetLevel() >= K.ancientLevel
+	for _, c in ipairs(bot:GetNearbyNeutralCreeps(K.neutralNear) or {}) do
+		if Valid(c) and (ancients or not c:IsAncientCreep()) and c:GetHealth() < bestHp then best, bestHp = c, c:GetHealth() end
+	end
+	if best ~= nil then
+		return { intent = 'farmear', target = best, reason = string.format('%s vida %d', (string.gsub(best:GetUnitName(), 'npc_dota_', '')), bestHp) }
+	end
+	if #p.enemyHeroes > 0 then return nil end
+	s.campEmpty = s.campEmpty or {}
+	local home, enemyHome = GetAncient(p.team):GetLocation(), GetAncient(GetOpposingTeam()):GetLocation()
+	local camp, campD = nil, K.campReach
+	for _, c in ipairs(GetNeutralSpawners() or {}) do
+		local loc = c.location
+		local key = string.format('%d_%d', loc.x, loc.y)
+		local d = D2(p.loc, loc)
+		-- Arrived and nothing to hit: empty until the next minute, when camps refill.
+		if d < K.campArrive then s.campEmpty[key] = p.t - p.t % 60 + 60 end
+		if d < campD and (s.campEmpty[key] or -1000) <= p.t and D2(loc, home) < D2(loc, enemyHome) and M.Risk(bot, loc) < K.holdRisk then
+			camp, campD = loc, d
+		end
+	end
+	if camp == nil then return nil end
+	return { intent = 'a_neutrales', to = camp, reason = string.format('campamento a %d', campD) }
 end
 
 -- Our nearest standing tower, wherever it is: a retreat does not cross the map to the lane it came to play.

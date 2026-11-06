@@ -532,6 +532,8 @@ local function Decide(bot, s, p)
 			local cast = hero ~= nil and r.intent == 'acosar' and not bot:IsInvisible() and hero.KillCast(bot, s, p, r.target) or nil
 			return cast or WithAim(bot, s, p, hero, r)
 		end
+		r = Medio.TeleportToFight(bot, s, p)
+		if r then return r end
 	end
 	local hidden = bot:IsInvisible()
 	local ready, soon
@@ -553,6 +555,10 @@ local function Decide(bot, s, p)
 	if r then return r end
 	if not NO_COMBAT and hero ~= nil and not hidden then
 		r = hero.Harass(bot, s, p)
+		if r then return r end
+	end
+	if late and ready == nil and not hidden then
+		r = Medio.Neutrals(bot, s, p)
 		if r then return r end
 	end
 	local holdAt = late and Medio.HoldSpot(bot, s, p, LanePoint(p)) or nil
@@ -647,7 +653,7 @@ local function Act(bot, s, p, d)
 		s.stopAttack, s.moveTo = false, nil
 		if d.to == nil and d.intent ~= 'ultimo_golpe' and d.intent ~= 'denegar' then d.to = LanePoint(p) end
 	end
-	if d.intent ~= 'matar' then s.attacking = nil end
+	if d.intent ~= 'matar' and d.intent ~= 'farmear' then s.attacking = nil end
 	if d.intent ~= 'runa' then s.runeTry = nil end
 	if d.intent == 'comprar' then Buy(bot, s) return end
 	-- An item order is not repeated each frame while the healing buff has not appeared yet.
@@ -711,7 +717,7 @@ local function Act(bot, s, p, d)
 	end
 	-- A kill: keep attacking the target (one order per target or per second, not per frame); unseen, walk to where it
 	-- was last seen. A rotation walks to it.
-	if d.intent == 'matar' and d.to == nil then
+	if (d.intent == 'matar' or d.intent == 'farmear') and d.to == nil then
 		if s.attacking ~= d.target or p.now - (s.attackOrderAt or -1000) > 1.0 then
 			bot:Action_AttackUnit(d.target, false)
 			s.attacking, s.attackOrderAt = d.target, p.now
