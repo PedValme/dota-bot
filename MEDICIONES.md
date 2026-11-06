@@ -1182,4 +1182,14 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 ### 2026-11-06 · Vuelta 3 con héroes fijos (`fijo-p4-a`/`-b`): predicción antes de lanzar
 - Qué cambió desde `fijo-p3`: solo revertir contestar con un último golpe por madurar.
 - Predicción: muertes y rival vuelven cerca de `fijo-p2` (1,3 y 27,5). Si no, la causa está en otra parte y el supuesto era falso. Kills por encima de 8,8 si cazar con compañía ayuda.
+- Máquina: CPU media 52-74 %. Código `a3dd321`, 4 de 4 válidas, 0 errores.
+- Resultado: LH 160,0; muertes 2,3; kills 5,0; patrimonio 20.562; daño a héroes 14.660; sin devolver 26,9 %; rival 29,5 LH. Min 10: 49,0 y 40,0 LH, muertes 2,0 y 1,0.
+- Lectura:
+  - **El código de línea es el mismo que en `fijo-p2`, y las muertes del min 10 son 1,5 frente a 0,5.** Con 4 partidas, incluso con héroes fijos, **hay mucho ruido**: esto no mide diferencias pequeñas, y la explicación de `fijo-p3` (contestar con un último golpe por madurar) **queda como supuesto, sin probar**: la reversión mejora, pero no se separa del ruido.
+  - Cazar con compañía: 27 decisiones de rotar, 43 persecuciones, 4 kills. Peor en conjunto que `fijo-p2`.
+- Decisión: volver a la configuración de `fijo-p2` (sin rotar, TP con torre a 2.000, grupo a 900) y medirla con 8 partidas, el tamaño del listón.
+
+### 2026-11-06 · Vuelta 4: `fijo-p2` otra vez, con 8 partidas (`fijo-p5-a`/`-b`, 4 y 4): predicción antes de lanzar
+- Pregunta: ¿cuánto de `fijo-p2` era real? Es el mismo código salvo el comentario. Referencia: `fijo-oha-a`/`-b`, con solo 4 partidas, también con ruido.
+- Predicción: LH por encima de 160; muertes en torno a 1,5; kills 7-9; patrimonio 22.000-25.000. Si sale muy por debajo, `fijo-p2` fue suerte y hay que decirlo.
 - Máquina: se anota con el resultado.
