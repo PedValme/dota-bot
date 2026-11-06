@@ -12,7 +12,7 @@
 - **Qué se probó:** partidas de Pedro con registro: `node tools/jugar-sniper.mjs` y `quitar`; `bench/observaciones/lobby-*.log`. Cambios de la noche en MEDICIONES 2026-11-06.
   Pedro pidió seguir con humos hasta el pulido (DECISIONES 2026-11-06), con héroes fijos para comparar vueltas: `fijo-oha-a`/`-b` hechos; `fijo-p1` cortado el 2026-11-06 por falta de memoria (Unreal Editor ajeno, 77 GB; 5 % libre).
 - **Siguiente acción:** con memoria libre y el sí de Pedro, repetir la línea base y medir con `node tools/analisis/pulido.mjs --referencia fijo-oha-a,fijo-oha-b <etiquetas>`. **Sin jugar aún:** aprender el daño de cada rival, Assassinate para abrir peleas y antes en la build; `fightOdds` 1 y grupo a 6.000, una sola vuelta ruidosa (`presion8`).
-- Espera al dueño: jugar contra el Sniper con el medio juego: `node tools/jugar-sniper.mjs`, Custom Lobby con Local Host y Local Dev Script, puesto 2 de Radiant; al acabar, cerrar Dota y `node tools/jugar-sniper.mjs quitar`
+- Espera al dueño: decir cuándo hay memoria libre para seguir con los humos de pulido · Recomendado: cerrar los Unreal Editor que no use, y relanzar con su sí
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
