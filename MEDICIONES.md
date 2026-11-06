@@ -1192,4 +1192,23 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 ### 2026-11-06 · Vuelta 4: `fijo-p2` otra vez, con 8 partidas (`fijo-p5-a`/`-b`, 4 y 4): predicción antes de lanzar
 - Pregunta: ¿cuánto de `fijo-p2` era real? Es el mismo código salvo el comentario. Referencia: `fijo-oha-a`/`-b`, con solo 4 partidas, también con ruido.
 - Predicción: LH por encima de 160; muertes en torno a 1,5; kills 7-9; patrimonio 22.000-25.000. Si sale muy por debajo, `fijo-p2` fue suerte y hay que decirlo.
-- Máquina: se anota con el resultado.
+- Máquina: CPU media 45-69 % por partida. Código `965fc9f`, 8 de 8 válidas, 0 errores.
+- Resultado (`pulido.mjs`, propio n=8, OHA n=4), min 25:
+
+  | | Propio | OHA | Listón |
+  |---|---|---|---|
+  | LH | 162,1 | 160,8 | ✓ |
+  | Muertes | 1,3 | 1,5 | ✓ |
+  | LH del rival, min 10 | 24,6 | 26,8 | ✓ |
+  | Sin devolver (100 acosos) | 19,0 % | 27,4 % | ✗ frente a 17 %, por poco |
+  | Patrimonio | 21.468 | 26.442 | ✗ (81 %; OHA lleva 11.042 sin gastar) |
+  | Daño a héroes | 13.956 | 21.823 | ✗ (64 %) |
+  | Kills | 7,1 | 13,0 | ✗ (55 %) |
+
+  Ventanas con daño 20,2 % frente a 29,8 %; oro sin gastar 910.
+- Lectura:
+  - **`fijo-p2` fue en parte suerte:** mismo código, y baja de 199 a 162 LH y de 24.742 a 21.468 de patrimonio. Esta es la cifra a tomar como base; patrimonio algo por debajo de la predicción.
+  - **Cumple farm, muertes y rival; no cumple kills, daño y patrimonio.** La brecha es tiempo peleando. Los dos intentos de subirlo no funcionaron.
+  - Hipótesis del agente, sin medir: un solo héroe propio con cuatro de OHA quizá no llegue a sus kills sin decisiones de equipo (OHA: 27 % del tiempo empujando o defendiendo en grupo).
+- Validez: héroes fijos, solo 2 enfrentamientos; la referencia de OHA, con solo 4 partidas. Descriptivo. Partida completa de este código: sin jugar.
+- Decisión: Pedro corta aquí: «que acabe la corrida actual y cambiamos de sesión». Vueltas usadas: 4 de 6.

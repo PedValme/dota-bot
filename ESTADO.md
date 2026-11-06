@@ -2,17 +2,11 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Qué se estaba haciendo:** el medio juego del Sniper propio (`bots/FunLib/propio/medio.lua`), que Pedro adelantó a los cinco en línea
-  (DECISIONES 2026-11-05): gastar el oro, tienda secreta, Shadow Blade/Silver Edge, Force Staff/Hurricane Pike y el «criterio de
-  riesgo-taque-sigilo». Variante `control_sniper`, `--mid sniper`, frente a `base_sniper`.
-- **Dónde quedó:** línea cerrada: `fase1k`, 61,5 últimos golpes y 0 muertes en el min 10 (OHA 55 y 1,00); el rival de mid en 12,1 frente a
-  ≤ 11, como deuda. Pedro: «muchisimo mejor en early game». Contra él: 40 LH en el min 10, 10 muertes y 17.087 de oro sin gastar en 36 min
-  (MEDICIONES 2026-11-05). Noche del 2026-11-06 (encargo de Pedro): contra un equipo OHA, que presiona de verdad (`--rival dotabot --variantes control_sniper,base`),
-  `presion6` en el min 25: 212,5 LH, 0,5 muertes, 5,3 kills, patrimonio 21.689; el Sniper de OHA, 181,3, 2,0, 13,8 y 28.094 (4 partidas cada uno, sorteos distintos).
-- **Qué se probó:** partidas de Pedro con registro: `node tools/jugar-sniper.mjs` y `quitar`; `bench/observaciones/lobby-*.log`. Cambios de la noche en MEDICIONES 2026-11-06.
-  Pedro pidió seguir con humos hasta el pulido (DECISIONES 2026-11-06), con héroes fijos para comparar vueltas: `fijo-oha-a`/`-b` hechos; `fijo-p1` cortado el 2026-11-06 por falta de memoria (Unreal Editor ajeno, 77 GB; 5 % libre).
-- **Siguiente acción:** con memoria libre y el sí de Pedro, repetir la línea base y medir con `node tools/analisis/pulido.mjs --referencia fijo-oha-a,fijo-oha-b <etiquetas>`. **Sin jugar aún:** aprender el daño de cada rival, Assassinate para abrir peleas y antes en la build; `fightOdds` 1 y grupo a 6.000, una sola vuelta ruidosa (`presion8`).
-- Espera al dueño: decir cuándo hay memoria libre para seguir con los humos de pulido · Recomendado: cerrar los Unreal Editor que no use, y relanzar con su sí
+- **Qué se estaba haciendo:** el medio juego del Sniper propio (`bots/FunLib/propio/medio.lua`), que Pedro adelantó a los cinco en línea, y el pulido que pidió antes de volver a probar (DECISIONES 2026-11-05 y 2026-11-06). Variante `control_sniper`.
+- **Dónde quedó:** Pedro cerró esta sesión al acabar `fijo-p5`, la base firme (8 partidas, héroes fijos, contra un equipo OHA, min 25; OHA con 4): LH 162,1 y 160,8 ✓; muertes 1,3 y 1,5 ✓; rival de mid 24,6 y 26,8 ✓; sin devolver 19,0 % (✗ frente a 17 %; OHA 27,4 %); patrimonio 21.468 y 26.442 ✗; daño a héroes 13.956 y 21.823 ✗; kills 7,1 y 13,0 ✗. Vueltas de pulido usadas: 4 de 6.
+- **Qué se probó:** la brecha es tiempo peleando (ventanas con daño 20 % frente a 30 %); cuando pelea, pega casi igual. Contestar siempre en línea (`fijo-p3`) y cazar con compañía (`fijo-p4`) salieron mal y están revertidos. Con 4 partidas hay mucho ruido, incluso con héroes fijos: `fijo-p2`, el mismo código, dio 199 LH y 24.742 (MEDICIONES 2026-11-06).
+- **Siguiente acción:** con lo que decida Pedro. Comandos: `node tools/analisis/pulido.mjs --referencia fijo-oha-a,fijo-oha-b <etiquetas>`; los héroes de `fijo-p5` en MEDICIONES. Para jugar: `node tools/jugar-sniper.mjs`, `quitar` al acabar, y `bench/observaciones/lobby-*.log`.
+- Espera al dueño: decidir si prueba esta versión o se sigue puliendo, y si el criterio de pulido cambia (kills al 85 % y sin devolver ≤ 17 %, puestos por el agente) · Recomendado: que juegue esta versión y, con lo que vea, decidir entre pulir el Sniper o pasar a decisiones de equipo; más humos de umbrales rinden poco
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -31,9 +25,10 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
   Prueba de control completo (#50); fase 1 y fase 1 completa (#51, #52); diagnóstico y ajustes (#53).
 - 2026-11-04 · Vuelta de la fase 1: banco con `--corte` y `--heroes` (#56), registro (#57), defectos y build (#58, #59),
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
+- 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
 
 ## Siguientes pasos
-1. Medio juego del Sniper propio, hasta el visto bueno de Pedro: `trabajo/bot-propio.md`.
+1. Medio juego del Sniper propio, hasta el visto bueno de Pedro: `trabajo/bot-propio.md`. Hipótesis sin medir: un héroe propio con cuatro de OHA quizá no llegue a sus kills sin decisiones de equipo.
 2. Fase 2, los cinco en línea: `trabajo/bot-propio.md`.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
@@ -58,8 +53,8 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
   - el rival de mid farmea más que contra OHA (12,1 LH frente a 10,8): deuda aceptada por Pedro al cerrar la línea (DECISIONES 2026-11-05);
-  - poco daño a héroes y pocas kills en medio juego frente a OHA con el mismo rival: 31.102 frente a 89.369 tras el min 12, 5,3 kills frente a 13,8 en el min 25;
-  - en línea, con un rival que presiona, no contesta en el 49 % de los acosos (OHA 23 %), y el rival de mid hace 20,3 LH: el `ratio` con daño real lo aleja más;
+  - poco daño a héroes y pocas kills en medio juego frente a OHA con el mismo rival (`fijo-p5`: 13.956 frente a 21.823, 7,1 frente a 13,0): pelea menos tiempo;
+  - contra un humano, sin comprobar con este código: en sus partidas anteriores iba a 40-42 LH en el min 10 y 7-10 muertes;
   - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
     `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.
 - **Bot OHA:**
