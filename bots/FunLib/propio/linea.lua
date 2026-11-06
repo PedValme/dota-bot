@@ -38,6 +38,7 @@ local STARTING_ITEMS = { 'item_tango', 'item_flask', 'item_branches', 'item_bran
 -- Thresholds of the rules (one place, so the log and the rules agree).
 local K = {
 	retreatHp = 0.30,     -- retreat below this health fraction
+	exposedHp = 0.45,     -- ...or below this one with an enemy hero able to reach us
 	returnHp = 0.65,      -- come back to the lane above it
 	fountainHp = 0.20,    -- below it, without a salve, go heal at the fountain
 	enemyBurst = 0.80,    -- retreat if the visible enemy heroes can deal this share of our health in 3 s
@@ -57,6 +58,8 @@ local K = {
 	pressEdge = 1.2,      -- step forward and hit, with nothing else to do, if the trade (intercambio.lua: his time to kill
 	                      -- us over ours) reaches this
 	pressReach = 300,     -- how far beyond our range we walk to press him
+	freeShotGap = 250,    -- a free shot, alone, from at least this much beyond its attack range
+	freeShotHp = 0.5,
 	-- When hit there is no third way: step away if the trade is below loseEdge and we are under loseHp, else hit back.
 	-- With a gap between both it stood there taking hits (fase1j: 10 of 23 harassed windows with no answer, ratio 0,5-0,8).
 	loseEdge = 0.7,
@@ -71,6 +74,7 @@ local K = {
 	runeBan = 60,         -- ...and seconds before trying that one again
 	tpFrom = 3500,        -- this far from the lane's front, go back by teleport
 	tpRisk = 2,           -- no teleport to a tower with this risk (medio.lua)
+	lateHomeHp = 0.45,    -- once the lane is over and with no salve, home below this health
 	recoverWait = 15,     -- seconds of regeneration worth waiting for at a tower, without going home
 }
 
@@ -254,6 +258,15 @@ local function RuleRetreat(bot, s, p)
 		reason = string.format('peligro_reciente %.1fs', s.burstUntil - p.now)
 	-- Only a retreat for low health waits to recover up to returnHp; one for danger ends when the danger does.
 	elseif s.lowHp and p.hp < K.returnHp then reason = string.format('recuperando %.2f < %.2f', p.hp, K.returnHp)
+	-- Once the lane is over, with no salves and under this health it neither farms (Neutrals) nor helps anyone: home.
+	elseif s.late and p.hp < K.lateHomeHp and HasItem(bot, 'item_flask') == nil then
+		reason = string.format('vida %.2f < %.2f sin salvia', p.hp, K.lateHomeHp)
+		s.lowHp = true
+	-- Touched, and an enemy that can reach us: out now, before its next spell decides it (presion4: three deaths in lane to Lina,
+	-- from 0,3-0,5 of health; Pedro, 2026-11-05: «asume mas daño [d]el necesario antes de escapar»).
+	elseif p.hp < K.exposedHp and p.enemyBurst > 0 then
+		reason = string.format('expuesto %.2f < %.2f', p.hp, K.exposedHp)
+		s.burstUntil = p.now + K.burstHold
 	-- Once the lane is over, more enemies than friends on us is reason enough, before any damage.
 	elseif s.late and Medio.Outnumbered(bot, p) ~= nil then
 		reason = Medio.Outnumbered(bot, p)
@@ -275,7 +288,7 @@ local function RuleRetreat(bot, s, p)
 	end
 	if p.hp >= K.returnHp then s.lowHp = false end
 	s.retreating = reason ~= nil
-	if reason == nil then s.toFountain, s.stepBack = false, false return nil end
+	if reason == nil then s.toFountain, s.stepBack, s.retreatTower = false, false, nil return nil end
 	if s.stepBack and not p.towerOnMe and p.hp >= K.retreatHp then
 		return { intent = 'alejarse', reason = reason, to = Toward(p.loc, Home(p.team), K.aggroStep) }
 	end
@@ -286,7 +299,7 @@ local function RuleRetreat(bot, s, p)
 		and bot:GetItemInSlot(15):IsFullyCastable()
 		and (K.returnHp - p.hp) * bot:GetMaxHealth() / math.max(bot:GetHealthRegen(), 0.1) > K.recoverWait
 	-- Once the lane is over nothing heals it at a tower (2.000 of health at 5 a second): any retreat for health ends at home.
-	if s.toFountain or waitLong or ((p.hp < K.fountainHp or (s.late and p.hp < K.retreatHp)) and HasItem(bot, 'item_flask') == nil) then
+	if s.toFountain or waitLong or ((p.hp < K.fountainHp or (s.late and s.lowHp)) and HasItem(bot, 'item_flask') == nil) then
 		s.toFountain = true
 		return { intent = 'retirada_fuente', reason = reason .. ', sin salvia', to = Fountain(p.team) }
 	end
@@ -294,8 +307,11 @@ local function RuleRetreat(bot, s, p)
 		return { intent = 'salir_de_torre', reason = reason, to = Toward(p.loc, Home(p.team), 500) }
 	end
 	local spot, name = SafeSpot(p.team, s.lane)
-	local nearest = s.late and Medio.NearestTower(p.loc) or nil
-	if nearest ~= nil then spot, name = Toward(nearest:GetLocation(), Home(p.team), 250), 'torre_cercana' end
+	if s.late then
+		local tower = Medio.RetreatTower(bot, s, p)
+		if tower ~= nil then spot, name = Toward(tower:GetLocation(), Home(p.team), 250), 'torre_cercana'
+		else spot, name = Fountain(p.team), 'fuente' end
+	end
 	return { intent = 'retirada', reason = reason .. ' -> ' .. name, to = spot }
 end
 
@@ -433,7 +449,11 @@ local function RuleTrade(bot, s, p, ready, soon)
 				-- Once the lane is over, alone: no pressing, and hitting back only from out of its reach.
 				local company = not s.late or Medio.Allies(bot) > 0
 				if inRange and hit and (v.ratio >= K.loseEdge or p.hp >= K.loseHp) and (company or v.outranged) then kind = 'contesto'
-				elseif company and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono' end
+				elseif company and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono'
+				-- Alone, a free shot: in our range and well out of its reach, nobody else near, winning the trade. It is what the
+				-- range is for, and it stood there instead (presion3: 66 of 74 such seconds without firing).
+				elseif not company and ready == nil and d <= p.range and d >= e:GetAttackRange() + K.freeShotGap
+					and #p.enemyHeroes == 1 and v.ratio >= K.pressEdge and p.hp >= K.freeShotHp then kind = 'disparo' end
 				if kind ~= nil then
 					return { intent = 'acosar', target = e, walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1),
 						reason = string.format('%s a %s: ratio %.2f, mi_dps %d, su_dps %d, altura %d, a %d', kind,
@@ -449,6 +469,8 @@ end
 -- against 0). To the first standing tower of the lane we play, only from far enough and with no enemy near.
 local function RuleTeleport(bot, s, p)
 	if p.t < 0 or #p.enemyHeroes > 0 or D2(p.loc, p.front) < K.tpFrom then return nil end
+	-- Farming a camp it is where it wants to be: the scroll stays for the next fight.
+	if s.intent == 'a_neutrales' or s.intent == 'farmear' then return nil end
 	if p.now - (s.tpAt or -1000) < 5 then return nil end -- an order the engine took and did nothing with is not repeated
 	local slot = bot:FindItemSlot('item_tpscroll')
 	if slot < 0 or (slot > 5 and slot ~= 15) then return nil end
@@ -529,6 +551,8 @@ local function Decide(bot, s, p)
 			local cast = hero ~= nil and r.intent == 'acosar' and not bot:IsInvisible() and hero.KillCast(bot, s, p, r.target) or nil
 			return cast or WithAim(bot, s, p, hero, r)
 		end
+		r = Medio.TeleportToFight(bot, s, p)
+		if r then return r end
 	end
 	local hidden = bot:IsInvisible()
 	local ready, soon
@@ -550,6 +574,10 @@ local function Decide(bot, s, p)
 	if r then return r end
 	if not NO_COMBAT and hero ~= nil and not hidden then
 		r = hero.Harass(bot, s, p)
+		if r then return r end
+	end
+	if late and ready == nil and not hidden then
+		r = Medio.Neutrals(bot, s, p)
 		if r then return r end
 	end
 	local holdAt = late and Medio.HoldSpot(bot, s, p, LanePoint(p)) or nil
@@ -644,7 +672,7 @@ local function Act(bot, s, p, d)
 		s.stopAttack, s.moveTo = false, nil
 		if d.to == nil and d.intent ~= 'ultimo_golpe' and d.intent ~= 'denegar' then d.to = LanePoint(p) end
 	end
-	if d.intent ~= 'matar' then s.attacking = nil end
+	if d.intent ~= 'matar' and d.intent ~= 'farmear' then s.attacking = nil end
 	if d.intent ~= 'runa' then s.runeTry = nil end
 	if d.intent == 'comprar' then Buy(bot, s) return end
 	-- An item order is not repeated each frame while the healing buff has not appeared yet.
@@ -708,7 +736,7 @@ local function Act(bot, s, p, d)
 	end
 	-- A kill: keep attacking the target (one order per target or per second, not per frame); unseen, walk to where it
 	-- was last seen. A rotation walks to it.
-	if d.intent == 'matar' and d.to == nil then
+	if (d.intent == 'matar' or d.intent == 'farmear') and d.to == nil then
 		if s.attacking ~= d.target or p.now - (s.attackOrderAt or -1000) > 1.0 then
 			bot:Action_AttackUnit(d.target, false)
 			s.attacking, s.attackOrderAt = d.target, p.now
@@ -834,7 +862,7 @@ function L.Think()
 			bot:GetAttributeValue(ATTRIBUTE_AGILITY), bot:GetAttributeValue(ATTRIBUTE_INTELLECT)))
 	end
 	local treads = (p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.TreadsToAgility(bot, s, p.now) or nil
-	local filler = (s.late and treads == nil and p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.FillerToDrop(bot, s, p.now) or nil
+	local filler = (treads == nil and p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.FillerToDrop(bot, s, p.now) or nil
 	if filler ~= nil then
 		bot:Action_DropItem(filler, p.loc)
 		s.busyUntil, s.moveTo = p.now + 0.05, nil

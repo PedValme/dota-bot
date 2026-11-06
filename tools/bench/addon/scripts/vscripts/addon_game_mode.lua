@@ -383,6 +383,10 @@ local function LanePlayers()
 	if lane ~= nil then return lane end
 	local ok, variant = pcall(require, "bots.Customize.bench_variant")
 	local hero = ok and type(variant) == "table" and variant.linea_heroe or nil
+	-- --rival dotabot: the variant is per team, and the followed hero comes from whichever team has one.
+	if hero == nil and ok and type(variant) == "table" and type(variant.teams) == "table" then
+		for _, t in pairs(variant.teams) do hero = hero or t.linea_heroe end
+	end
 	if type(hero) ~= "string" then
 		lane = { own = -1, rival = -1 }
 		return lane

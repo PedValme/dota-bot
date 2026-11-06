@@ -7,10 +7,10 @@
   riesgo-taque-sigilo». Variante `control_sniper`, `--mid sniper`, frente a `base_sniper`.
 - **Dónde quedó:** línea cerrada: `fase1k`, 61,5 últimos golpes y 0 muertes en el min 10 (OHA 55 y 1,00); el rival de mid en 12,1 frente a
   ≤ 11, como deuda. Pedro: «muchisimo mejor en early game». Contra él: 40 LH en el min 10, 10 muertes y 17.087 de oro sin gastar en 36 min
-  (MEDICIONES 2026-11-05). Medio juego escrito y revisado; humo `medio1`, cortado en el min 25: 0 muertes desde el min 10 (OHA 1,0), 476 de oro sin
-  gastar (OHA 8.967), patrimonio 26.448 frente a 24.553, con 4 partidas por brazo y contra bots de Valve. Mecanismo limpio.
-- **Qué se probó:** partidas de Pedro con registro: `node tools/jugar-sniper.mjs` y `quitar`; `bench/observaciones/lobby-*.log`.
-- **Siguiente acción:** revisar el registro de la partida de Pedro contra lo que cuente. Sin comprobar: por qué nunca cambia de línea.
+  (MEDICIONES 2026-11-05). Noche del 2026-11-06 (encargo de Pedro): contra un equipo OHA, que presiona de verdad (`--rival dotabot --variantes control_sniper,base`),
+  `presion6` en el min 25: 212,5 LH, 0,5 muertes, 5,3 kills, patrimonio 21.689; el Sniper de OHA, 181,3, 2,0, 13,8 y 28.094 (4 partidas cada uno, sorteos distintos).
+- **Qué se probó:** partidas de Pedro con registro: `node tools/jugar-sniper.mjs` y `quitar`; `bench/observaciones/lobby-*.log`. Cambios de la noche en MEDICIONES 2026-11-06.
+- **Siguiente acción:** revisar el registro de la partida de Pedro contra lo que cuente. Lo pendiente que más pesa: daño a héroes tras el min 12 (31.102 frente a 89.369 de OHA) y kills.
 - Espera al dueño: jugar contra el Sniper con el medio juego: `node tools/jugar-sniper.mjs`, Custom Lobby con Local Host y Local Dev Script, puesto 2 de Radiant; al acabar, cerrar Dota y `node tools/jugar-sniper.mjs quitar`
 
 ## Madurez
@@ -57,8 +57,8 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
   - el rival de mid farmea más que contra OHA (12,1 LH frente a 10,8): deuda aceptada por Pedro al cerrar la línea (DECISIONES 2026-11-05);
-  - nunca cambia de línea en el medio juego (0 en `medio1`): `ChooseLane` no actúa, causa sin comprobar;
-  - usa poco Force Staff y Hurricane Pike (0-4 por partida), y Blade casi siempre para entrar, no para escapar;
+  - poco daño a héroes y pocas kills en medio juego frente a OHA con el mismo rival: 31.102 frente a 89.369 tras el min 12, 5,3 kills frente a 13,8 en el min 25;
+  - en línea, con un rival que presiona, no contesta en el 49 % de los acosos (OHA 23 %), y el rival de mid hace 20,3 LH: el `ratio` con daño real lo aleja más;
   - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
     `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.
 - **Bot OHA:**

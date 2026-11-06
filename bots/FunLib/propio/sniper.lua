@@ -11,12 +11,22 @@ end
 local function Seen(u) return u ~= nil and not u:IsNull() and u:IsAlive() and u:CanBeSeen() end
 local function Short(u) return (string.gsub(u:GetUnitName(), 'npc_dota_hero_', '')) end
 
--- Assassinate: only to finish a visible enemy hero it kills for sure, with no other enemy hero near us during its
+-- How close another enemy may be during Assassinate's long cast: 900 alone, 500 with allies beside us, who draw them. In a team
+-- fight there is always someone at 900, and it never fired there (4,0 kills at minute 25 against OHA's 13,8, presion5).
+local function CastClear(bot)
+	for _, a in ipairs(bot:GetNearbyHeroes(1200, false, BOT_MODE_NONE) or {}) do
+		if a ~= bot and Seen(a) and not a:IsIllusion() then return 500 end
+	end
+	return 900
+end
+
+-- Assassinate: only to finish a visible enemy hero it kills for sure, with no other enemy hero on top of us during its
 -- long cast.
 function H.Finish(bot, s, p)
 	local a = bot:GetAbilityByName('sniper_assassinate')
 	if a == nil or not a:IsFullyCastable() then return nil end
 	local range = a:GetCastRange()
+	local clear = CastClear(bot)
 	local dmg = a:GetSpecialValueInt('damage')
 	if dmg == nil or dmg <= 0 then dmg = a:GetAbilityDamage() end
 	-- Every visible enemy hero in the ability's real range (it reaches farther than the 1500 of the lane snapshot).
@@ -25,7 +35,7 @@ function H.Finish(bot, s, p)
 			local real = e:GetActualIncomingDamage(dmg, DAMAGE_TYPE_MAGICAL)
 			local others = 0
 			for _, o in ipairs(p.enemyHeroes) do
-				if Seen(o) and o ~= e and D2(p.loc, o:GetLocation()) < 900 then others = others + 1 end
+				if Seen(o) and o ~= e and D2(p.loc, o:GetLocation()) < clear then others = others + 1 end
 			end
 			if real >= e:GetHealth() and others == 0 then
 				return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(),
@@ -96,8 +106,9 @@ function H.KillBurst(bot, p, e, window)
 	local u = bot:GetAbilityByName('sniper_assassinate')
 	if u ~= nil and u:IsFullyCastable() and not e:IsMagicImmune() and D2(p.loc, e:GetLocation()) <= u:GetCastRange() then
 		local others = 0
+		local clear = CastClear(bot)
 		for _, o in ipairs(p.enemyHeroes) do
-			if Seen(o) and o ~= e and D2(p.loc, o:GetLocation()) < 900 then others = others + 1 end
+			if Seen(o) and o ~= e and D2(p.loc, o:GetLocation()) < clear then others = others + 1 end
 		end
 		if others == 0 then
 			local dmg = u:GetSpecialValueInt('damage')

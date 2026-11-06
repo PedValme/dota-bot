@@ -1097,4 +1097,45 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 ### 2026-11-05 · Humo del ajuste (`medio3`, 4 partidas del propio, min 25): predicción antes de lanzar
 - Pregunta: ¿recupera el farm sin volver a presionar solo?
 - Predicción: `esperar` por debajo del 10 % del tiempo; LH del min 25 por encima de 150; kills desde el min 10, entre 2,7 y 8,5; menos tramos de 12 s o más quieto con `retirada`.
-- Máquina: se anota con el resultado.
+- Máquina: CPU media 49 %. Código `d6e014a`, 4 de 4 válidas, sorteo, 0 errores.
+- Resultado: min 10, 62,8 LH y 0 muertes. Min 25: 156,0 LH, 0,0 muertes, 2,8 kills desde el min 10, patrimonio 19.954, 1.767 de oro sin gastar. `esperar`, 7-9 % del tiempo.
+- Lectura: cumple la predicción, justo en kills: **2,8 frente a 8,5 de `medio1`, y patrimonio 19.954 frente a 26.448**. Es el precio de no empezar solo. Contra bots de Valve, «0 muertes» no
+  separa nada, porque no castigan: hay que medir contra un rival que presione.
+- Decisión: encargo nocturno de Pedro (DECISIONES 2026-11-06): medir contra OHA en la misma partida.
+
+### 2026-11-06 · El Sniper propio y el de OHA contra un equipo OHA (`presion-propio`, `presion-oha`, 4 y 4, min 25): pregunta antes de lanzar
+- Pregunta: los bots de Valve casi no acosan (5-14 % de las ventanas): ¿un equipo OHA presiona más, y cómo queda el Sniper propio frente al de OHA con ese mismo rival?
+- Qué cambió: el custom game sigue al héroe también con `--rival dotabot` (`--variantes control_sniper,base` y `base_sniper,base`). Es un brazo cada vez, con sorteos separados: descriptivo.
+- Predicción: más ventanas acosado que contra Valve; el Sniper propio muere más que 0; las muertes dirán qué regla falla. Sin mirar victorias.
+- Máquina: CPU media 32-48 % por partida, con picos de 77 %.
+- Resultado: acosado el 22-23 % de las ventanas: **presiona de verdad**. En `presion-propio`, muertes 1,8. Propio frente a OHA, min 25: patrimonio 16.985 y 28.094; kills 3,5 y 13,8; LH 134,8 y 181,3; muertes 1,8 y 2,0.
+  Tras el min 12, el propio pasa el 62 % del tiempo en `linea`.
+- Decisión: las siguientes vueltas de la noche se miden contra este rival.
+
+### 2026-11-06 · Vueltas de la noche contra un equipo OHA (`presion2` a `presion6`, 4 partidas cada una, min 25) y contra Valve (`medio4`)
+- Encargo: DECISIONES 2026-11-06. Código `3dbc5ab` a `af0e191`. Todas válidas, 0 `prop error`, sorteo distinto en cada una. **Con 4 partidas por vuelta y sorteos distintos, una diferencia entre dos vueltas puede ser ruido:** se lee la tendencia y el mecanismo, no cada salto.
+- Causas encontradas en los registros y qué se cambió:
+  - **Compras:** una Belt of Strength de la Lance que llegaba con las piezas de los Treads los montaba en fuerza; la Lance no se montaba, se llenaba el inventario y el mensajero iba y volvía cada 15 s (`presion-propio` partida 3, t=210-575). Ahora los Treads se montan antes de comprar piezas de otro objeto.
+  - **Cruzar el mapa:** `ChooseLane` lo mandaba a otra línea en plena emboscada, andando 6.000-7.000, gastando el Blade. Ahora solo sin enemigos a la vista y, si está lejos, con TP.
+  - **Riesgo y retirada:** la torre enemiga cuenta; no se retira a través de los enemigos, y mantiene la torre elegida.
+  - **Sin nada que hacer:** neutrales de nuestro lado si no hay oleada ni riesgo, y TP a peleas de dos o más aliados. Disparo gratis estando solo. Assassinate con aliados aunque haya otro enemigo a 900. Salir antes con vida bajo 0,45 si un héroe lo alcanza.
+  - Revisión de un subagente (Opus) sobre neutrales y peleas, aplicada: vuelve a entrar oculto en caminatas medias, porque reservarlo recortaba lo que pidió Pedro. Sigue sin entrar oculto en caminatas de más de 3.000: **ajuste del agente**.
+- Resultado, min 25:
+
+  | Vuelta | Qué cambia | LH | Muertes | Kills | Patrimonio |
+  |---|---|---|---|---|---|
+  | `presion-oha` | Sniper de OHA, referencia | 181,3 | 2,0 | 13,8 | 28.094 |
+  | `presion-propio` | antes de la noche | 134,8 | 1,8 | 3,5 | 16.985 |
+  | `presion2` | Lance, cruzar el mapa, retirada | 142,3 | 2,0 | 6,3 | 21.533 |
+  | `presion3` | neutrales, TP a peleas | 213,0 | 1,3 | 5,8 | 21.558 |
+  | `presion4` | disparo gratis, campamentos a 1.800 | 149,8 | 2,3 | 4,0 | 19.126 |
+  | `presion5` | campamentos a 3.000, salir antes | 189,0 | 1,3 | 4,0 | 20.832 |
+  | `presion6` | Assassinate con aliados | **212,5** | **0,5** | 5,3 | 21.689 |
+  | `medio4` | como `presion5`, rival Valve | 241,8 | 0,3 | 10,0 | 27.219 |
+
+- Lectura:
+  - **Mejor:** farmea más que OHA y muere menos con el mismo rival; `presion6` tiene las mejores muertes de las vueltas, y `medio4` frente a `medio3` (156,0 LH, 19.954) sube mucho.
+  - **Sigue lejos en lo que más pesa:** 5,3 kills frente a 13,8, patrimonio 21.689 frente a 28.094, **daño a héroes tras el min 12: 31.102 en `presion6` frente a 89.369 de OHA** (suma de 4 partidas).
+  - En línea, bajo presión, no devuelve nada en el 49 % de las ventanas de acoso (`presion6`, 18 de 37; OHA 23 %), y el rival de mid hace 20,3 LH. Con el `ratio` que cuenta el daño real se aleja más que contesta. Sin decidir si es mejor o peor: lo juzga Pedro.
+- Validez: descriptivo. Un equipo OHA tampoco es un humano. Sin partida completa de este código.
+- Decisión: dejar el resultado para que Pedro juegue.
