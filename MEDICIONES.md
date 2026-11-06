@@ -1097,4 +1097,14 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 ### 2026-11-05 · Humo del ajuste (`medio3`, 4 partidas del propio, min 25): predicción antes de lanzar
 - Pregunta: ¿recupera el farm sin volver a presionar solo?
 - Predicción: `esperar` por debajo del 10 % del tiempo; LH del min 25 por encima de 150; kills desde el min 10, entre 2,7 y 8,5; menos tramos de 12 s o más quieto con `retirada`.
+- Máquina: CPU media 49 %. Código `d6e014a`, 4 de 4 válidas, sorteo, 0 errores.
+- Resultado: min 10, 62,8 LH y 0 muertes. Min 25: 156,0 LH, 0,0 muertes, 2,8 kills desde el min 10, patrimonio 19.954, 1.767 de oro sin gastar. `esperar`, 7-9 % del tiempo.
+- Lectura: cumple la predicción, justo en kills: **2,8 frente a 8,5 de `medio1`, y patrimonio 19.954 frente a 26.448**. Es el precio de no empezar solo. Contra bots de Valve, «0 muertes» no
+  separa nada, porque no castigan: hay que medir contra un rival que presione.
+- Decisión: encargo nocturno de Pedro (DECISIONES 2026-11-06): medir contra OHA en la misma partida.
+
+### 2026-11-06 · El Sniper propio y el de OHA contra un equipo OHA (`presion-propio`, `presion-oha`, 4 y 4, min 25): pregunta antes de lanzar
+- Pregunta: los bots de Valve casi no acosan (5-14 % de las ventanas): ¿un equipo OHA presiona más, y cómo queda el Sniper propio frente al de OHA con ese mismo rival?
+- Qué cambió: el custom game sigue al héroe también con `--rival dotabot` (`--variantes control_sniper,base` y `base_sniper,base`). Es un brazo cada vez, con sorteos separados: descriptivo.
+- Predicción: más ventanas acosado que contra Valve; el Sniper propio muere más que 0; las muertes dirán qué regla falla. Sin mirar victorias.
 - Máquina: se anota con el resultado.
