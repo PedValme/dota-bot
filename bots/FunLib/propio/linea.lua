@@ -54,7 +54,9 @@ local K = {
 	reachMargin = 150,    -- an enemy hero counts as dangerous within its reach plus this, plus half a second walking
 	reachCap = 1200,      -- cast ranges above this (global ultimates) count as this
 	tradeHp = 0.35,       -- no trade below this health
-	tradeEvery = 1.0,     -- seconds between two right-clicks on a hero
+	tradeEvery = 0.2,     -- seconds between two right-clicks on a hero: the attack's own cooldown sets the pace. With 1 s, the
+	                      -- gap sent it walking between shots: 2,1 attacks per fighting window against OHA's 4,4 (presion6)
+	answerReach = 200,    -- a hit is answered also from this much beyond our range: one step, not letting nukes go free
 	pressEdge = 1.2,      -- step forward and hit, with nothing else to do, if the trade (intercambio.lua: his time to kill
 	                      -- us over ours) reaches this
 	pressReach = 300,     -- how far beyond our range we walk to press him
@@ -448,7 +450,7 @@ local function RuleTrade(bot, s, p, ready, soon)
 				local kind = nil
 				-- Once the lane is over, alone: no pressing, and hitting back only from out of its reach.
 				local company = not s.late or Medio.Allies(bot) > 0
-				if inRange and hit and (v.ratio >= K.loseEdge or p.hp >= K.loseHp) and (company or v.outranged) then kind = 'contesto'
+				if d <= p.range + K.answerReach and hit and (v.ratio >= K.loseEdge or p.hp >= K.loseHp) and (company or v.outranged) then kind = 'contesto'
 				elseif company and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono'
 				-- Alone, a free shot: in our range and well out of its reach, nobody else near, winning the trade. It is what the
 				-- range is for, and it stood there instead (presion3: 66 of 74 such seconds without firing).
@@ -577,7 +579,7 @@ local function Decide(bot, s, p)
 		if r then return r end
 	end
 	if late and ready == nil and not hidden then
-		r = Medio.Neutrals(bot, s, p)
+		r = Medio.Group(bot, s, p) or Medio.Neutrals(bot, s, p)
 		if r then return r end
 	end
 	local holdAt = late and Medio.HoldSpot(bot, s, p, LanePoint(p)) or nil
