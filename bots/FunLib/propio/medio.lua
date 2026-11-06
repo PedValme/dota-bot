@@ -36,6 +36,13 @@ local K = {
 	facing = 30,         -- degrees within which a Force Staff on ourselves goes the way we want
 	itemAgain = 1.5,     -- seconds before ordering the same item again: a push order takes a moment to start, and repeating it
 	                     -- each tick left the hero standing there (lobby 2026-11-05: 5 Pike orders in 0,5 s while dying)
+	enemyTower = 0.6,    -- an enemy tower near a spot adds this to its risk: alone, it does not stand at the foot of one
+	enemyTowerNear = 1600,
+	laneWalk = 2500,     -- a change of lane is walked only this far; farther needs the teleport ready: it was crossing the map on
+	                     -- foot, in the middle of a fight, when it died (presion-propio: 6.000-7.000 from its lane)
+	hideRisk = 0.9,      -- a walk is done hidden only toward an enemy seen near: the Blade is first of all the way out
+	hideFar = 3000,      -- ...and not for a walk this long, which it will not last
+	blockNear = 1200,    -- a retreat does not take a tower with an enemy this near us standing closer to it than we are
 	holdRisk = 0.9,      -- alone, a spot with this risk is not walked to: an enemy seen near it. With 0.4, three enemies missing
 	                     -- were enough and it spent 13-24 % of the game waiting (medio2: 138,7 last hits at minute 25, 175,5 before)
 	holdFromTower = 500, -- ...it stays this far from our nearest tower, toward the lane
@@ -104,6 +111,12 @@ function M.Risk(bot, loc)
 			break
 		end
 	end
+	for _, t in ipairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS) or {}) do
+		if t ~= nil and not t:IsNull() and t:IsAlive() and t:IsTower() and D2(loc, t:GetLocation()) < K.enemyTowerNear then
+			risk = risk + K.enemyTower
+			break
+		end
+	end
 	return risk
 end
 
@@ -111,14 +124,17 @@ end
 -- when it changes.
 function M.ChooseLane(bot, s, p)
 	s.lane = s.lane or LANE_MID
-	if p.now - (s.laneAt or -1000) < K.laneEvery then return nil end
+	-- With an enemy in sight this is no time to leave for another lane.
+	if p.now - (s.laneAt or -1000) < K.laneEvery or #p.enemyHeroes > 0 then return nil end
 	s.laneAt = p.now
+	local tp = bot:FindItemSlot('item_tpscroll')
+	local canJump = tp >= 0 and (tp <= 5 or tp == 15) and bot:GetItemInSlot(tp) ~= nil and bot:GetItemInSlot(tp):IsFullyCastable()
 	local scores, best, bestScore = {}, s.lane, 1e9
 	for _, lane in ipairs({ LANE_TOP, LANE_MID, LANE_BOT }) do
 		local front = GetLaneFrontLocation(p.team, lane, 0)
 		local score = M.Risk(bot, front) + D2(p.loc, front) / K.laneTravel
 		scores[lane] = score
-		if score < bestScore then best, bestScore = lane, score end
+		if score < bestScore and (lane == s.lane or canJump or D2(p.loc, front) <= K.laneWalk) then best, bestScore = lane, score end
 	end
 	if best ~= s.lane and bestScore + K.laneGain <= scores[s.lane] then
 		local old = s.lane
@@ -206,9 +222,9 @@ end
 
 -- A walk that is long enough, toward a spot with risk and with no enemy tower near (towers see through it), is done hidden.
 function M.Hide(bot, s, p, to)
-	if to == nil or D2(p.loc, to) < K.hideTravel or not CanHide(bot) or #p.enemyTowers > 0 then return nil end
+	if to == nil or D2(p.loc, to) < K.hideTravel or D2(p.loc, to) > K.hideFar or not CanHide(bot) or #p.enemyTowers > 0 then return nil end
 	local blade = ReadyItem(bot, s, p, INVIS)
-	if blade == nil or M.Risk(bot, to) <= 0 then return nil end
+	if blade == nil or M.Risk(bot, to) < K.hideRisk then return nil end
 	return { intent = 'usar_objeto', item = blade, reason = string.format('entro oculto, a %d del destino', D2(p.loc, to)) }
 end
 
@@ -290,6 +306,25 @@ function M.NearestTower(loc)
 		if t ~= nil and not t:IsNull() and t:IsAlive() and t:IsTower() then
 			local d = D2(loc, t:GetLocation())
 			if d < bestD then best, bestD = t, d end
+		end
+	end
+	return best
+end
+
+-- The tower to run to: the nearest one that does not lead through them: none with an enemy near us who stands closer to it than
+-- we are. Nil means the fountain.
+function M.RetreatTower(bot, p)
+	local best, bestD = nil, 1e9
+	for _, t in ipairs(GetUnitList(UNIT_LIST_ALLIED_BUILDINGS) or {}) do
+		if t ~= nil and not t:IsNull() and t:IsAlive() and t:IsTower() then
+			local d = D2(p.loc, t:GetLocation())
+			if d < bestD then
+				local blocked = false
+				for _, e in ipairs(p.enemyHeroes) do
+					if Valid(e) and D2(p.loc, e:GetLocation()) < K.blockNear and D2(e:GetLocation(), t:GetLocation()) < d then blocked = true end
+				end
+				if not blocked then best, bestD = t, d end
+			end
 		end
 	end
 	return best

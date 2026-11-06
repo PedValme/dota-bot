@@ -294,8 +294,11 @@ local function RuleRetreat(bot, s, p)
 		return { intent = 'salir_de_torre', reason = reason, to = Toward(p.loc, Home(p.team), 500) }
 	end
 	local spot, name = SafeSpot(p.team, s.lane)
-	local nearest = s.late and Medio.NearestTower(p.loc) or nil
-	if nearest ~= nil then spot, name = Toward(nearest:GetLocation(), Home(p.team), 250), 'torre_cercana' end
+	if s.late then
+		local tower = Medio.RetreatTower(bot, p)
+		if tower ~= nil then spot, name = Toward(tower:GetLocation(), Home(p.team), 250), 'torre_cercana'
+		else spot, name = Fountain(p.team), 'fuente' end
+	end
 	return { intent = 'retirada', reason = reason .. ' -> ' .. name, to = spot }
 end
 
@@ -834,7 +837,7 @@ function L.Think()
 			bot:GetAttributeValue(ATTRIBUTE_AGILITY), bot:GetAttributeValue(ATTRIBUTE_INTELLECT)))
 	end
 	local treads = (p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.TreadsToAgility(bot, s, p.now) or nil
-	local filler = (s.late and treads == nil and p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.FillerToDrop(bot, s, p.now) or nil
+	local filler = (treads == nil and p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.FillerToDrop(bot, s, p.now) or nil
 	if filler ~= nil then
 		bot:Action_DropItem(filler, p.loc)
 		s.busyUntil, s.moveTo = p.now + 0.05, nil

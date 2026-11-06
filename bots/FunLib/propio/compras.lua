@@ -83,7 +83,8 @@ function P.FillerToDrop(bot, s, now)
 	if now - (s.dropAt or -1000) < 5 then return nil end
 	local used = 0
 	for slot = 0, 8 do if bot:GetItemInSlot(slot) ~= nil then used = used + 1 end end
-	if used < 8 then return nil end
+	-- In the lane only with the nine full: there a branch still gives stats.
+	if used < (s.late and 8 or 9) then return nil end
 	local slot = bot:FindItemSlot('item_branches')
 	if slot < 0 or slot > 8 then return nil end
 	s.dropAt = now
@@ -173,6 +174,14 @@ function P.Buy(bot, s, now)
 	local queue = P.Queue(bot, s)
 	local next = queue[s.buyIndex]
 	if next == nil then return nil end
+	-- The next item waits until the Treads are assembled. A Belt of Strength (Dragon Lance) arriving with their parts makes them
+	-- strength Treads, leaves the Boots of Elves over and the Lance without its part: it never came together, the inventory
+	-- filled and the courier went back and forth for minutes (presion-propio 3, t=210-575). A minute at most.
+	if not s.treadsDone and next.of ~= 'item_power_treads' and next.of ~= 'item_wraith_band' then
+		local slot = bot:FindItemSlot('item_power_treads')
+		s.treadsWait = s.treadsWait or now
+		if slot >= 0 or now - s.treadsWait > 60 then s.treadsDone = true else return nil end
+	end
 	local cost = GetItemCost(next.part)
 	bot:SetNextItemPurchaseValue(cost)
 	if IsItemPurchasedFromSecretShop(next.part) then
