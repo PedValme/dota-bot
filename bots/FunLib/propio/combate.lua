@@ -154,10 +154,10 @@ function C.Continue(bot, s, p)
 	return { intent = c.kind, target = e, reason = string.format('%s vida %d a %d', c.name, e:GetHealth(), d) }, nil
 end
 
--- Walking out for a kill: off in the lane (DECISIONES 2026-11-04: 8 of 8 with no kill); once the lane is over, only with an ally beside
--- it. Hunting in company is the middle game's kills (8,8 against OHA's 13,0, fijo-p2).
+-- Walking out for a kill: off (DECISIONES 2026-11-04: 8 of 8 with no kill). Tried once the lane is over and with an ally beside it:
+-- 43 chases, 4 kills, and worse overall (fijo-p4 against fijo-p2).
 local function MayRotate(bot, s)
-	return K.rotar or (s.late and Medio.Allies(bot) > 0)
+	return K.rotar
 end
 
 -- What a kill on this enemy looks like now: the numbers Start() decides on.
