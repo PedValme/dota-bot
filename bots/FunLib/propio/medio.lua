@@ -36,9 +36,10 @@ local K = {
 	facing = 30,         -- degrees within which a Force Staff on ourselves goes the way we want
 	itemAgain = 1.5,     -- seconds before ordering the same item again: a push order takes a moment to start, and repeating it
 	                     -- each tick left the hero standing there (lobby 2026-11-05: 5 Pike orders in 0,5 s while dying)
-	holdRisk = 0.4,      -- alone, a spot with this risk is not walked to: three enemies missing are enough
+	holdRisk = 0.9,      -- alone, a spot with this risk is not walked to: an enemy seen near it. With 0.4, three enemies missing
+	                     -- were enough and it spent 13-24 % of the game waiting (medio2: 138,7 last hits at minute 25, 175,5 before)
 	holdFromTower = 500, -- ...it stays this far from our nearest tower, toward the lane
-	sureKill = 2.0,      -- alone, a chase starts only with this many times the margin
+	sureKill = 1.5,      -- alone, a chase starts only with this many times the margin (with 2.0: 2,7 kills from minute 10, 8,5 before)
 }
 
 local function D2(a, b)

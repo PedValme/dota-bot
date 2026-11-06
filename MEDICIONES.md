@@ -1086,4 +1086,15 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Pregunta: ¿los cambios actúan sin dejarlo sin farmear?
 - Predicción: `prop acoso presiono` después del medio juego solo con aliados cerca; decisiones `esperar` en todas las partidas; 0 repeticiones de un objeto en
   menos de 1,5 s; LH del min 25 por debajo de 175, por esperar: **es el coste**; si baja de 150, espera demasiado.
+- Máquina: CPU media 44 %. Código `328b542`, 4 de 4 válidas, sorteo; 1 partida acabó antes del min 25.
+- Resultado: min 10, 57,0 LH y 0 muertes. Min 25 (n=3): **138,7 LH**, 0,7 muertes, 2,7 kills desde el min 10, patrimonio 18.066, 503 de oro sin gastar. Frente a `medio1`:
+  175,5, 0,0, 8,5 y 26.448. 0 errores. Espera el 13-24 % del tiempo tras el min 12.
+- Lectura: **espera demasiado**, bajo el umbral de 150 fijado antes. No muere menos que `medio1`, aunque con 3-4 partidas y rivales distintos eso no se separa del azar. Con
+  `holdRisk` 0,4, tres enemigos fuera del mapa bastaban, y frente a bots de Valve casi siempre faltan.
+  Pedro añadió de su partida: «se quedó parado como pendejo»; candidato en el registro: t=393-413, 20 s quieto en la torre con 0,27 de vida, sin salvia (sin confirmar).
+- Decisión: esperar solo con un enemigo visto cerca (0,9); persecución en solitario desde 1,5 veces el margen; sin salvia y con TP, a la fuente si recuperarse tarda más de 15 s.
+
+### 2026-11-05 · Humo del ajuste (`medio3`, 4 partidas del propio, min 25): predicción antes de lanzar
+- Pregunta: ¿recupera el farm sin volver a presionar solo?
+- Predicción: `esperar` por debajo del 10 % del tiempo; LH del min 25 por encima de 150; kills desde el min 10, entre 2,7 y 8,5; menos tramos de 12 s o más quieto con `retirada`.
 - Máquina: se anota con el resultado.
