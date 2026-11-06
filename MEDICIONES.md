@@ -1146,4 +1146,11 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   OHA: 27 % del tiempo empujando o defendiendo y 8 % en `TEAM_ROAM`.
 - Qué cambió: `tradeEvery` de 1 a 0,2 s, porque el hueco lo mandaba a andar entre disparos; `Medio.Group`, ir detrás de dos o más aliados juntos; del daño medido cuenta el 60 %, porque un hechizo se leía como daño sostenido; contestar también a 200 más allá de su alcance.
 - Predicción: ataques por ventana activa de 2,1 hacia 3 o más; ventanas con daño de 17 % hacia 25 %; sin devolver, por debajo del 49 %; muertes más altas que 0,5 (es el coste; preocupa por encima de OHA, 2,0); LH por debajo de 212, por ir con el grupo.
+- Máquina: CPU media 43 %. Código `6844b6d`, 4 de 4 válidas, 0 errores.
+- Resultado: min 10: 58,8 LH, 0,3 muertes; **sin devolver 13 %** (10 de 79; antes 49 %), rival de mid 14,8 LH (antes 20,3). Min 25: 205,3 LH, 0,5 muertes, 5,3 kills, patrimonio 22.919. Tras el min 12: **3,7 ataques y 1.020 de daño por ventana activa** (OHA 4,4 y 1.016), pero **ventanas con daño 14 %** (OHA 28 %) y 11.474 de daño por partida (OHA 22.342).
+- Lectura: acertada en cadencia y en contestar. Falló en tiempo peleando: sigue bajo, y `con_el_grupo` solo ocupa el 4 %.
+- Decisión: unirse con las fuerzas algo en contra (`fightOdds` 1) y buscar al grupo desde más lejos (6.000): `presion8`.
+
+### 2026-11-06 · Humo de unirse más a las peleas (`presion8`, 4 partidas, min 25): predicción antes de lanzar
+- Predicción: ventanas con daño de 14 % hacia 20 % o más; kills por encima de 5,3; muertes por encima de 0,5, sin pasar de OHA (2,0); LH bajando de 205.
 - Máquina: se anota con el resultado.
