@@ -1066,3 +1066,24 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - `prop nivel` salta del 14 al 18 también en OHA (`learn`, de t=654 a t=889): **lo hace el motor**, no es un defecto. Corrección a lo anotado.
 - Validez: 4 partidas por brazo, sin intervalos, bots de Valve que no castigan como un humano. Las 0 muertes no se trasladan a una partida contra Pedro.
 - Decisión: mecanismo limpio; avisar a Pedro para que juegue.
+
+### 2026-11-05 · Tercera partida de Pedro contra el Sniper propio (lobby, con registro: `lobby-202611060402.log`)
+- Lo que contó: «ha mejorado bastante, se hace invisible y es algo más escurridizo, pero sigue posicionandose mal o atacando solo a pesar de que es
+  uno de los heroes mas endebles». Código `3dffae7`, partida de 37 min.
+- Resultado del registro: 7 muertes (10 antes), 2 kills (5 antes), oro gastado (428 y 188 en los min 30 y 35, frente a 17.087). 10 cambios de línea: la
+  regla sí actúa cuando hay riesgo. Por lo que se ve en los 14 s antes de cada muerte:
+  - **El `ratio` veía poco daño:** Bloodseeker 258 y hacía 476 por segundo; Alchemist 35 y hacía 128. Faltan críticos, habilidades y robo de vida: seguía
+    contestando y presionando cuerpo a cuerpo (a 68, 190 y 233 de distancia), con `ratio` 1,3-2.
+  - **Presiona solo:** 35 `presiono` después del min 10, sin mirar si hay aliados. En 3 de 7 muertes sale `presiono` o `contesto` poco antes.
+  - **Pike repetido:** 5 órdenes en 0,5 s en t=1198, mientras moría; el héroe no llegó a separarse.
+  - **Va a la línea aunque esté solo y falten enemigos:** en 3 muertes lo cazan en otra línea, a 3.200-4.400 del frente, recién teletransportado o yendo.
+  - Las dos primeras, frente a Alchemist en la línea, también caen en lo primero: la fase de línea tampoco queda libre contra un humano.
+- Validez: una partida; la cuenta de causas es por lectura, no por medida. El registro de un lobby no tiene líneas `obs`: las muertes se ven como huecos en `estado`.
+- Decisión, dentro de lo que pidió Pedro: `ratio` con el daño real de los últimos 2 s; solo y tras la línea, no presiona, contesta solo fuera del alcance enemigo,
+  no empieza persecuciones salvo kill clara, y si hay riesgo espera junto a su torre; cada objeto, como mucho cada 1,5 s.
+
+### 2026-11-05 · Humo de «no atacar solo» (`medio2`, 4 partidas del propio, min 25): predicción antes de lanzar
+- Pregunta: ¿los cambios actúan sin dejarlo sin farmear?
+- Predicción: `prop acoso presiono` después del medio juego solo con aliados cerca; decisiones `esperar` en todas las partidas; 0 repeticiones de un objeto en
+  menos de 1,5 s; LH del min 25 por debajo de 175, por esperar: **es el coste**; si baja de 150, espera demasiado.
+- Máquina: se anota con el resultado.
