@@ -1163,3 +1163,15 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Resultado OHA: `-a` 141,5 LH, 2,5 muertes, 14,5 kills, 25.570, 10.170 de oro sin gastar. `-b` 180,0, 0,5, 11,5, 27.315, 11.915. Su patrimonio incluye ese oro sin usar.
 - **`fijo-p1`, sin terminar:** de 4 partidas, 2 válidas, 1 `sin-gsi` y la última cortada: el sistema detuvo la corrida por falta de memoria (5 % libre, 77 GB en cuatro Unreal Editor ajenos al banco). No se lee.
 - Pendiente de jugar, sin medir: daño aprendido de cada rival (`967f1a6`), Assassinate para abrir peleas y segundo nivel antes (`ec08a0e`).
+
+### 2026-11-06 · Vuelta con héroes fijos (`fijo-p2-a`/`-b`, 2 y 2, min 25): predicción antes de lanzar
+- Pregunta: con todo lo pendiente de jugar, ¿cómo queda cada punto del pulido frente a `fijo-oha-a`/`-b`? Pedro confirma memoria: «ya hay recursos disponibles continua». Primera vuelta de las 6 fijadas con este método.
+- Predicción: contra Viper, muertes muy por debajo de las 9 de `presion8`; daño con Assassinate por encima de 680 por partida; kills por encima de 5,3; patrimonio por encima de 22.919. Con 4 partidas, solo mueve la decisión lo que salga de lejos.
+- Máquina: 36 % de memoria libre al lanzar (45,5 GB), con un Unreal Editor ajeno de 35 GB. CPU media 50-52 %.
+- Resultado (`pulido.mjs`, 4 partidas por brazo, mismos héroes), propio y OHA: LH 199,3 y 160,8 ✓; muertes 1,3 y 1,5 ✓; patrimonio 24.742 y 26.442 (−6 %, ✗ por poco; OHA lleva 11.042 sin gastar); kills 8,8 y 13,0 (68 %, ✗); daño a héroes 15.975 y 21.823 (73 %, ✗); sin devolver 29,8 % y 27,4 % (✗ frente a 17 %); rival 27,5 y 26,8 LH (✗ por poco). Ventanas con daño 20,5 % y 29,8 %. 33 Assassinate para abrir peleas. 0 errores.
+- Lectura: contra Viper, 3 muertes en 2 partidas, frente a 9 en una. Predicciones cumplidas. Queda tiempo peleando.
+- Decisión: vuelta 2: cazar con compañía tras la línea, TP a peleas con torre hasta 3.000, grupo a 1.200, contestar aunque madure un último golpe.
+
+### 2026-11-06 · Vuelta 2 con héroes fijos (`fijo-p3-a`/`-b`): predicción antes de lanzar
+- Predicción: ventanas con daño de 20 % hacia 25 %; kills de 8,8 a 10 o más; sin devolver por debajo de 30 %; muertes por encima de 1,3, sin pasar de 2.
+- Máquina: se anota con el resultado.
