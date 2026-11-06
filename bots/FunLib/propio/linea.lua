@@ -38,6 +38,7 @@ local STARTING_ITEMS = { 'item_tango', 'item_flask', 'item_branches', 'item_bran
 -- Thresholds of the rules (one place, so the log and the rules agree).
 local K = {
 	retreatHp = 0.30,     -- retreat below this health fraction
+	exposedHp = 0.45,     -- ...or below this one with an enemy hero able to reach us
 	returnHp = 0.65,      -- come back to the lane above it
 	fountainHp = 0.20,    -- below it, without a salve, go heal at the fountain
 	enemyBurst = 0.80,    -- retreat if the visible enemy heroes can deal this share of our health in 3 s
@@ -261,6 +262,11 @@ local function RuleRetreat(bot, s, p)
 	elseif s.late and p.hp < K.lateHomeHp and HasItem(bot, 'item_flask') == nil then
 		reason = string.format('vida %.2f < %.2f sin salvia', p.hp, K.lateHomeHp)
 		s.lowHp = true
+	-- Touched, and an enemy that can reach us: out now, before its next spell decides it (presion4: three deaths in lane to Lina,
+	-- from 0,3-0,5 of health; Pedro, 2026-11-05: «asume mas daño [d]el necesario antes de escapar»).
+	elseif p.hp < K.exposedHp and p.enemyBurst > 0 then
+		reason = string.format('expuesto %.2f < %.2f', p.hp, K.exposedHp)
+		s.burstUntil = p.now + K.burstHold
 	-- Once the lane is over, more enemies than friends on us is reason enough, before any damage.
 	elseif s.late and Medio.Outnumbered(bot, p) ~= nil then
 		reason = Medio.Outnumbered(bot, p)
