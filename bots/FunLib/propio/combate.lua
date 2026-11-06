@@ -154,6 +154,12 @@ function C.Continue(bot, s, p)
 	return { intent = c.kind, target = e, reason = string.format('%s vida %d a %d', c.name, e:GetHealth(), d) }, nil
 end
 
+-- Walking out for a kill: off in the lane (DECISIONES 2026-11-04: 8 of 8 with no kill); once the lane is over, only with an ally beside
+-- it. Hunting in company is the middle game's kills (8,8 against OHA's 13,0, fijo-p2).
+local function MayRotate(bot, s)
+	return K.rotar or (s.late and Medio.Allies(bot) > 0)
+end
+
 -- What a kill on this enemy looks like now: the numbers Start() decides on.
 local function Evaluate(bot, p, e, d)
 	local dmg, helpers, hits, burst = SideDamage(bot, p, e)
@@ -177,7 +183,7 @@ function C.KillEval(bot, s, p)
 			local unsafe = Unsafe(bot, p, e)
 			local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
 			local veto = (banned and 'veto_reciente') or (v.score < v.margin and 'margen') or (unsafe and 'inseguro')
-				or (v.kind == 'rotar' and not (K.rotar and v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
+				or (v.kind == 'rotar' and not (MayRotate(bot, s) and v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
 			lines = lines or {}
 			-- intencion: the previous decision's. veto=- is not "it starts": the rules before Start() may still win.
 			local trade = Intercambio.Eval(bot, p, e)
@@ -202,7 +208,7 @@ function C.Start(bot, s, p)
 		if d <= K.rotateMax and not banned then
 			local v = Evaluate(bot, p, e, d)
 			if v.score >= v.margin and Medio.MayStart(bot, s, v.score, v.margin)
-				and (v.kind == 'matar' or (K.rotar and v.travel <= K.rotateTravel and p.hp > 0.6))
+				and (v.kind == 'matar' or (MayRotate(bot, s) and v.travel <= K.rotateTravel and p.hp > 0.6))
 				and Unsafe(bot, p, e) == nil and v.score > bestScore then
 				best, bestScore = { e = e, d = d, dmg = v.dmg, helpers = v.helpers, kind = v.kind }, v.score
 			end
