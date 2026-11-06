@@ -57,6 +57,8 @@ local K = {
 	pressEdge = 1.2,      -- step forward and hit, with nothing else to do, if the trade (intercambio.lua: his time to kill
 	                      -- us over ours) reaches this
 	pressReach = 300,     -- how far beyond our range we walk to press him
+	freeShotGap = 250,    -- a free shot, alone, from at least this much beyond its attack range
+	freeShotHp = 0.5,
 	-- When hit there is no third way: step away if the trade is below loseEdge and we are under loseHp, else hit back.
 	-- With a gap between both it stood there taking hits (fase1j: 10 of 23 harassed windows with no answer, ratio 0,5-0,8).
 	loseEdge = 0.7,
@@ -441,7 +443,11 @@ local function RuleTrade(bot, s, p, ready, soon)
 				-- Once the lane is over, alone: no pressing, and hitting back only from out of its reach.
 				local company = not s.late or Medio.Allies(bot) > 0
 				if inRange and hit and (v.ratio >= K.loseEdge or p.hp >= K.loseHp) and (company or v.outranged) then kind = 'contesto'
-				elseif company and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono' end
+				elseif company and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono'
+				-- Alone, a free shot: in our range and well out of its reach, nobody else near, winning the trade. It is what the
+				-- range is for, and it stood there instead (presion3: 66 of 74 such seconds without firing).
+				elseif not company and ready == nil and d <= p.range and d >= e:GetAttackRange() + K.freeShotGap
+					and #p.enemyHeroes == 1 and v.ratio >= K.pressEdge and p.hp >= K.freeShotHp then kind = 'disparo' end
 				if kind ~= nil then
 					return { intent = 'acosar', target = e, walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1),
 						reason = string.format('%s a %s: ratio %.2f, mi_dps %d, su_dps %d, altura %d, a %d', kind,
