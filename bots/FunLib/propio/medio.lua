@@ -22,6 +22,7 @@ local K = {
 	laneTravel = 6000,   -- each this many units of walking cost 1 of risk
 	fightReach = 3500,   -- a fight this far is worth walking to; farther, by teleport
 	fightTpAllies = 2,   -- ...with this many allies in it
+	fightAloneReach = 2500, -- a fight of one ally is walked to only from this close
 	fightTpTower = 2000, -- ...and one of our towers this close to it
 	fightTpHp = 0.6,
 	farmHp = 0.5,        -- no neutrals below this health
@@ -48,8 +49,7 @@ local K = {
 	enemyTowerNear = 1600,
 	laneWalk = 2500,     -- a change of lane is walked only this far; farther needs the teleport ready: it was crossing the map on
 	                     -- foot, in the middle of a fight, when it died (presion-propio: 6.000-7.000 from its lane)
-	hideRisk = 0.9,      -- a walk is done hidden only toward an enemy seen near: the Blade is first of all the way out
-	hideFar = 3000,      -- ...and not for a walk this long, which it will not last
+	hideFar = 3000,      -- a walk this long is not done hidden: it will not last, and it left the Blade on cooldown for the fight
 	blockNear = 1200,    -- a retreat does not take a tower with an enemy this near us standing closer to it than we are
 	holdRisk = 0.9,      -- alone, a spot with this risk is not walked to: an enemy seen near it. With 0.4, three enemies missing
 	                     -- were enough and it spent 13-24 % of the game waiting (medio2: 138,7 last hits at minute 25, 175,5 before)
@@ -101,7 +101,7 @@ end
 
 -- How risky a spot is: enemies seen and near it (or able to have walked there), the missing ones a little, allies and our
 -- towers near it the other way. Roughly, the number of enemies more than friends the hero would meet there.
-function M.Risk(bot, loc)
+function M.Risk(bot, loc, noEnemyTower)
 	local risk = 0
 	for _, e in ipairs(Enemies()) do
 		if e.location == nil or e.since > K.seenRecent then
@@ -119,6 +119,7 @@ function M.Risk(bot, loc)
 			break
 		end
 	end
+	if noEnemyTower then return risk end
 	for _, t in ipairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS) or {}) do
 		if t ~= nil and not t:IsNull() and t:IsAlive() and t:IsTower() and D2(loc, t:GetLocation()) < K.enemyTowerNear then
 			risk = risk + K.enemyTower
@@ -194,7 +195,8 @@ end
 
 -- Alone and with risk at the spot, it stays by our nearest tower instead of walking down the lane. Returns that spot, or nil.
 function M.HoldSpot(bot, s, p, spot)
-	if M.Allies(bot) > 0 or M.Risk(bot, spot) < K.holdRisk then return nil end
+	-- The tower does not count here: when we push, the front is at theirs, and LanePoint already keeps its distance.
+	if M.Allies(bot) > 0 or M.Risk(bot, spot, true) < K.holdRisk then return nil end
 	local tower = M.NearestTower(p.loc)
 	if tower == nil or D2(spot, tower:GetLocation()) <= K.holdFromTower then return nil end
 	return Toward(tower:GetLocation(), spot, K.holdFromTower)
@@ -232,7 +234,7 @@ end
 function M.Hide(bot, s, p, to)
 	if to == nil or D2(p.loc, to) < K.hideTravel or D2(p.loc, to) > K.hideFar or not CanHide(bot) or #p.enemyTowers > 0 then return nil end
 	local blade = ReadyItem(bot, s, p, INVIS)
-	if blade == nil or M.Risk(bot, to) < K.hideRisk then return nil end
+	if blade == nil or M.Risk(bot, to) <= 0 then return nil end
 	return { intent = 'usar_objeto', item = blade, reason = string.format('entro oculto, a %d del destino', D2(p.loc, to)) }
 end
 
@@ -272,7 +274,9 @@ local function FightWithin(bot, p, enemies, reach)
 			local target = a:GetAttackTarget()
 			local hurt = a:WasRecentlyDamagedByAnyHero(2.0)
 			for _, e in ipairs(enemies) do
-				if D2(a:GetLocation(), e:GetLocation()) < K.allyEngaged and (target == e or hurt) then
+				-- Only allies in the same fight count: one in top and one in bot are not two against three.
+				if (center == nil or D2(center:GetLocation(), e:GetLocation()) < K.riskRadius)
+					and D2(a:GetLocation(), e:GetLocation()) < K.allyEngaged and (target == e or hurt) then
 					engaged, center = engaged + 1, center or e
 					break
 				end
@@ -293,6 +297,8 @@ function M.Fight(bot, s, p)
 	if #enemies == 0 then return nil end
 	local engaged, center, near = FightWithin(bot, p, enemies, K.fightReach)
 	if engaged == 0 or near - (engaged + 1) > K.fightOdds then return nil end
+	-- One ally alone is worth the walk only when close: else it drops the wave for a fight it will not reach.
+	if engaged < K.fightTpAllies and D2(p.loc, center:GetLocation()) > K.fightAloneReach then return nil end
 	local weakest, weakestHp, nearest, nearestD = nil, 1e9, nil, 1e9
 	for _, e in ipairs(enemies) do
 		local d = D2(p.loc, e:GetLocation())
@@ -305,8 +311,9 @@ function M.Fight(bot, s, p)
 	end
 	if nearest == nil or p.hp < K.fightHp then return nil end
 	local spot = Toward(nearest:GetLocation(), p.loc, p.range - K.standBack)
-	for _, tw in ipairs(p.enemyTowers) do
-		if Valid(tw) and D2(spot, tw:GetLocation()) < K.towerMargin then return nil end
+	-- Every tower, also in the fog: seeing it only once near made it turn back and walk in again.
+	for _, tw in ipairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS) or {}) do
+		if tw ~= nil and not tw:IsNull() and tw:IsAlive() and tw:IsTower() and D2(spot, tw:GetLocation()) < K.towerMargin then return nil end
 	end
 	if CanHide(bot) and nearestD > p.range + K.hideTravel / 3 then
 		local blade = ReadyItem(bot, s, p, INVIS)
@@ -329,6 +336,13 @@ function M.TeleportToFight(bot, s, p)
 	local tower = M.NearestTower(center:GetLocation())
 	if tower == nil or D2(tower:GetLocation(), center:GetLocation()) > K.fightTpTower then return nil end
 	s.tpAt = p.now
+	-- The lane it plays is now the one there: else, after the fight, it would cross the map on foot back to the old one.
+	local nearestLane, laneD = s.lane, 1e9
+	for _, lane in ipairs({ LANE_TOP, LANE_MID, LANE_BOT }) do
+		local d = D2(tower:GetLocation(), GetLaneFrontLocation(p.team, lane, 0))
+		if d < laneD then nearestLane, laneD = lane, d end
+	end
+	s.lane = nearestLane
 	return { intent = 'teleporte', item = item, at = tower:GetLocation(),
 		reason = string.format('a la pelea: %d aliados, %d enemigos, a %d', engaged, near, D2(p.loc, center:GetLocation())) }
 end
@@ -336,7 +350,8 @@ end
 -- With no creeps in the lane, neutrals: the one in reach, else the nearest camp on our side with no risk. It spent 62 % of the time
 -- from minute 12 standing in the lane (presion-propio), and OHA's Sniper takes 53 neutrals in a match. Returns a decision or nil.
 function M.Neutrals(bot, s, p)
-	if p.hp < K.farmHp or #p.enemyCreeps > 0 then return nil end
+	-- With risk right here it does not stay hitting a creep until someone hits it.
+	if p.hp < K.farmHp or M.Risk(bot, p.loc) >= K.holdRisk then return nil end
 	local best, bestHp = nil, 1e9
 	local ancients = bot:GetLevel() >= K.ancientLevel
 	for _, c in ipairs(bot:GetNearbyNeutralCreeps(K.neutralNear) or {}) do
@@ -345,22 +360,39 @@ function M.Neutrals(bot, s, p)
 	if best ~= nil then
 		return { intent = 'farmear', target = best, reason = string.format('%s vida %d', (string.gsub(best:GetUnitName(), 'npc_dota_', '')), bestHp) }
 	end
-	if #p.enemyHeroes > 0 then return nil end
+	-- Walking to a camp only with no creeps in the lane and no enemy near. A camp begun is finished, above.
+	if #p.enemyHeroes > 0 or #p.enemyCreeps > 0 then return nil end
 	s.campEmpty = s.campEmpty or {}
-	local home, enemyHome = GetAncient(p.team):GetLocation(), GetAncient(GetOpposingTeam()):GetLocation()
-	local camp, campD = nil, K.campReach
-	for _, c in ipairs(GetNeutralSpawners() or {}) do
-		local loc = c.location
-		local key = string.format('%d_%d', loc.x, loc.y)
-		local d = D2(p.loc, loc)
+	-- pairs, as OHA reads this list; the keys are not documented. The camp is chosen once a second: Risk per camp each tick is dear.
+	if s.camps == nil then
+		s.camps = {}
+		for _, c in pairs(GetNeutralSpawners() or {}) do
+			if c.location ~= nil then
+				table.insert(s.camps, { loc = c.location, ancient = c.type == 'ancient', key = string.format('%d_%d', c.location.x, c.location.y) })
+			end
+		end
+		print(string.format('[bench] prop medio t=%.1f pid=%d campamentos=%d', p.t, bot:GetPlayerID(), #s.camps))
+	end
+	for _, c in ipairs(s.camps) do
 		-- Arrived and nothing to hit: empty until the next minute, when camps refill.
-		if d < K.campArrive then s.campEmpty[key] = p.t - p.t % 60 + 60 end
-		if d < campD and (s.campEmpty[key] or -1000) <= p.t and D2(loc, home) < D2(loc, enemyHome) and M.Risk(bot, loc) < K.holdRisk then
-			camp, campD = loc, d
+		if D2(p.loc, c.loc) < K.campArrive then s.campEmpty[c.key] = p.t - p.t % 60 + 60 end
+	end
+	if p.now - (s.campPickAt or -1000) >= 1 then
+		s.campPickAt = p.now
+		s.campPick = nil
+		local home, enemyHome = GetAncient(p.team):GetLocation(), GetAncient(GetOpposingTeam()):GetLocation()
+		local bestD = K.campReach
+		for _, c in ipairs(s.camps) do
+			local d = D2(p.loc, c.loc)
+			if d < bestD and (ancients or not c.ancient) and (s.campEmpty[c.key] or -1000) <= p.t
+				and D2(c.loc, home) < D2(c.loc, enemyHome) and M.Risk(bot, c.loc) < K.holdRisk then
+				s.campPick, bestD = c, d
+			end
 		end
 	end
-	if camp == nil then return nil end
-	return { intent = 'a_neutrales', to = camp, reason = string.format('campamento a %d', campD) }
+	local pick = s.campPick
+	if pick == nil or (s.campEmpty[pick.key] or -1000) > p.t then return nil end
+	return { intent = 'a_neutrales', to = pick.loc, reason = string.format('campamento a %d', D2(p.loc, pick.loc)) }
 end
 
 -- Our nearest standing tower, wherever it is: a retreat does not cross the map to the lane it came to play.
@@ -377,7 +409,10 @@ end
 
 -- The tower to run to: the nearest one that does not lead through them: none with an enemy near us who stands closer to it than
 -- we are. Nil means the fountain.
-function M.RetreatTower(bot, p)
+function M.RetreatTower(bot, s, p)
+	-- The same tower through the whole flight: an enemy running beside it made the choice jump between two.
+	local kept = s.retreatTower
+	if kept ~= nil and not kept:IsNull() and kept:IsAlive() then return kept end
 	local best, bestD = nil, 1e9
 	for _, t in ipairs(GetUnitList(UNIT_LIST_ALLIED_BUILDINGS) or {}) do
 		if t ~= nil and not t:IsNull() and t:IsAlive() and t:IsTower() then
@@ -391,6 +426,7 @@ function M.RetreatTower(bot, p)
 			end
 		end
 	end
+	s.retreatTower = best
 	return best
 end
 

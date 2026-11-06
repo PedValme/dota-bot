@@ -71,6 +71,7 @@ local K = {
 	runeBan = 60,         -- ...and seconds before trying that one again
 	tpFrom = 3500,        -- this far from the lane's front, go back by teleport
 	tpRisk = 2,           -- no teleport to a tower with this risk (medio.lua)
+	lateHomeHp = 0.45,    -- once the lane is over and with no salve, home below this health
 	recoverWait = 15,     -- seconds of regeneration worth waiting for at a tower, without going home
 }
 
@@ -254,6 +255,10 @@ local function RuleRetreat(bot, s, p)
 		reason = string.format('peligro_reciente %.1fs', s.burstUntil - p.now)
 	-- Only a retreat for low health waits to recover up to returnHp; one for danger ends when the danger does.
 	elseif s.lowHp and p.hp < K.returnHp then reason = string.format('recuperando %.2f < %.2f', p.hp, K.returnHp)
+	-- Once the lane is over, with no salves and under this health it neither farms (Neutrals) nor helps anyone: home.
+	elseif s.late and p.hp < K.lateHomeHp and HasItem(bot, 'item_flask') == nil then
+		reason = string.format('vida %.2f < %.2f sin salvia', p.hp, K.lateHomeHp)
+		s.lowHp = true
 	-- Once the lane is over, more enemies than friends on us is reason enough, before any damage.
 	elseif s.late and Medio.Outnumbered(bot, p) ~= nil then
 		reason = Medio.Outnumbered(bot, p)
@@ -275,7 +280,7 @@ local function RuleRetreat(bot, s, p)
 	end
 	if p.hp >= K.returnHp then s.lowHp = false end
 	s.retreating = reason ~= nil
-	if reason == nil then s.toFountain, s.stepBack = false, false return nil end
+	if reason == nil then s.toFountain, s.stepBack, s.retreatTower = false, false, nil return nil end
 	if s.stepBack and not p.towerOnMe and p.hp >= K.retreatHp then
 		return { intent = 'alejarse', reason = reason, to = Toward(p.loc, Home(p.team), K.aggroStep) }
 	end
@@ -286,7 +291,7 @@ local function RuleRetreat(bot, s, p)
 		and bot:GetItemInSlot(15):IsFullyCastable()
 		and (K.returnHp - p.hp) * bot:GetMaxHealth() / math.max(bot:GetHealthRegen(), 0.1) > K.recoverWait
 	-- Once the lane is over nothing heals it at a tower (2.000 of health at 5 a second): any retreat for health ends at home.
-	if s.toFountain or waitLong or ((p.hp < K.fountainHp or (s.late and p.hp < K.retreatHp)) and HasItem(bot, 'item_flask') == nil) then
+	if s.toFountain or waitLong or ((p.hp < K.fountainHp or (s.late and s.lowHp)) and HasItem(bot, 'item_flask') == nil) then
 		s.toFountain = true
 		return { intent = 'retirada_fuente', reason = reason .. ', sin salvia', to = Fountain(p.team) }
 	end
@@ -295,7 +300,7 @@ local function RuleRetreat(bot, s, p)
 	end
 	local spot, name = SafeSpot(p.team, s.lane)
 	if s.late then
-		local tower = Medio.RetreatTower(bot, p)
+		local tower = Medio.RetreatTower(bot, s, p)
 		if tower ~= nil then spot, name = Toward(tower:GetLocation(), Home(p.team), 250), 'torre_cercana'
 		else spot, name = Fountain(p.team), 'fuente' end
 	end
@@ -452,6 +457,8 @@ end
 -- against 0). To the first standing tower of the lane we play, only from far enough and with no enemy near.
 local function RuleTeleport(bot, s, p)
 	if p.t < 0 or #p.enemyHeroes > 0 or D2(p.loc, p.front) < K.tpFrom then return nil end
+	-- Farming a camp it is where it wants to be: the scroll stays for the next fight.
+	if s.intent == 'a_neutrales' or s.intent == 'farmear' then return nil end
 	if p.now - (s.tpAt or -1000) < 5 then return nil end -- an order the engine took and did nothing with is not repeated
 	local slot = bot:FindItemSlot('item_tpscroll')
 	if slot < 0 or (slot > 5 and slot ~= 15) then return nil end
