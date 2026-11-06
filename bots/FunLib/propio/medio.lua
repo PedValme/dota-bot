@@ -25,7 +25,7 @@ local K = {
 	fightAloneReach = 2500, -- a fight of one ally is walked to only from this close
 	fightTpTower = 2000, -- ...and one of our towers this close to it
 	fightTpHp = 0.6,
-	groupReach = 3500,   -- a group this far is worth joining
+	groupReach = 6000,   -- a group this far is worth joining (with 3500: 4 % of the time with it, presion7)
 	groupNear = 900,     -- allies this close to each other are a group
 	groupBehind = 500,   -- ...and it stands this far behind them, toward home
 	groupThere = 500,    -- this close to that spot is being with them
@@ -35,7 +35,8 @@ local K = {
 	campReach = 3000,    -- camps this far are worth walking to (1800 cost farm: 150 last hits at minute 25 against 213, presion3 and 4)
 	campArrive = 300,    -- this close to a camp is being there
 	allyEngaged = 1100,  -- an ally this close to a visible enemy, and hitting or being hit, is fighting
-	fightOdds = 0,       -- join with at most this many enemies above our heroes there, ourselves counted
+	fightOdds = 1,       -- join with at most this many enemies above our heroes there, ourselves counted: it shoots from behind
+	                     -- the allies, and with 0 it skipped most fights (damage in 14 % of the windows against OHA's 28 %, presion7)
 	fightHp = 0.5,       -- no walking into a fight below this health
 	towerMargin = 820,   -- no walking this close to an enemy tower for a fight
 	standBack = 100,     -- stand this much inside our range from the nearest enemy
@@ -166,7 +167,8 @@ function M.Outnumbered(bot, p)
 	for _, a in ipairs(bot:GetNearbyHeroes(K.alliesNear, false, BOT_MODE_NONE) or {}) do
 		if a ~= bot and Valid(a) and not a:IsIllusion() then allies = allies + 1 end
 	end
-	if enemies - allies >= K.outnumbered then return string.format('superado %d enemigos, %d aliados', enemies, allies) end
+	-- With an ally beside it, one enemy more is tolerated, like Fight's odds: else it joined and left in a loop.
+	if enemies - allies >= K.outnumbered + (allies > 0 and 1 or 0) then return string.format('superado %d enemigos, %d aliados', enemies, allies) end
 	return nil
 end
 
