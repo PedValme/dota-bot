@@ -71,6 +71,7 @@ local K = {
 	runeBan = 60,         -- ...and seconds before trying that one again
 	tpFrom = 3500,        -- this far from the lane's front, go back by teleport
 	tpRisk = 2,           -- no teleport to a tower with this risk (medio.lua)
+	recoverWait = 15,     -- seconds of regeneration worth waiting for at a tower, without going home
 }
 
 local S = {} -- pid -> state of this bot
@@ -279,8 +280,13 @@ local function RuleRetreat(bot, s, p)
 		return { intent = 'alejarse', reason = reason, to = Toward(p.loc, Home(p.team), K.aggroStep) }
 	end
 	-- Once heading for the fountain it keeps going until healed (returnHp), not back and forth with the tower.
+	-- Waiting long for its regeneration, with no salve and a teleport to come back, it goes home instead of standing there
+	-- (lobby 2026-11-05: 20 s still at a tower with 0,27 of health).
+	local waitLong = s.lowHp and HasItem(bot, 'item_flask') == nil and bot:FindItemSlot('item_tpscroll') == 15
+		and bot:GetItemInSlot(15):IsFullyCastable()
+		and (K.returnHp - p.hp) * bot:GetMaxHealth() / math.max(bot:GetHealthRegen(), 0.1) > K.recoverWait
 	-- Once the lane is over nothing heals it at a tower (2.000 of health at 5 a second): any retreat for health ends at home.
-	if s.toFountain or ((p.hp < K.fountainHp or (s.late and p.hp < K.retreatHp)) and HasItem(bot, 'item_flask') == nil) then
+	if s.toFountain or waitLong or ((p.hp < K.fountainHp or (s.late and p.hp < K.retreatHp)) and HasItem(bot, 'item_flask') == nil) then
 		s.toFountain = true
 		return { intent = 'retirada_fuente', reason = reason .. ', sin salvia', to = Fountain(p.team) }
 	end
