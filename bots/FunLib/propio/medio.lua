@@ -34,6 +34,11 @@ local K = {
 	hideTravel = 1200,   -- a walk this long, in sight of risk, is done hidden
 	pushNear = 450,      -- Hurricane Pike reaches an enemy this close to push both apart
 	facing = 30,         -- degrees within which a Force Staff on ourselves goes the way we want
+	itemAgain = 1.5,     -- seconds before ordering the same item again: a push order takes a moment to start, and repeating it
+	                     -- each tick left the hero standing there (lobby 2026-11-05: 5 Pike orders in 0,5 s while dying)
+	holdRisk = 0.4,      -- alone, a spot with this risk is not walked to: three enemies missing are enough
+	holdFromTower = 500, -- ...it stays this far from our nearest tower, toward the lane
+	sureKill = 2.0,      -- alone, a chase starts only with this many times the margin
 }
 
 local function D2(a, b)
@@ -135,15 +140,39 @@ function M.Outnumbered(bot, p)
 	return nil
 end
 
-local function ReadyItem(bot, names)
+local function ReadyItem(bot, s, p, names)
 	for _, name in ipairs(names) do
 		local slot = bot:FindItemSlot(name)
-		if slot >= 0 and slot <= 5 then
+		if slot >= 0 and slot <= 5 and p.now - ((s.itemUsed or {})[name] or -1000) >= K.itemAgain then
 			local item = bot:GetItemInSlot(slot)
 			if item ~= nil and item:IsFullyCastable() then return item, name end
 		end
 	end
 	return nil
+end
+
+-- Allies with us. One of the frailest heroes in the game (Pedro, 2026-11-05: «atacando solo a pesar de que es uno de los
+-- heroes mas endebles»): alone, it does not start anything.
+function M.Allies(bot)
+	local n = 0
+	for _, a in ipairs(bot:GetNearbyHeroes(K.alliesNear, false, BOT_MODE_NONE) or {}) do
+		if a ~= bot and Valid(a) and not a:IsIllusion() then n = n + 1 end
+	end
+	return n
+end
+
+-- Whether a chase or a press may start: always in the lane, then with company or a kill beyond doubt.
+function M.MayStart(bot, s, score, margin)
+	if not s.late or M.Allies(bot) > 0 then return true end
+	return score ~= nil and margin ~= nil and score >= margin * K.sureKill
+end
+
+-- Alone and with risk at the spot, it stays by our nearest tower instead of walking down the lane. Returns that spot, or nil.
+function M.HoldSpot(bot, s, p, spot)
+	if M.Allies(bot) > 0 or M.Risk(bot, spot) < K.holdRisk then return nil end
+	local tower = M.NearestTower(p.loc)
+	if tower == nil or D2(spot, tower:GetLocation()) <= K.holdFromTower then return nil end
+	return Toward(tower:GetLocation(), spot, K.holdFromTower)
 end
 local INVIS = { 'item_silver_edge', 'item_invis_sword' }
 local PUSH = { 'item_hurricane_pike', 'item_force_staff' }
@@ -155,7 +184,7 @@ end
 -- While leaving with an enemy on us: push it away, jump, or vanish, whichever is ready, in that order.
 function M.Escape(bot, s, p, home)
 	if not bot:WasRecentlyDamagedByAnyHero(3.0) and #p.enemyHeroes == 0 then return nil end
-	local pike = ReadyItem(bot, { 'item_hurricane_pike' })
+	local pike = ReadyItem(bot, s, p, { 'item_hurricane_pike' })
 	if pike ~= nil then
 		for _, e in ipairs(p.enemyHeroes) do
 			if Valid(e) and not e:IsMagicImmune() and D2(p.loc, e:GetLocation()) < K.pushNear then
@@ -163,12 +192,12 @@ function M.Escape(bot, s, p, home)
 			end
 		end
 	end
-	local push = ReadyItem(bot, PUSH)
+	local push = ReadyItem(bot, s, p, PUSH)
 	if push ~= nil and bot:IsFacingLocation(home, K.facing) and bot:DistanceFromFountain() > 600 then
 		return { intent = 'usar_objeto', item = push, target = bot, reason = 'salto hacia casa' }
 	end
 	if CanHide(bot) then
-		local blade = ReadyItem(bot, INVIS)
+		local blade = ReadyItem(bot, s, p, INVIS)
 		if blade ~= nil then return { intent = 'usar_objeto', item = blade, reason = 'desaparezco al huir' } end
 	end
 	return nil
@@ -177,7 +206,7 @@ end
 -- A walk that is long enough, toward a spot with risk and with no enemy tower near (towers see through it), is done hidden.
 function M.Hide(bot, s, p, to)
 	if to == nil or D2(p.loc, to) < K.hideTravel or not CanHide(bot) or #p.enemyTowers > 0 then return nil end
-	local blade = ReadyItem(bot, INVIS)
+	local blade = ReadyItem(bot, s, p, INVIS)
 	if blade == nil or M.Risk(bot, to) <= 0 then return nil end
 	return { intent = 'usar_objeto', item = blade, reason = string.format('entro oculto, a %d del destino', D2(p.loc, to)) }
 end
@@ -247,7 +276,7 @@ function M.Fight(bot, s, p)
 		if Valid(tw) and D2(spot, tw:GetLocation()) < K.towerMargin then return nil end
 	end
 	if CanHide(bot) and nearestD > p.range + K.hideTravel / 3 then
-		local blade = ReadyItem(bot, INVIS)
+		local blade = ReadyItem(bot, s, p, INVIS)
 		if blade ~= nil then return { intent = 'usar_objeto', item = blade, reason = string.format('entro oculto a la pelea, a %d', nearestD) } end
 	end
 	return { intent = 'a_la_pelea', to = spot, reason = string.format('a %d de %s, %d aliados, %d enemigos', nearestD, Short(nearest), engaged, near) }
@@ -273,7 +302,7 @@ function M.Bkb(bot, s, p)
 		if Valid(e) and D2(p.loc, e:GetLocation()) < 800 then near = near + 1 end
 	end
 	if near < 2 then return nil end
-	local bkb = ReadyItem(bot, { 'item_black_king_bar' })
+	local bkb = ReadyItem(bot, s, p, { 'item_black_king_bar' })
 	if bkb == nil then return nil end
 	return { intent = 'usar_objeto', item = bkb, reason = string.format('%d enemigos encima', near) }
 end

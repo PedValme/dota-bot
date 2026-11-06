@@ -6,6 +6,7 @@
 -- 8 of 8 ended with no kill).
 local C = {}
 local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
+local Medio = require(GetScriptDirectory()..'/FunLib/propio/medio')
 
 local K = {
 	rotar = false,        -- walking out of the lane for a kill
@@ -200,7 +201,8 @@ function C.Start(bot, s, p)
 		local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
 		if d <= K.rotateMax and not banned then
 			local v = Evaluate(bot, p, e, d)
-			if v.score >= v.margin and (v.kind == 'matar' or (K.rotar and v.travel <= K.rotateTravel and p.hp > 0.6))
+			if v.score >= v.margin and Medio.MayStart(bot, s, v.score, v.margin)
+				and (v.kind == 'matar' or (K.rotar and v.travel <= K.rotateTravel and p.hp > 0.6))
 				and Unsafe(bot, p, e) == nil and v.score > bestScore then
 				best, bestScore = { e = e, d = d, dmg = v.dmg, helpers = v.helpers, kind = v.kind }, v.score
 			end

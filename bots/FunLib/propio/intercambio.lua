@@ -75,7 +75,9 @@ function I.Eval(bot, p, e)
 	local myHeight, hisHeight = GetHeightLevel(p.loc), GetHeightLevel(eLoc)
 	if myHeight > hisHeight then his = his * K.highGround
 	elseif myHeight < hisHeight then mine = mine * K.highGround end
-	local against = his + creeps + others
+	-- What is really coming in over the last 2 s counts if it is more: attacks alone leave out crits, abilities and lifesteal
+	-- (lobby 2026-11-05: Bloodseeker read 258 and did 476; Alchemist read 35 and did 128), and the hero traded to its death.
+	local against = math.max(his + creeps + others, p.dps or 0)
 	local tHim = e:GetHealth() / math.max(mine, 1)
 	local tMe = p.hpAbs / math.max(against, 1)
 	return { ratio = tMe / math.max(tHim, 0.1), mine = mine, against = against, height = myHeight - hisHeight, outranged = outranged }

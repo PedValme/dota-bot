@@ -424,8 +424,10 @@ local function RuleTrade(bot, s, p, ready, soon)
 			if d <= p.range + K.pressReach and (inRange or not TowerBlocks(bot, p, Toward(e:GetLocation(), p.loc, p.range))) then
 				local v = Intercambio.Eval(bot, p, e)
 				local kind = nil
-				if inRange and hit and (v.ratio >= K.loseEdge or p.hp >= K.loseHp) then kind = 'contesto'
-				elseif ready == nil and v.ratio >= K.pressEdge then kind = 'presiono' end
+				-- Once the lane is over, alone: no pressing, and hitting back only from out of its reach.
+				local company = not s.late or Medio.Allies(bot) > 0
+				if inRange and hit and (v.ratio >= K.loseEdge or p.hp >= K.loseHp) and (company or v.outranged) then kind = 'contesto'
+				elseif company and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono' end
 				if kind ~= nil then
 					return { intent = 'acosar', target = e, walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1),
 						reason = string.format('%s a %s: ratio %.2f, mi_dps %d, su_dps %d, altura %d, a %d', kind,
@@ -544,13 +546,18 @@ local function Decide(bot, s, p)
 		r = hero.Harass(bot, s, p)
 		if r then return r end
 	end
+	local holdAt = late and Medio.HoldSpot(bot, s, p, LanePoint(p)) or nil
 	if ready ~= nil then
 		local spot = Toward(ready:GetLocation(), p.loc, p.range * 0.9)
-		local moves = D2(p.loc, ready:GetLocation()) > p.range
+		-- Holding back, it takes the creeps that come within its range, and does not walk out for them.
+		local moves = holdAt == nil and D2(p.loc, ready:GetLocation()) > p.range
 		if not moves or not TowerBlocks(bot, p, spot) then
 			return { intent = 'preparar_golpe', reason = string.format('%s cae en ~%.0fs', string.gsub(ready:GetUnitName(), 'npc_dota_', ''), K.lookAhead),
 				to = moves and spot or nil }
 		end
+	end
+	if holdAt ~= nil then
+		return { intent = 'esperar', reason = string.format('solo y con riesgo %.1f: junto a la torre', Medio.Risk(bot, LanePoint(p))), to = holdAt }
 	end
 	local spot = LanePoint(p)
 	local hide = late and Medio.Hide(bot, s, p, spot)
@@ -650,6 +657,8 @@ local function Act(bot, s, p, d)
 	if d.intent == 'usar_objeto' then
 		if d.target ~= nil then bot:Action_UseAbilityOnEntity(d.item, d.target) else bot:Action_UseAbility(d.item) end
 		s.busyUntil, s.moveTo = p.now + 0.1, nil
+		s.itemUsed = s.itemUsed or {}
+		s.itemUsed[d.item:GetName()] = p.now
 		Log(s, bot, 'objeto', string.format('%s: %s', d.item:GetName(), d.reason))
 		return
 	end
