@@ -25,6 +25,10 @@ local K = {
 	fightAloneReach = 2500, -- a fight of one ally is walked to only from this close
 	fightTpTower = 2000, -- ...and one of our towers this close to it
 	fightTpHp = 0.6,
+	groupReach = 3500,   -- a group this far is worth joining
+	groupNear = 900,     -- allies this close to each other are a group
+	groupBehind = 500,   -- ...and it stands this far behind them, toward home
+	groupThere = 500,    -- this close to that spot is being with them
 	farmHp = 0.5,        -- no neutrals below this health
 	neutralNear = 900,   -- neutrals this close are hit
 	ancientLevel = 20,   -- ancients from this level on
@@ -393,6 +397,32 @@ function M.Neutrals(bot, s, p)
 	local pick = s.campPick
 	if pick == nil or (s.campEmpty[pick.key] or -1000) > p.t then return nil end
 	return { intent = 'a_neutrales', to = pick.loc, reason = string.format('campamento a %d', D2(p.loc, pick.loc)) }
+end
+
+-- With the group: two or more allies together, near enough, are where the fights are about to be. Behind them by its range. OHA's
+-- Sniper spends 27 % of its time pushing and defending with its team, and has damage to heroes in 28 % of the windows against 17 %
+-- (presion-oha, presion6). Returns a decision or nil.
+function M.Group(bot, s, p)
+	if p.hp < K.fightHp then return nil end
+	local allies = {}
+	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if a ~= bot and Valid(a) and not a:IsIllusion() and D2(p.loc, a:GetLocation()) < K.groupReach then table.insert(allies, a) end
+	end
+	local best, bestN = nil, 1
+	for _, a in ipairs(allies) do
+		local n = 0
+		for _, o in ipairs(allies) do
+			if D2(a:GetLocation(), o:GetLocation()) < K.groupNear then n = n + 1 end
+		end
+		if n > bestN then best, bestN = a, n end
+	end
+	if best == nil then return nil end
+	local spot = Toward(best:GetLocation(), GetAncient(p.team):GetLocation(), K.groupBehind)
+	if D2(p.loc, spot) < K.groupThere then return nil end
+	for _, tw in ipairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS) or {}) do
+		if tw ~= nil and not tw:IsNull() and tw:IsAlive() and tw:IsTower() and D2(spot, tw:GetLocation()) < K.towerMargin then return nil end
+	end
+	return { intent = 'con_el_grupo', to = spot, reason = string.format('%d aliados juntos, a %d', bestN, D2(p.loc, spot)) }
 end
 
 -- Our nearest standing tower, wherever it is: a retreat does not cross the map to the lane it came to play.

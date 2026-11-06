@@ -1138,4 +1138,12 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **Sigue lejos en lo que más pesa:** 5,3 kills frente a 13,8, patrimonio 21.689 frente a 28.094, **daño a héroes tras el min 12: 31.102 en `presion6` frente a 89.369 de OHA** (suma de 4 partidas).
   - En línea, bajo presión, no devuelve nada en el 49 % de las ventanas de acoso (`presion6`, 18 de 37; OHA 23 %), y el rival de mid hace 20,3 LH. Con el `ratio` que cuenta el daño real se aleja más que contesta. Sin decidir si es mejor o peor: lo juzga Pedro.
 - Validez: descriptivo. Un equipo OHA tampoco es un humano. Sin partida completa de este código.
-- Decisión: dejar el resultado para que Pedro juegue.
+- Decisión: dejar el resultado para que Pedro juegue. Pedro, al leerlo, pide corregir lo flojo y medirlo antes.
+
+### 2026-11-06 · Humo de cadencia, grupo y contestar (`presion7`, 4 partidas, min 25): predicción antes de lanzar
+- Pregunta (Pedro: «por que no corremos unos humos con los cambios que hiciste y con correcciones a eso que ya adelantas»): ¿sube el daño a héroes sin subir mucho las muertes?
+- Diagnóstico, tras el min 12, por partida (`presion6` frente a `presion-oha`): daño a héroes 7.776 y 22.342; ventanas de 10 s con daño, 17 % y 28 %; daño por ventana activa, 598 y 1.016; ataques por ventana activa, 2,1 y 4,4.
+  OHA: 27 % del tiempo empujando o defendiendo y 8 % en `TEAM_ROAM`.
+- Qué cambió: `tradeEvery` de 1 a 0,2 s, porque el hueco lo mandaba a andar entre disparos; `Medio.Group`, ir detrás de dos o más aliados juntos; del daño medido cuenta el 60 %, porque un hechizo se leía como daño sostenido; contestar también a 200 más allá de su alcance.
+- Predicción: ataques por ventana activa de 2,1 hacia 3 o más; ventanas con daño de 17 % hacia 25 %; sin devolver, por debajo del 49 %; muertes más altas que 0,5 (es el coste; preocupa por encima de OHA, 2,0); LH por debajo de 212, por ir con el grupo.
+- Máquina: se anota con el resultado.
