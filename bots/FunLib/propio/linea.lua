@@ -27,8 +27,9 @@ local NO_COMBAT = Variant.sin_combate == true
 local BUILDS = {
 	npc_dota_hero_sniper = { 'sniper_headshot', 'sniper_take_aim', 'sniper_headshot', 'sniper_take_aim',
 		'sniper_shrapnel', 'sniper_assassinate', 'sniper_shrapnel', 'sniper_shrapnel', 'sniper_shrapnel',
-		'special_bonus_unique_sniper_headshot_damage', 'sniper_headshot', 'sniper_headshot', 'sniper_take_aim',
-		'sniper_assassinate', 'sniper_take_aim', 'special_bonus_unique_sniper_6', 'sniper_assassinate',
+		-- Assassinate's second level as soon as the game allows: its damage in fights is what was missing.
+		'special_bonus_unique_sniper_headshot_damage', 'sniper_headshot', 'sniper_assassinate', 'sniper_take_aim',
+		'sniper_headshot', 'sniper_take_aim', 'special_bonus_unique_sniper_6', 'sniper_assassinate',
 		'special_bonus_unique_sniper_4', 'special_bonus_unique_sniper_3', 'special_bonus_unique_sniper_5',
 		'special_bonus_unique_sniper_1', 'special_bonus_unique_sniper_shrapnel_damage', 'special_bonus_unique_sniper_2' },
 }
@@ -563,6 +564,8 @@ local function Decide(bot, s, p)
 		if r then return r end
 		r = Medio.Fight(bot, s, p)
 		if r then
+			local opening = hero ~= nil and not bot:IsInvisible() and hero.FightCast(bot, s, p) or nil
+			if opening then return opening end
 			local cast = hero ~= nil and r.intent == 'acosar' and not bot:IsInvisible() and hero.KillCast(bot, s, p, r.target) or nil
 			return cast or WithAim(bot, s, p, hero, r)
 		end

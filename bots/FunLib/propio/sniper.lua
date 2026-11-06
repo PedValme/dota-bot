@@ -46,6 +46,35 @@ function H.Finish(bot, s, p)
 	return nil
 end
 
+-- Assassinate in a team fight, to open it up: on the enemy it hurts most, or on one channelling, which it interrupts. OHA's Sniper does
+-- 2.685 a match with it, this one 310-680 (fijo-oha, presion6), since it only fired for a sure kill. Only with nobody on top of us during
+-- the cast. For the fight rule (medio.lua).
+local FIGHT_SHARE = 0.35 -- it must take at least this share of the target's health
+function H.FightCast(bot, s, p)
+	local a = bot:GetAbilityByName('sniper_assassinate')
+	if a == nil or not a:IsFullyCastable() then return nil end
+	local clear = CastClear(bot)
+	for _, o in ipairs(p.enemyHeroes) do
+		if Seen(o) and D2(p.loc, o:GetLocation()) < clear then return nil end
+	end
+	local range = a:GetCastRange()
+	local dmg = a:GetSpecialValueInt('damage')
+	if dmg == nil or dmg <= 0 then dmg = a:GetAbilityDamage() end
+	local best, bestShare = nil, FIGHT_SHARE
+	for _, e in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES) or {}) do
+		if Seen(e) and not e:IsMagicImmune() and D2(p.loc, e:GetLocation()) <= range then
+			if e:IsChanneling() then
+				return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), reason = string.format('%s canaliza: la interrumpo', Short(e)) }
+			end
+			local share = e:GetActualIncomingDamage(dmg, DAMAGE_TYPE_MAGICAL) / math.max(e:GetHealth(), 1)
+			if share > bestShare then best, bestShare = e, share end
+		end
+	end
+	if best == nil then return nil end
+	return { intent = 'rematar', ability = a, target = best, castPoint = a:GetCastPoint(),
+		reason = string.format('%s en la pelea: quita %.0f%% de su vida %d', Short(best), 100 * bestShare, best:GetHealth()) }
+end
+
 -- The mana to keep for Assassinate: its cost once learned and nearly off cooldown, else none.
 local function ManaToKeep(bot)
 	local u = bot:GetAbilityByName('sniper_assassinate')
