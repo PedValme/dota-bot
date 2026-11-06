@@ -1153,4 +1153,13 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 
 ### 2026-11-06 · Humo de unirse más a las peleas (`presion8`, 4 partidas, min 25): predicción antes de lanzar
 - Predicción: ventanas con daño de 14 % hacia 20 % o más; kills por encima de 5,3; muertes por encima de 0,5, sin pasar de OHA (2,0); LH bajando de 205.
-- Máquina: se anota con el resultado.
+- Máquina: CPU media 57-64 % por partida.
+- Resultado (`pulido.mjs`, n=4): 153,3 LH, 3,5 muertes, 3,3 kills, patrimonio 18.327, ventanas con daño 19,9 %, sin devolver 25,4 %, rival 30,3 LH. Una partida con **9 muertes contra Viper** hunde la media: veneno y Nethertoxin no salen en ninguna lectura previa, y volvía a entrar con `ratio` 1,9.
+- Lectura: no se separa un cambio de otro: los héroes cambian en cada vuelta. Las ventanas con daño sí suben.
+- Decisión: comparar con héroes fijos y aprender el daño real de cada rival.
+
+### 2026-11-06 · Referencia y línea base con héroes fijos (`fijo-oha-a`/`-b`, `fijo-p1-a`/`-b`, 2 y 2, min 25)
+- Pregunta: con dos enfrentamientos fijos (rival de mid Viper y Lina), ¿dónde está el propio frente a OHA, sin el ruido del sorteo? `--heroes` es de desarrollo: no decide una serie.
+- Resultado OHA: `-a` 141,5 LH, 2,5 muertes, 14,5 kills, 25.570, 10.170 de oro sin gastar. `-b` 180,0, 0,5, 11,5, 27.315, 11.915. Su patrimonio incluye ese oro sin usar.
+- **`fijo-p1`, sin terminar:** de 4 partidas, 2 válidas, 1 `sin-gsi` y la última cortada: el sistema detuvo la corrida por falta de memoria (5 % libre, 77 GB en cuatro Unreal Editor ajenos al banco). No se lee.
+- Pendiente de jugar, sin medir: daño aprendido de cada rival (`967f1a6`), Assassinate para abrir peleas y segundo nivel antes (`ec08a0e`).

@@ -10,7 +10,8 @@
   (MEDICIONES 2026-11-05). Noche del 2026-11-06 (encargo de Pedro): contra un equipo OHA, que presiona de verdad (`--rival dotabot --variantes control_sniper,base`),
   `presion6` en el min 25: 212,5 LH, 0,5 muertes, 5,3 kills, patrimonio 21.689; el Sniper de OHA, 181,3, 2,0, 13,8 y 28.094 (4 partidas cada uno, sorteos distintos).
 - **Qué se probó:** partidas de Pedro con registro: `node tools/jugar-sniper.mjs` y `quitar`; `bench/observaciones/lobby-*.log`. Cambios de la noche en MEDICIONES 2026-11-06.
-- **Siguiente acción:** revisar el registro de la partida de Pedro contra lo que cuente. Lo pendiente que más pesa: daño a héroes tras el min 12 (31.102 frente a 89.369 de OHA) y kills.
+  Pedro pidió seguir con humos hasta el pulido (DECISIONES 2026-11-06), con héroes fijos para comparar vueltas: `fijo-oha-a`/`-b` hechos; `fijo-p1` cortado el 2026-11-06 por falta de memoria (Unreal Editor ajeno, 77 GB; 5 % libre).
+- **Siguiente acción:** con memoria libre y el sí de Pedro, repetir la línea base y medir con `node tools/analisis/pulido.mjs --referencia fijo-oha-a,fijo-oha-b <etiquetas>`. **Sin jugar aún:** aprender el daño de cada rival, Assassinate para abrir peleas y antes en la build; `fightOdds` 1 y grupo a 6.000, una sola vuelta ruidosa (`presion8`).
 - Espera al dueño: jugar contra el Sniper con el medio juego: `node tools/jugar-sniper.mjs`, Custom Lobby con Local Host y Local Dev Script, puesto 2 de Radiant; al acabar, cerrar Dota y `node tools/jugar-sniper.mjs quitar`
 
 ## Madurez

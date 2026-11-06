@@ -27,8 +27,9 @@ local NO_COMBAT = Variant.sin_combate == true
 local BUILDS = {
 	npc_dota_hero_sniper = { 'sniper_headshot', 'sniper_take_aim', 'sniper_headshot', 'sniper_take_aim',
 		'sniper_shrapnel', 'sniper_assassinate', 'sniper_shrapnel', 'sniper_shrapnel', 'sniper_shrapnel',
-		'special_bonus_unique_sniper_headshot_damage', 'sniper_headshot', 'sniper_headshot', 'sniper_take_aim',
-		'sniper_assassinate', 'sniper_take_aim', 'special_bonus_unique_sniper_6', 'sniper_assassinate',
+		-- Assassinate's second level as soon as the game allows: its damage in fights is what was missing.
+		'special_bonus_unique_sniper_headshot_damage', 'sniper_headshot', 'sniper_assassinate', 'sniper_take_aim',
+		'sniper_headshot', 'sniper_take_aim', 'special_bonus_unique_sniper_6', 'sniper_assassinate',
 		'special_bonus_unique_sniper_4', 'special_bonus_unique_sniper_3', 'special_bonus_unique_sniper_5',
 		'special_bonus_unique_sniper_1', 'special_bonus_unique_sniper_shrapnel_damage', 'special_bonus_unique_sniper_2' },
 }
@@ -39,6 +40,7 @@ local STARTING_ITEMS = { 'item_tango', 'item_flask', 'item_branches', 'item_bran
 local K = {
 	retreatHp = 0.30,     -- retreat below this health fraction
 	exposedHp = 0.45,     -- ...or below this one with an enemy hero able to reach us
+	learnFade = 0.9954,   -- per second, what is learned of an enemy's damage fades by this: half in 150 s
 	returnHp = 0.65,      -- come back to the lane above it
 	fountainHp = 0.20,    -- below it, without a salve, go heal at the fountain
 	enemyBurst = 0.80,    -- retreat if the visible enemy heroes can deal this share of our health in 3 s
@@ -195,7 +197,9 @@ local function Perceive(bot)
 	p.enemyBurst, p.enemyBurstAll = 0, 0
 	for _, e in ipairs(p.enemyHeroes) do
 		if Valid(e) then
-			local dmg = Intercambio.Threat(e, bot, 3.0)
+			-- At least what this enemy has really done to us per second, learned below.
+			local learned = (State(bot).enemyDps or {})[e:GetUnitName()] or 0
+			local dmg = math.max(Intercambio.Threat(e, bot, 3.0), learned * 3)
 			p.enemyBurstAll = p.enemyBurstAll + dmg
 			local reach = e:GetAttackRange()
 			for slot = 0, 5 do
@@ -217,6 +221,16 @@ local function Perceive(bot)
 	end
 	local oldest = s.hpHist[1]
 	p.dps = (oldest ~= nil and p.now - oldest.t >= 1.0) and math.max(0, (oldest.hp - p.hpAbs) / (p.now - oldest.t)) or 0
+	-- How hard each enemy hits, learned from the health lost with only that one near. It fades slowly (half in 150 s): levels and items change.
+	s.enemyDps = s.enemyDps or {}
+	local since = p.now - (s.enemyDpsAt or p.now)
+	s.enemyDpsAt = p.now
+	for name, v in pairs(s.enemyDps) do s.enemyDps[name] = v * K.learnFade ^ since end
+	if #p.enemyHeroes == 1 and p.dps > 0 and bot:WasRecentlyDamagedByAnyHero(1.0) and Valid(p.enemyHeroes[1]) then
+		local name = p.enemyHeroes[1]:GetUnitName()
+		if p.dps > (s.enemyDps[name] or 0) then s.enemyDps[name] = p.dps end
+	end
+	p.enemyDps = s.enemyDps
 	p.heroOnMe = bot:WasRecentlyDamagedByAnyHero(2.0) == true
 	for _, e in ipairs(p.enemyHeroes) do
 		if Valid(e) and D2(p.loc, e:GetLocation()) < 600 then p.heroOnMe = true end
@@ -550,6 +564,8 @@ local function Decide(bot, s, p)
 		if r then return r end
 		r = Medio.Fight(bot, s, p)
 		if r then
+			local opening = hero ~= nil and not bot:IsInvisible() and hero.FightCast(bot, s, p) or nil
+			if opening then return opening end
 			local cast = hero ~= nil and r.intent == 'acosar' and not bot:IsInvisible() and hero.KillCast(bot, s, p, r.target) or nil
 			return cast or WithAim(bot, s, p, hero, r)
 		end
