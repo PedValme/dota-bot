@@ -73,6 +73,10 @@ function I.Eval(bot, p, e)
 	end
 	local outranged = e:GetAttackRange() + K.rangeMargin <= p.range and dist > e:GetAttackRange()
 	if outranged then his = his * K.outrange end
+	-- What this enemy has really done to us alone in this match counts (linea.lua, Perceive): venom, toxin and passives are in no
+	-- reading beforehand, and the hero walked into Viper again and again with ratio 1,9 (presion8: 9 deaths in one match).
+	local learned = p.enemyDps ~= nil and p.enemyDps[e:GetUnitName()] or 0
+	his = math.max(his, learned * K.measuredShare)
 	local myHeight, hisHeight = GetHeightLevel(p.loc), GetHeightLevel(eLoc)
 	if myHeight > hisHeight then his = his * K.highGround
 	elseif myHeight < hisHeight then mine = mine * K.highGround end

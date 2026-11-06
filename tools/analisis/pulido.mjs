@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const args = process.argv.slice(2);
 const at = args.indexOf("--referencia");
-const ref = at >= 0 ? args.splice(at, 2)[1] : "presion-oha";
+const ref = at >= 0 ? args.splice(at, 2)[1].split(",") : ["presion-oha"]; // several, separated by commas
 if (!args.length) { console.log("Uso: node tools/analisis/pulido.mjs [--referencia presion-oha] <etiqueta> [<etiqueta>...]"); process.exit(1); }
 const dir = join(root, "bench", "observaciones");
 const csv = readFileSync(join(root, "bench", "series.csv"), "utf8").split(/\r?\n/);
@@ -61,10 +61,10 @@ const summary = (g) => ({ n: g.length, lh: mean(g.map((x) => x.lh)), m: mean(g.m
   sin: 100 * g.reduce((a, x) => a + x.noAnswer, 0) / Math.max(g.reduce((a, x) => a + x.hurt, 0), 1), acosos: g.reduce((a, x) => a + x.hurt, 0),
   rival: mean(g.map((x) => x.rivalLh).filter(Number.isFinite)), oro: mean(g.map((x) => x.oro)) });
 const a = summary(measure(args));
-const b = summary(measure([ref]));
+const b = summary(measure(ref));
 const f = (x, d = 1) => x.toFixed(d);
 const row = (name, own, oha, ok, d = 1) => console.log(`${ok ? "cumple   " : "NO cumple"} ${name.padEnd(30)} ${f(own, d).padStart(9)} frente a ${f(oha, d).padStart(9)}`);
-console.log(`Propio: ${args.join("+")}, n=${a.n}. OHA: ${ref}, n=${b.n}. Partidas acabadas antes del min 25, fuera.`);
+console.log(`Propio: ${args.join("+")}, n=${a.n}. OHA: ${ref.join("+")}, n=${b.n}. Partidas acabadas antes del min 25, fuera.`);
 row("LH min 25 (>= 95 %)", a.lh, b.lh, a.lh >= 0.95 * b.lh);
 row("Patrimonio min 25 (>= 95 %)", a.nw, b.nw, a.nw >= 0.95 * b.nw, 0);
 row("Kills min 25 (>= 85 %)", a.k, b.k, a.k >= 0.85 * b.k);
