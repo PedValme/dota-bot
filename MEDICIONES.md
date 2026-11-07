@@ -1283,3 +1283,14 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **Fallo de regla, sigue en el código:** con vida ≥ 0,8 contesta con cualquier ratio y solo se aleja bajo 0,8. Muere desde vida llena en ~8 s contestando cuerpo a cuerpo con ratio 0,22-0,48 (t=1451, 1981, 2094).
   - **Exposición, no separa:** solo el 71-73 % de la partida y el 80-86 % antes de morir. Solo y con un bot rival a 1.400: 7-11 % de la partida, 30-43 % antes de morir, pero el humano no se registra y es casi tautológico. **No sirve como métrica principal.**
 - Decisión, con DECISIONES 2026-11-06 (dos métricas de mecanismo tras la base): **participación en kills**, la única que discrimina (media brecha: ≥ 0,43), y **tiempo sin aliado a 1.500**, lo que el paquete cambia directamente y se puede leer en los lobbies (≤ 59 %). Ninguna decide sola: son puerta para que juegue Pedro.
+
+### 2026-11-07 · Paquete «con el equipo», ronda 1 (`equipo1-*`, 3 enfrentamientos, 2 y 2 y 2, min 25): predicción antes de lanzar
+- Pregunta: ¿hace el paquete lo que dice, sin romper nada? Mecanismo, no resultado: con 6 partidas solo se lee si se mueve lo que toca (`base2-propio-*`, mismos enfrentamientos).
+- Qué cambió: tras la línea, su sitio es detrás del grupo, con TP desde lejos y sin caminar hacia riesgo; pega a torres en su rango con compañía; a vida ≥ 0,8 deja de contestar con ratio bajo 0,5 y se aleja.
+- Predicción:
+  - tiempo sin aliado a 1.500, de 66 % a ≤ 59 %; participación en kills, de 0,36 hacia ≥ 0,43;
+  - `con_el_grupo`, de 10 % al doble o más; `linea`+`a_neutrales`+`farmear`, de 62 % a menos de 50 %;
+  - `derribar` y `intercambio_perdido` a vida alta aparecen en todas las partidas;
+  - últimos golpes por debajo de 168: es el coste; por debajo de 130 no compensa;
+  - muertes, no más de 3 (OHA, 3); si sube mucho, muere en tránsito o con el grupo: se mira cuál.
+- Máquina: se anota por partida. Si falla en mecanismo, una segunda ronda, y es la última (DECISIONES 2026-11-06).

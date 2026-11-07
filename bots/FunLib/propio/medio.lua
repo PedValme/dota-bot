@@ -29,6 +29,9 @@ local K = {
 	groupNear = 900,     -- allies this close to each other are a group
 	groupBehind = 500,   -- ...and it stands this far behind them, toward home
 	groupThere = 500,    -- this close to that spot is being with them
+	teamEvery = 3,       -- seconds it keeps the spot it chose
+	teamWalk = 2500,     -- farther than this, by teleport if that saves at least this much
+	siegeCreeps = 700,   -- our creeps this close to a tower keep it busy
 	farmHp = 0.5,        -- no neutrals below this health
 	neutralNear = 900,   -- neutrals this close are hit
 	ancientLevel = 20,   -- ancients from this level on
@@ -401,14 +404,12 @@ function M.Neutrals(bot, s, p)
 	return { intent = 'a_neutrales', to = pick.loc, reason = string.format('campamento a %d', D2(p.loc, pick.loc)) }
 end
 
--- With the group: two or more allies together, near enough, are where the fights are about to be. Behind them by its range. OHA's
--- Sniper spends 27 % of its time pushing and defending with its team, and has damage to heroes in 28 % of the windows against 17 %
--- (presion-oha, presion6). Returns a decision or nil.
-function M.Group(bot, s, p)
-	if p.hp < K.fightHp then return nil end
+-- Where the team is: behind the largest group of two or more allies, anywhere on the map, and out of the reach of any enemy tower. Nil
+-- if they are all apart.
+local function TeamSpot(bot, p)
 	local allies = {}
 	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
-		if a ~= bot and Valid(a) and not a:IsIllusion() and D2(p.loc, a:GetLocation()) < K.groupReach then table.insert(allies, a) end
+		if a ~= bot and Valid(a) and not a:IsIllusion() then table.insert(allies, a) end
 	end
 	local best, bestN = nil, 1
 	for _, a in ipairs(allies) do
@@ -420,11 +421,66 @@ function M.Group(bot, s, p)
 	end
 	if best == nil then return nil end
 	local spot = Toward(best:GetLocation(), GetAncient(p.team):GetLocation(), K.groupBehind)
-	if D2(p.loc, spot) < K.groupThere then return nil end
 	for _, tw in ipairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS) or {}) do
-		if tw ~= nil and not tw:IsNull() and tw:IsAlive() and tw:IsTower() and D2(spot, tw:GetLocation()) < K.towerMargin then return nil end
+		-- It used to give up here, and so it was never there when they pushed a tower: it stops at its margin instead.
+		if tw ~= nil and not tw:IsNull() and tw:IsAlive() and tw:IsTower() and D2(spot, tw:GetLocation()) < K.towerMargin then
+			spot = Toward(tw:GetLocation(), spot, K.towerMargin)
+		end
 	end
-	return { intent = 'con_el_grupo', to = spot, reason = string.format('%d aliados juntos, a %d', bestN, D2(p.loc, spot)) }
+	return spot, bestN
+end
+
+-- With the team: once the lane is over, its place is behind the group, not the lane and far camps: participation in kills 0,36 against
+-- OHA's 0,49 (base2). Pedro, 2026-11-05: «sigue posicionandose mal o atacando solo». The way there is the danger (lobby 2026-11-05: 3
+-- deaths hunted while going to a lane): by teleport from far, and not on foot toward known risk. The spot is kept for a few seconds so it
+-- does not change its mind each tick. Returns a decision or nil; once there, nil: what it farms and hits is what comes by.
+function M.WithTeam(bot, s, p)
+	if p.hp < K.fightHp then return nil end
+	if p.now - (s.teamAt or -1000) >= K.teamEvery then
+		s.teamAt = p.now
+		s.teamSpot, s.teamN = TeamSpot(bot, p)
+	end
+	local spot = s.teamSpot
+	if spot == nil then return nil end
+	local d = D2(p.loc, spot)
+	if d < K.groupThere then return nil end
+	if d > K.teamWalk and #p.enemyHeroes == 0 and p.now - (s.tpAt or -1000) >= 5 then
+		local slot = bot:FindItemSlot('item_tpscroll')
+		local item = slot >= 0 and (slot <= 5 or slot == 15) and bot:GetItemInSlot(slot) or nil
+		local tower = M.NearestTower(spot)
+		if item ~= nil and item:IsFullyCastable() and tower ~= nil and D2(tower:GetLocation(), spot) <= d - K.teamWalk then
+			s.tpAt = p.now
+			local nearestLane, laneD = s.lane, 1e9
+			for _, lane in ipairs({ LANE_TOP, LANE_MID, LANE_BOT }) do
+				local l = D2(tower:GetLocation(), GetLaneFrontLocation(p.team, lane, 0))
+				if l < laneD then nearestLane, laneD = lane, l end
+			end
+			s.lane = nearestLane
+			return { intent = 'teleporte', item = item, at = tower:GetLocation(), reason = string.format('con el equipo: %d aliados, a %d', s.teamN or 0, d) }
+		end
+	end
+	if d > K.groupReach then return nil end
+	-- Not on foot toward risk: the spot itself, or the road ahead, with enemies seen and no friends.
+	if M.Risk(bot, spot) >= K.holdRisk or M.Risk(bot, Toward(p.loc, spot, math.min(d, K.teamWalk / 2)), true) >= K.holdRisk then return nil end
+	return { intent = 'con_el_grupo', to = spot, reason = string.format('%d aliados juntos, a %d', s.teamN or 0, d) }
+end
+
+-- A tower in range with company and no enemy hero in sight: it hits it from where it stands. Alone, or walking in, it does not: it is what
+-- Pedro complains of. It had no rule for it.
+function M.Siege(bot, s, p)
+	if #p.enemyHeroes > 0 then return nil end
+	for _, tw in ipairs(p.enemyTowers) do
+		if Valid(tw) and not tw:IsInvulnerable() and D2(p.loc, tw:GetLocation()) <= p.range then
+			local creeps = 0
+			for _, c in ipairs(p.allyCreeps) do
+				if Valid(c) and D2(c:GetLocation(), tw:GetLocation()) < K.siegeCreeps then creeps = creeps + 1 end
+			end
+			if M.Allies(bot) > 0 or creeps >= 2 then
+				return { intent = 'derribar', target = tw, reason = string.format('torre a %d, %d creeps con ella', D2(p.loc, tw:GetLocation()), creeps) }
+			end
+		end
+	end
+	return nil
 end
 
 -- Our nearest standing tower, wherever it is: a retreat does not cross the map to the lane it came to play.
