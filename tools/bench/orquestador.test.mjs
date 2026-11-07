@@ -220,6 +220,8 @@ test("the match config is plain Lua data for the custom game", () => {
   assert.match(matchConfigLua(["x"], 4, 4, true), /turbo = true/);
   assert.match(matchConfigLua(["x"], 4, 4), /observar = false/);
   assert.match(matchConfigLua(["x"], 4, 4, true, true), /observar = true/);
+  assert.doesNotMatch(matchConfigLua(["x"], 4, 4), /tienda_universal/);
+  assert.match(matchConfigLua(["x"], 4, 4, true, false, null, true), /tienda_universal = true/);
 });
 
 test("observer mode keeps the custom game's lines and the engine's bot lines, nothing else", () => {

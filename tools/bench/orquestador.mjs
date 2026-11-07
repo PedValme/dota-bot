@@ -172,6 +172,8 @@ export const VARIANTS = {
   // The own Sniper with its fighting off (no kills, abilities on heroes or trades), to measure what fighting costs in
   // farm (trabajo/fase1-plan.md, step 5).
   control_sniper_sincombate: { control_completo: "sniper", linea_heroe: "sniper", sin_combate: true, empuje: false, thinkless: 1 },
+  // What the engine answers when a bot buys a secret shop item away from it (FunLib/sonda_compra.lua). The bots stop buying: never for a measure.
+  sonda_compra: { sonda_compra: true, empuje: false, thinkless: 1 },
   // Only to check that the bots apply the variant: they almost stop casting, which shows in the casts per team.
   sonda: { empuje: true, thinkless: 1000 },
 };
@@ -338,13 +340,15 @@ export function laneHeroProblem(variantes, mid, fijos) {
 // Lua read by the custom game (tools/bench/addon/scripts/vscripts/addon_game_mode.lua).
 // turbo: the custom game imitates Turbo (Dota's real Turbo cannot run in a custom game: forcing game mode 23 changes
 // nothing and the VScript API has no switch for it, both checked 2026-10-29).
-export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false, heroesDire = null) {
+// tiendaUniversal: secret shop items at any shop, which a community source says real Turbo does: OHA's Turbo purchase path never goes to
+// the secret shop, and its teams left a median 37 % of their net worth unspent at minute 25 (MEDICIONES, evaluation of 2026-11-06).
+export function matchConfigLua(heroes, difficulty, timescale, turbo = false, observar = false, heroesDire = null, tiendaUniversal = false) {
   const list = heroes.map((h) => `"${h}"`).join(", ");
   // heroes_dire: Dire's own drawn heroes, none shared with Radiant's: the engine never gives the same hero to both
   // teams (0 of 112 matches did), so each team asks for its own and nothing is swapped. Without it ("--espejo no",
   // debugging) Dire asks for Radiant's and gets random ones.
   const dire = heroesDire ? `heroes_dire = { ${heroesDire.map((h) => `"${h}"`).join(", ")} }, ` : "";
-  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, ${dire}heroes = { ${list} } }\n`;
+  return `-- written by tools/bench/orquestador.mjs for one match; deleted when it ends\nreturn { difficulty = "${DIFFICULTIES[difficulty]}", timescale = ${timescale}, turbo = ${turbo}, observar = ${observar}, ${tiendaUniversal ? "tienda_universal = true, " : ""}${dire}heroes = { ${list} } }\n`;
 }
 
 // Which drawn group each side asks for (DECISIONES 2026-10-31): dota-bot (or variant a, against dota-bot) always gets
@@ -586,6 +590,7 @@ function parseArgs(argv) {
     else if (k === "--dota") opt.dota = v;
     else if (k === "--muestra-gsi") opt.muestra = v; // debugging: keeps the last raw GSI post in this file
     else if (k === "--observar") { opt.observar = true; i -= 1; } // a flag: takes no value
+    else if (k === "--tienda-universal") { opt.tiendaUniversal = true; i -= 1; } // a flag: secret shop items at any shop
     else if (k === "--lado") opt.lado = v; // debugging one side: dota-bot always plays it (no side balance)
     else if (k === "--espejo") opt.espejo = v; // "no", debugging only: Dire keeps the random heroes the engine gives it
     else if (k === "--rival") opt.rival = v; // "valve" (default) or "dotabot": both teams dota-bot, one variant each
@@ -782,7 +787,7 @@ async function main(argv) {
       }
       const groups = sideGroups(dotabot, heroes, rivals, opt.espejo ?? "");
       const esperado = { radiant: groups.radiant, dire: groups.dire ?? [] };
-      writeFileSync(MATCH_FILE, matchConfigLua(groups.radiant, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), groups.dire));
+      writeFileSync(MATCH_FILE, matchConfigLua(groups.radiant, opt.dificultad, opt.velocidad, opt.modo === "turbo", Boolean(opt.observar), groups.dire, Boolean(opt.tiendaUniversal)));
       latest = null;
       lastPost = 0;
       const names = (l) => l.map((h) => h.replace("npc_dota_hero_", "")).join(" ");

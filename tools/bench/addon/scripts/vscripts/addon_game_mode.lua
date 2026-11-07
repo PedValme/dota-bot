@@ -639,6 +639,10 @@ function Activate()
 	-- One courier per player, as in normal Dota; custom games give none unless this is on.
 	GameRules:GetGameModeEntity():SetFreeCourierModeEnabled(true)
 	if MatchConfig().turbo then ApplyTurbo() else print("[dotabench] turbo off") end
+	if MatchConfig().tienda_universal == true then
+		GameRules:SetUseUniversalShopMode(true)
+		print("[dotabench] tienda_universal true")
+	end
 	if MatchConfig().observar then StartObserver() end
 	ListenToGameEvent("game_rules_state_change", OnStateChange, nil)
 	ListenToGameEvent("player_connect_full", OnPlayerConnect, nil)

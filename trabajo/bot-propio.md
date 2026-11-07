@@ -53,6 +53,8 @@ Hasta la fase 2, OHA juega el resto del equipo; en ningún momento el bot por de
   cinco en línea, el medio juego del Sniper (`bots/FunLib/propio/medio.lua`): gastar el oro, tienda secreta, Shadow Blade/Silver Edge,
   Force Staff/Hurricane Pike, y el criterio de riesgo, ataque y sigilo. Humos cortados en el min 25; su partida sigue decidiendo.
 
+- 2026-11-06: tras la evaluación adversarial, Pedro aprueba la ruta de `trabajo/evaluacion-adversarial-2026-11-06.md`, que manda sobre el orden de arriba hasta cerrar el Sniper.
+
 ## Lo que pide la firma
 - Este orden de fases y la meta de la fase 1.
 - Que la fase 1 empiece ya, con Sniper, sin serie hasta igualar a OHA en humo.
