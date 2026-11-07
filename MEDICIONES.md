@@ -1212,3 +1212,18 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Hipótesis del agente, sin medir: un solo héroe propio con cuatro de OHA quizá no llegue a sus kills sin decisiones de equipo (OHA: 27 % del tiempo empujando o defendiendo en grupo).
 - Validez: héroes fijos, solo 2 enfrentamientos; la referencia de OHA, con solo 4 partidas. Descriptivo. Partida completa de este código: sin jugar.
 - Decisión: Pedro corta aquí: «que acabe la corrida actual y cambiamos de sesión». Vueltas usadas: 4 de 6.
+
+### 2026-11-06 · Evaluación adversarial sobre lo ya jugado (sin partidas nuevas)
+- Pregunta: qué y cómo mejorar, y con qué criterio (DECISIONES 2026-11-06). Detalle y ruta: `trabajo/evaluacion-adversarial-2026-11-06.md`.
+- Qué cambió: nada en el bot ni el banco. Código `23b1021`. Sin carga de partidas: lectura de registros. Scripts: `tools/analisis/evaluacion-2026-11-06/` (el recálculo del revisor, en `revisor/`).
+- Resultado:
+  - **Oro sin gastar de los equipos OHA, min 25:** mediana 37 % desde el 2026-10-31 (n=172), 5 % antes, 9 % Valve. Piezas de tienda secreta hasta el min 20: de 2-5 por partida a 0,0-0,5. Coincide con la ruta de compra Turbo en el banco. Derrotas contra Valve: +5.561 en patrimonio, −13.946 en objetos.
+  - **Sniper, héroes fijos, min 25:** objetos 21.594 frente a 15.400; kills 7,7 y 13,0; daño a héroes 14.629 y 21.822; recibido 3.721 y 7.488.
+  - **Listón propuesto:** bajo paridad real pasa el 36 % con 8 frente a 4 y el 48 % con 32 frente a 32.
+- Validez:
+  - **Afecta a lo anterior:** toda serie contra Valve o contra OHA desde el 2026-10-31, también `n3-v3` y `n3-v3r`. Sus cifras no se reescriben; se leen con esto.
+  - La causa del atasco es inferida (ningún código de retorno visto). Sin comprobar si pasa en Turbo real.
+  - El espejo `base_sniper-vs-base` va +25,3k en 7 de 8: ventaja sin medir del grupo con Sniper fijo. Nunca hubo A contra A con `rival=dotabot`.
+  - Las diferencias de torres, muertes de aliados y daño por pelea dependen de un enfrentamiento con n=2 de OHA. No demostradas.
+  - La corrección de `a3.py` (pendiente, listón e iteración) está en `revisor/`.
+- Decisión: pendiente de Pedro. Mientras tanto no se mide nada que compare con OHA.

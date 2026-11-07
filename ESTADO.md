@@ -2,11 +2,11 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Qué se estaba haciendo:** el medio juego del Sniper propio (`bots/FunLib/propio/medio.lua`), que Pedro adelantó a los cinco en línea, y el pulido que pidió antes de volver a probar (DECISIONES 2026-11-05 y 2026-11-06). Variante `control_sniper`.
-- **Dónde quedó:** Pedro cerró esta sesión al acabar `fijo-p5`, la base firme (8 partidas, héroes fijos, contra un equipo OHA, min 25; OHA con 4): LH 162,1 y 160,8 ✓; muertes 1,3 y 1,5 ✓; rival de mid 24,6 y 26,8 ✓; sin devolver 19,0 % (✗ frente a 17 %; OHA 27,4 %); patrimonio 21.468 y 26.442 ✗; daño a héroes 13.956 y 21.823 ✗; kills 7,1 y 13,0 ✗. Vueltas de pulido usadas: 4 de 6.
-- **Qué se probó:** la brecha es tiempo peleando (ventanas con daño 20 % frente a 30 %); cuando pelea, pega casi igual. Contestar siempre en línea (`fijo-p3`) y cazar con compañía (`fijo-p4`) salieron mal y están revertidos. Con 4 partidas hay mucho ruido, incluso con héroes fijos: `fijo-p2`, el mismo código, dio 199 LH y 24.742 (MEDICIONES 2026-11-06).
-- **Siguiente acción:** evaluación adversarial, sin partidas nuevas ni esperar a que Pedro juegue (DECISIONES 2026-11-06), con dos preguntas: qué y cómo mejorar (pulir el Sniper o decisiones de equipo; por qué pelea menos) y qué criterio de pulido usar (la propuesta del agente, en DECISIONES). Base: MEDICIONES 2026-11-06, `bench/observaciones/`, `node tools/analisis/pulido.mjs --referencia fijo-oha-a,fijo-oha-b <etiquetas>`. Luego, decidirlo con Pedro.
-- Espera al dueño: nada hasta tener la evaluación adversarial
+- **Qué se estaba haciendo:** la evaluación adversarial pedida el 2026-11-06, sin partidas nuevas: `trabajo/evaluacion-adversarial-2026-11-06.md`, MEDICIONES 2026-11-06.
+- **Dónde quedó:** hecha y revisada por dos subagentes. Los equipos OHA guardan una mediana del 37 % de su patrimonio sin gastar en el banco desde el 2026-10-31 (antes 5 %), lo que afecta a toda comparación desde esa fecha. El Sniper propio tiene un 40 % más en objetos que el de OHA y hace un 33 % menos de daño. El listón propuesto no sirve (36 % bajo paridad).
+- **Qué se probó:** recalcular todo desde los registros. Se retiraron «el pulido no movió nada» (el método no tiene potencia para verlo) y «el propio hunde a sus aliados» (no demostrado).
+- **Siguiente acción:** con el sí de Pedro, el paso 1 de la ruta: la sonda de compra, sin tocar la base hasta verla. Nada que compare con OHA se mide antes.
+- Espera al dueño: la ruta de `trabajo/evaluacion-adversarial-2026-11-06.md`, reemplazar el listón del 2026-11-05 y confirmar el rumbo del 2026-11-03 · Recomendado: aprobar la ruta, reemplazar el listón con métricas de mecanismo fijadas tras la base nueva y mantener el rumbo
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -28,7 +28,7 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
 
 ## Siguientes pasos
-1. Medio juego del Sniper propio, hasta el visto bueno de Pedro: `trabajo/bot-propio.md`. Hipótesis sin medir: un héroe propio con cuatro de OHA quizá no llegue a sus kills sin decisiones de equipo.
+1. Medio juego del Sniper propio, hasta el visto bueno de Pedro: ruta propuesta en `trabajo/evaluacion-adversarial-2026-11-06.md`, pendiente de su decisión; `trabajo/bot-propio.md`.
 2. Fase 2, los cinco en línea: `trabajo/bot-propio.md`.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
@@ -37,6 +37,8 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
+- **Banco: los equipos OHA no compran piezas de tienda secreta desde el 2026-10-31** y guardan una mediana del 37 % de su patrimonio en el min 25 (`item_purchase_generic.lua:1297`; causa inferida). Afecta a toda serie desde esa fecha. Sin comprobar en Turbo real.
+- **Banco, sin medir:** el espejo `base_sniper-vs-base` va +25,3k en 7 de 8. Nunca hubo A contra A con `rival=dotabot`.
 - **Banco: Dota se cierra solo** al cambiar o crear héroes de Dire (5 de 16 partidas con espejo, 1 de 2 creando).
   Se dejó de hacer: cada equipo pide su propio sorteo. Sin comprobar aún en una serie que no vuelva a pasar (20 de 20
   partidas de humo sin cierres).
@@ -53,7 +55,7 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
   - el rival de mid farmea más que contra OHA (12,1 LH frente a 10,8): deuda aceptada por Pedro al cerrar la línea (DECISIONES 2026-11-05);
-  - poco daño a héroes y pocas kills en medio juego frente a OHA con el mismo rival (`fijo-p5`: 13.956 frente a 21.823, 7,1 frente a 13,0): pelea menos tiempo;
+  - poco daño a héroes y pocas kills en medio juego frente a OHA con el mismo rival (`fijo-p5`: 13.956 frente a 21.823, 7,1 frente a 13,0), con más objetos: pelea menos tiempo; no tiene regla para pegar a torres;
   - contra un humano, sin comprobar con este código: en sus partidas anteriores iba a 40-42 LH en el min 10 y 7-10 muertes;
   - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
     `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.
