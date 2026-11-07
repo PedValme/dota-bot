@@ -68,6 +68,7 @@ local K = {
 	-- With a gap between both it stood there taking hits (fase1j: 10 of 23 harassed windows with no answer, ratio 0,5-0,8).
 	loseEdge = 0.7,
 	loseHp = 0.8,
+	loseEdgeFull = 0.5,   -- ...at or above loseHp, only this far below: a nuke at level 1 reads 0,5-0,8 (fase1j), and it must not leave the lane for that
 	healNear = 900,       -- no salve with an enemy hero this close, or within its attack range plus healMargin (it was 1500)
 	healMargin = 300,
 	treeSafe = 800,       -- how far a tree is worth walking to with no enemy near (OHA's distance)...
@@ -289,12 +290,15 @@ local function RuleRetreat(bot, s, p)
 		s.burstUntil = p.now + K.burstHold
 	-- A trade we are losing: a step out, early and short, not the whole way to the tower: the farm is still there
 	-- (Pedro, 2026-11-05: «asume mas daño [d]el necesario antes de escapar»).
-	elseif p.hp < K.loseHp and bot:WasRecentlyDamagedByAnyHero(2.0) then
+	-- At full health too, if it is lost by far: on top of it with ratio 0,22-0,48 and a full bar it went on hitting back, and died in some
+	-- 8 s (lobby 2026-11-05, t=1451, 1981, 2094).
+	elseif bot:WasRecentlyDamagedByAnyHero(2.0) then
+		local edge = p.hp < K.loseHp and K.loseEdge or K.loseEdgeFull
 		for _, e in ipairs(p.enemyHeroes) do
 			if Valid(e) and D2(p.loc, e:GetLocation()) <= e:GetAttackRange() + 200 then
 				local trade = Intercambio.Eval(bot, p, e)
-				if trade.ratio < K.loseEdge then
-					reason = string.format('intercambio_perdido %.2f < %.2f frente a %s', trade.ratio, K.loseEdge,
+				if trade.ratio < edge then
+					reason = string.format('intercambio_perdido %.2f < %.2f frente a %s', trade.ratio, edge,
 						(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')))
 					s.burstUntil, s.stepBack = p.now + K.burstHold, true
 					break
@@ -466,7 +470,7 @@ local function RuleTrade(bot, s, p, ready, soon)
 				local kind = nil
 				-- Once the lane is over, alone: no pressing, and hitting back only from out of its reach.
 				local company = not s.late or Medio.Allies(bot) > 0
-				if d <= p.range + K.answerReach and hit and (v.ratio >= K.loseEdge or p.hp >= K.loseHp) and (company or v.outranged) then kind = 'contesto'
+				if d <= p.range + K.answerReach and hit and (v.ratio >= (p.hp < K.loseHp and K.loseEdge or K.loseEdgeFull) or v.outranged) and (company or v.outranged) then kind = 'contesto'
 				elseif company and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono'
 				-- Alone, a free shot: in our range and well out of its reach, nobody else near, winning the trade. It is what the
 				-- range is for, and it stood there instead (presion3: 66 of 74 such seconds without firing).
@@ -489,6 +493,8 @@ local function RuleTeleport(bot, s, p)
 	if p.t < 0 or #p.enemyHeroes > 0 or D2(p.loc, p.front) < K.tpFrom then return nil end
 	-- Farming a camp it is where it wants to be: the scroll stays for the next fight.
 	if s.intent == 'a_neutrales' or s.intent == 'farmear' then return nil end
+	-- With a team to be with, the scroll is not for going back to the lane: it left them at once (equipo1-c, t=914).
+	if s.late and s.teamSpot ~= nil then return nil end
 	if p.now - (s.tpAt or -1000) < 5 then return nil end -- an order the engine took and did nothing with is not repeated
 	local slot = bot:FindItemSlot('item_tpscroll')
 	if slot < 0 or (slot > 5 and slot ~= 15) then return nil end
@@ -573,6 +579,12 @@ local function Decide(bot, s, p)
 		end
 		r = Medio.TeleportToFight(bot, s, p)
 		if r then return r end
+		-- Before the last hits: it leaves the creeps for the team, not the other way round.
+		r = Medio.WithTeam(bot, s, p)
+		if r then
+			local hide = r.intent == 'con_el_grupo' and Medio.Hide(bot, s, p, r.to) or nil
+			return hide or r
+		end
 	end
 	local hidden = bot:IsInvisible()
 	local ready, soon
@@ -597,7 +609,7 @@ local function Decide(bot, s, p)
 		if r then return r end
 	end
 	if late and ready == nil and not hidden then
-		r = Medio.Group(bot, s, p) or Medio.Neutrals(bot, s, p)
+		r = Medio.Siege(bot, s, p) or Medio.Neutrals(bot, s, p)
 		if r then return r end
 	end
 	local holdAt = late and Medio.HoldSpot(bot, s, p, LanePoint(p)) or nil
@@ -610,6 +622,8 @@ local function Decide(bot, s, p)
 				to = moves and spot or nil }
 		end
 	end
+	-- With them it stays: falling through to the lane walked it out again, ten times a second (equipo1-c, t=900-905).
+	if late and s.atTeam then return { intent = 'con_el_grupo', reason = string.format('con ellos, %d aliados', s.teamN or 0) } end
 	if holdAt ~= nil then
 		return { intent = 'esperar', reason = string.format('solo y con riesgo %.1f: junto a la torre', Medio.Risk(bot, LanePoint(p))), to = holdAt }
 	end
@@ -756,7 +770,7 @@ local function Act(bot, s, p, d)
 	end
 	-- A kill: keep attacking the target (one order per target or per second, not per frame); unseen, walk to where it
 	-- was last seen. A rotation walks to it.
-	if (d.intent == 'matar' or d.intent == 'farmear') and d.to == nil then
+	if (d.intent == 'matar' or d.intent == 'farmear' or d.intent == 'derribar') and d.to == nil then
 		if s.attacking ~= d.target or p.now - (s.attackOrderAt or -1000) > 1.0 then
 			bot:Action_AttackUnit(d.target, false)
 			s.attacking, s.attackOrderAt = d.target, p.now

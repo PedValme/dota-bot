@@ -1283,3 +1283,49 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **Fallo de regla, sigue en el código:** con vida ≥ 0,8 contesta con cualquier ratio y solo se aleja bajo 0,8. Muere desde vida llena en ~8 s contestando cuerpo a cuerpo con ratio 0,22-0,48 (t=1451, 1981, 2094).
   - **Exposición, no separa:** solo el 71-73 % de la partida y el 80-86 % antes de morir. Solo y con un bot rival a 1.400: 7-11 % de la partida, 30-43 % antes de morir, pero el humano no se registra y es casi tautológico. **No sirve como métrica principal.**
 - Decisión, con DECISIONES 2026-11-06 (dos métricas de mecanismo tras la base): **participación en kills**, la única que discrimina (media brecha: ≥ 0,43), y **tiempo sin aliado a 1.500**, lo que el paquete cambia directamente y se puede leer en los lobbies (≤ 59 %). Ninguna decide sola: son puerta para que juegue Pedro.
+
+### 2026-11-07 · Paquete «con el equipo», ronda 1 (`equipo1-*`, 3 enfrentamientos, 2 y 2 y 2, min 25): predicción antes de lanzar
+- Pregunta: ¿hace el paquete lo que dice, sin romper nada? Mecanismo, no resultado: con 6 partidas solo se lee si se mueve lo que toca (`base2-propio-*`, mismos enfrentamientos).
+- Qué cambió: tras la línea, su sitio es detrás del grupo, con TP desde lejos y sin caminar hacia riesgo; pega a torres en su rango con compañía; a vida ≥ 0,8 deja de contestar con ratio bajo 0,5 y se aleja.
+- Predicción:
+  - tiempo sin aliado a 1.500, de 66 % a ≤ 59 %; participación en kills, de 0,36 hacia ≥ 0,43;
+  - `con_el_grupo`, de 10 % al doble o más; `linea`+`a_neutrales`+`farmear`, de 62 % a menos de 50 %;
+  - `derribar` y `intercambio_perdido` a vida alta aparecen en todas las partidas;
+  - últimos golpes por debajo de 168: es el coste; por debajo de 130 no compensa;
+  - muertes, no más de 3 (OHA, 3); si sube mucho, muere en tránsito o con el grupo: se mira cuál.
+- Máquina: se anota por partida. Si falla en mecanismo, una segunda ronda, y es la última (DECISIONES 2026-11-06).
+- Máquina medida: CPU media 42-63 %, memoria libre 32-38 %. Código `e3176bb`, 6 de 6 válidas, 0 errores.
+- Resultado (n=6): tiempo sin aliado **67 %** (predicho ≤ 59 %); participación **0,33** (predicho ≥ 0,43); `con_el_grupo` 16 %, antes 10 %; `linea`+`a_neutrales`+`farmear` 59 %, antes 62 %; últimos golpes 169; kills 4,7; muertes 1,7; daño a héroes 8.670, antes 13.059; `derribar` en 4 de 6.
+- **No cumple.** Fallos de regla vistos en el registro (`a10.py`):
+  - **Va y viene:** al llegar, la regla deja paso a `linea`, que lo aleja, hasta 10 veces por segundo (`equipo1-c`, t=900-905).
+  - **La vuelta a la línea por TP lo saca de allí** (t=914).
+  - **El grupo no dura:** existe el 38 % del tiempo, con mediana de 12 s; con TP desde lejos llega tarde (4-10 pergaminos por partida).
+  - **Corrige la premisa:** el Sniper de OHA está a 1.500 del grupo el 34 % del tiempo y el propio, el 33 %. Estar con el grupo no explica toda la brecha de participación.
+
+### 2026-11-07 · Paquete «con el equipo», ronda 2, la última (`equipo2-*`, los mismos 3 enfrentamientos): predicción antes de lanzar
+- Qué cambió: con ellos se queda (entra a 500, sale a 900) y no vuelve a la línea por TP ni camina a campamentos; sin grupo, el aliado más cercano a menos de 2.500; TP solo a grupos de 3 o más.
+- Predicción: desaparece el ir y venir; tiempo sin aliado ≤ 59 %, por ir con el aliado más cercano; `con_el_grupo` por encima del 25 %; `a_neutrales` por debajo del 10 %; últimos golpes bajan de 169 sin pasar de 130. Participación, **sin confianza** en llegar a 0,43, por lo anterior.
+- Pase lo que pase, esta es la última ronda: si el mecanismo queda limpio juega Pedro, y si no, se le dice con los datos.
+- Máquina: CPU media 42-45 %, memoria libre 30-40 %. Código `3c8a9c4`, 6 de 6 válidas, 0 errores.
+- Resultado (n=6, mismos enfrentamientos; descriptivo):
+
+  | | `equipo2` | `base2-propio` | `base2-oha` | Predicho |
+  |---|---|---|---|---|
+  | **Tiempo sin aliado a 1.500** | **40 %** | 66 % | 59 % | ≤ 59 %, cumple |
+  | **Participación en kills** | **0,53** | 0,36 | 0,49 | ≥ 0,43, cumple, contra lo que esperaba |
+  | `con_el_grupo` / `a_neutrales` | 52 % / 4 % | 10 % / 21 % | | cumple |
+  | **Últimos golpes** | **98** | 168 | 154 | **≥ 130, no cumple** |
+  | Objetos | 17.113 | 19.188 | 21.070 | |
+  | Kills / asistencias | 6,7 / 9,0 | 5 / 6 | 10 / 5 | |
+  | Muertes | 3,3 | 2 | 3 | ≤ 3, justo por encima |
+  | Daño a héroes | 13.265 | 13.059 | 16.057 | |
+  | Diferencia de torres | +2 | +2 | +1 | |
+
+  Decisiones por partida, de unas 1.700 a unas 800: desaparece el ir y venir. `derribar` en 5 de 6; 0-4 TP al grupo.
+- Lectura:
+  - **El mecanismo funciona:** está acompañado y participa más que el Sniper de OHA.
+  - **Coste mayor del previsto:** 70 últimos golpes y 2.075 de objetos menos, por debajo del límite que escribí antes de lanzar. Sin más rondas (DECISIONES 2026-11-06), no se ajusta: se le dice a Pedro.
+  - Más asistencias que kills: acompaña más de lo que remata. El daño no sube.
+  - Muere algo más que `base2-propio`; 2 partidas con 5. Sin leer aún dónde.
+- Validez: mismos enfrentamientos, corridas separadas, con el ruido medido en la base: solo mecanismo. Aliados y rivales son OHA, y un humano castiga distinto. Los 98 últimos golpes son iguales a los 91-100 de sus partidas, con otro código y sin relación demostrada.
+- Decisión: última ronda agotada. Fusionar y que juegue Pedro: su partida decide.
