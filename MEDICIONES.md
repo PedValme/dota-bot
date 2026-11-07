@@ -1243,3 +1243,43 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Lectura: **causa confirmada.** En la ruta Turbo de OHA (`item_purchase_generic.lua:466-473`), un 62 pasa a «sin existencias», porque el stock siempre da 0, y la pieza se descarta en silencio; por eso no hay líneas de fallo y quedan recetas huérfanas. La tienda universal lo evita sin tocar OHA.
 - Validez: mecanismo, no resultado. **Sin comprobar en Turbo real:** el Sniper propio intenta ahora la compra directa y lo registra (`secreta, compra directa` o `sin compra directa, codigo=`), y las líneas `[bench] aliado` dan el oro de sus aliados: se resuelve en la próxima partida de Pedro.
 - Decisión: el Turbo del banco lleva la tienda universal siempre, comprobado en cada partida (`modo`). Toda serie Turbo anterior deja de ser comparable. Sigue la base nueva.
+
+### 2026-11-06 · Base nueva con el banco arreglado (`base2-*`): pregunta antes de lanzar
+- Pregunta: con la tienda universal, ¿dónde quedan el Sniper de OHA y el propio frente a un equipo OHA, y cuánto se separan dos repeticiones del mismo código? De aquí salen las dos métricas de mecanismo (DECISIONES 2026-11-06). No decide nada más, ni se lee como victoria.
+- Qué cambió: tienda universal; compra directa del propio. Código `6258053` en los árboles.
+- Humo de la puerta (`base2-humo-oha`, `base2-humo-propio`, enfrentamiento `a`, 2 y 2, min 25): 4 de 4 válidas, 0 errores. **Oro sin gastar 3-8 % en los dos equipos, antes unos 37 %.** Piezas secretas 6-12 por partida. Sniper de OHA: 8,0 kills, 4,5 muertes (antes 14,5 y 2,5, contra rivales sin objetos): era de esperar, y **las referencias anteriores no valen**. Revisor (Opus): ninguna fila de la tabla falla; pide intercalar los brazos y medir A contra A.
+- Tamaño, 2 partidas por tanda (una en cada lado), corridas en este orden: `oha-b`, `propio-b`, `oha-c`, `propio-c`, `oha-a`. Con el humo, OHA 8 (A contra A, repetido en `a`) y propio 6. Unas 2,4 h.
+- Enfrentamientos fijos: `a` y `b`, los de `fijo-*`; `c`, nuevo: `luna sniper dragon_knight lion warlock` contra `phantom_assassin razor axe jakiro lich`. **Ajuste del agente:** Bloodseeker y Alchemist, que lo mataron en el lobby, no están en la lista de héroes del banco; Phantom Assassin y Razor dan daño físico sostenido parecido, y la lista no se toca.
+- Análisis fijo, por partida y por enfrentamiento: objetos (`nw-gold`), oro sin gastar, kills, muertes, daño a héroes tras el min 12, participación en kills, tiempo sin aliado a 1.500, torres, últimos golpes. Desviación con el mismo código en OHA `a`. Kills de `lineas` en t=1500: la fila de GSI difiere hasta en 2.
+- Sin comprobar: si los aliados OHA reaccionan distinto a un Sniper sin modos OHA; ~20 «error in error handling» por partida, sin origen, y si son iguales entre brazos; 15 órdenes «not allowed for illusions» en `propio-2`; Turbo real.
+- Máquina: se anota por partida; memoria libre 28-33 % en el humo.
+
+### 2026-11-07 · Base nueva: resultado (`base2-*`, OHA n=8, propio n=6, min 25)
+- Máquina: CPU media 43-55 %, memoria libre 14-40 %. Código `6258053`, 14 de 14 válidas, sin repetir ninguna. Análisis fijo: `tools/analisis/evaluacion-2026-11-06/a9.py`.
+- Resultado (diferencia equilibrada por enfrentamiento, propio menos OHA, bootstrap dentro de cada uno):
+
+  | | OHA | Propio | Diferencia, IC95 |
+  |---|---|---|---|
+  | Oro sin gastar, 4 aliados / rivales | 5 % / 6 % | 3 % / 6 % | antes, unos 40 % / 30 % |
+  | **Participación en kills** | 0,49 | 0,36 | **−0,12 (−0,19 a −0,05)** |
+  | Kills | 10 | 5 | −4,8 (−9,3 a +0,1) |
+  | Muertes | 3 | 2 | −1,4 (−3,6 a +0,7) |
+  | Objetos | 21.070 | 19.188 | −1.841 (−6.124 a +2.395) |
+  | Daño a héroes, min 12-25 | 16.057 | 13.059 | −2.471 (−8.353 a +3.037) |
+  | Tiempo sin aliado a 1.500 | 59 % | 66 % | +6,9 (−3,7 a +17,3) |
+  | Últimos golpes | 154 | 168 | +12,5 (−21 a +43) |
+  | Diferencia de torres | +1 | +2 | +0,8 (−1,2 a +2,6) |
+  | Kills del equipo / del rival | 30 / 18 | 31 / 16 | −0,9 (−10 a +9) / +0,1 (−8 a +8) |
+  | Patrimonio del equipo sobre el rival | +11.908 | +20.489 | +4.507 (−12.324 a +20.352) |
+
+- Lectura:
+  - **El arreglo funciona:** todos gastan. La referencia cambió: el Sniper de OHA ya no acumula oro, y sus kills bajan de 13 a 10 frente a rivales con objetos.
+  - **El «daño al equipo» y las torres de la evaluación eran del banco roto:** aquí no se ven. Se retira la diferencia de torres como brecha.
+  - **Sigue la brecha del Sniper:** menos participación y menos kills; objetos y daño, ya sin diferencia clara. No sale peor en nada del equipo.
+  - **El ruido es enorme, también con el mismo código** (OHA `a`, 4 partidas): últimos golpes 121-210, kills 7-14, equipo de −17.229 a +34.272. Con la desviación medida, ver media brecha pide 33 partidas por brazo en participación, 85 en kills, 404 en daño, 512 en torres. **Con 4-8 partidas solo se lee mecanismo.**
+  - El espejo OHA no muestra ventaja fija en `a` (−316 de media). El +25,3k de antes quedó sin explicar; pudo ser `b` o el banco roto.
+- Validez: 3 enfrentamientos, n=2 por celda, salvo OHA `a`, n=4. Aliados y rivales son OHA. Máquina con 14 % de memoria libre en una partida. Las líneas de lobby son de código anterior. **El brazo propio y el OHA corrieron intercalados salvo la última tanda (`oha-a`).**
+- Paso 3, muertes en los 2 lobbies con registro (17, código anterior; `a8.py`):
+  - **Fallo de regla, sigue en el código:** con vida ≥ 0,8 contesta con cualquier ratio y solo se aleja bajo 0,8. Muere desde vida llena en ~8 s contestando cuerpo a cuerpo con ratio 0,22-0,48 (t=1451, 1981, 2094).
+  - **Exposición, no separa:** solo el 71-73 % de la partida y el 80-86 % antes de morir. Solo y con un bot rival a 1.400: 7-11 % de la partida, 30-43 % antes de morir, pero el humano no se registra y es casi tautológico. **No sirve como métrica principal.**
+- Decisión, con DECISIONES 2026-11-06 (dos métricas de mecanismo tras la base): **participación en kills**, la única que discrimina (media brecha: ≥ 0,43), y **tiempo sin aliado a 1.500**, lo que el paquete cambia directamente y se puede leer en los lobbies (≤ 59 %). Ninguna decide sola: son puerta para que juegue Pedro.
