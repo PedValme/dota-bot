@@ -186,6 +186,20 @@ function P.Buy(bot, s, now)
 	bot:SetNextItemPurchaseValue(cost)
 	if IsItemPurchasedFromSecretShop(next.part) then
 		if bot:GetGold() < cost then s.secretSince = nil return nil end
+		-- Directly first, as any other part: the bench's Turbo sells them at any shop, and the line says whether real Turbo does too.
+		-- One refusal is enough: from then on, the courier.
+		if s.secretDirect ~= false then
+			if bot:GetItemInSlot(14) ~= nil then return nil end
+			local room = MakeRoom(bot)
+			local code = bot:ActionImmediate_PurchaseItem(next.part)
+			if code == PURCHASE_ITEM_SUCCESS then
+				s.secretDirect, s.buyIndex, s.secretSince = true, s.buyIndex + 1, nil
+				return string.format('%s (para %s) secreta, compra directa, codigo=%s coste=%d oro=%d%s', next.part, next.of, tostring(code), cost, bot:GetGold(),
+					room and (' · ' .. room) or '')
+			end
+			s.secretDirect = false
+			return string.format('%s (para %s) secreta, sin compra directa, codigo=%s: uso el mensajero', next.part, next.of, tostring(code))
+		end
 		return BuySecret(bot, s, now, next, cost)
 	end
 	if bot:GetGold() < cost or now - (s.buyTriedAt or -1000) < 1 then return nil end
@@ -253,7 +267,7 @@ function P.Courier(bot, s, now)
 	-- Paid parts left on the courier, or a courier parked at the secret shop waiting for gold, are sent on: with the
 	-- inventory full they stayed there for good (lobby-202611052104, t=1211 to 1778). Not while it waits to buy there.
 	local secretNext = s.buyQueue ~= nil and s.buyQueue[s.buyIndex] ~= nil and IsItemPurchasedFromSecretShop(s.buyQueue[s.buyIndex].part)
-	if secretNext and bot:GetGold() >= GetItemCost(s.buyQueue[s.buyIndex].part) then return nil end
+	if secretNext and s.secretDirect == false and bot:GetGold() >= GetItemCost(s.buyQueue[s.buyIndex].part) then return nil end
 	if bot:IsAlive() and bot:GetCourierValue() > 0 and StashCount(bot) == 0 then
 		bot:ActionImmediate_Courier(c, COURIER_ACTION_TRANSFER_ITEMS)
 		s.courierAt = now

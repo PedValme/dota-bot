@@ -480,7 +480,6 @@ end
 
 function ItemPurchaseThink()
 	if Control.Intercept('ItemPurchaseThink') then return end
-	if Customize.BenchVariant.sonda_compra == true then return require( GetScriptDirectory()..'/FunLib/sonda_compra' ).Tick( bot ) end
 	currentTime = DotaTime()
 
 	-- ARDM: detect stale hero instance and rebuild purchase list on hero swap

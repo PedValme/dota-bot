@@ -220,8 +220,6 @@ test("the match config is plain Lua data for the custom game", () => {
   assert.match(matchConfigLua(["x"], 4, 4, true), /turbo = true/);
   assert.match(matchConfigLua(["x"], 4, 4), /observar = false/);
   assert.match(matchConfigLua(["x"], 4, 4, true, true), /observar = true/);
-  assert.doesNotMatch(matchConfigLua(["x"], 4, 4), /tienda_universal/);
-  assert.match(matchConfigLua(["x"], 4, 4, true, false, null, true), /tienda_universal = true/);
 });
 
 test("observer mode keeps the custom game's lines and the engine's bot lines, nothing else", () => {
@@ -242,7 +240,8 @@ test("observer mode keeps the custom game's lines and the engine's bot lines, no
 });
 
 test("the mode the custom game applied is read from the log and must match the series", () => {
-  assert.equal(parseModo("[VScript] [dotabench] turbo on gold=2 xp=2 respawn=0.75 couriers=turbo"), "turbo");
+  assert.equal(parseModo("[VScript] [dotabench] turbo on tienda=universal gold=2 xp=2 respawn=0.75 couriers=turbo"), "turbo");
+  assert.equal(parseModo("[VScript] [dotabench] turbo on gold=2 xp=2 respawn=0.75 couriers=turbo"), "turbo sin tienda universal");
   assert.equal(parseModo("[VScript] [dotabench] turbo off"), "normal");
   assert.equal(parseModo("nothing"), "");
   const R = ["luna", "lina", "axe", "lion", "lich"];

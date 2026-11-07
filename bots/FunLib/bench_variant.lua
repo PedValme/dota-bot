@@ -16,7 +16,6 @@
 --   lobby_mid "<hero>", lobby_team: a human's lobby, that team's bots take that hero in mid, tools/jugar-sniper.mjs
 --   sin_combate true: that hero without kills, abilities on heroes or trades, FunLib/propio/linea.lua
 --   linea_heroe "<hero>": one "[bench] linea" line per minute with that hero's lane numbers, FunLib/propio/registro_linea
---   sonda_compra true: what the engine answers when buying a secret shop item, FunLib/sonda_compra.lua; the bots stop buying
 --   thinkless number: overrides Customize.ThinkLess, Customize/general.lua
 -- dofile (not require) so a stale answer is never cached between matches.
 -- With "teams" (orquestador.mjs --rival dotabot: dota-bot against dota-bot), each team plays its own entry.

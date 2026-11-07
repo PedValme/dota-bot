@@ -20,6 +20,14 @@ function R.Tick(bot)
 		math.floor(t), pid, GetTeam(), hero, bot:GetLastHits(), bot:GetDenies(), bot:GetNetWorth(), bot:GetGold(),
 		bot:GetLevel(), GetHeroDeaths(pid), GetHeroKills(pid), bot:IsAlive() and 1 or 0,
 		tostring(Variant.control_completo ~= nil)))
+	-- In a human's lobby there is no observer: the gold of the allies, to see whether OHA also leaves it unspent in real Turbo.
+	if Variant.lobby_mid == nil then return end
+	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if a ~= bot and a:IsHero() and not a:IsIllusion() then
+			out(string.format('[bench] aliado t=%d pid=%d heroe=%s nw=%d oro=%d', math.floor(t), a:GetPlayerID(),
+				(string.gsub(a:GetUnitName(), 'npc_dota_hero_', '')), a:GetNetWorth() or -1, a:GetGold() or -1))
+		end
+	end
 end
 
 return R
