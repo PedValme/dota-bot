@@ -3,10 +3,10 @@
 <!-- pic-method: next-session -->
 ## Próxima sesión
 - **Qué se estaba haciendo:** la ruta que Pedro aprobó tras la evaluación adversarial: `trabajo/evaluacion-adversarial-2026-11-06.md`, DECISIONES 2026-11-06.
-- **Dónde quedó:** pasos 1 a 3 hechos (MEDICIONES 2026-11-07). Con el banco arreglado todos gastan (oro ocioso 3-8 %), desaparece la diferencia de equipo y de torres, y queda la brecha del Sniper: participación en kills 0,36 frente a 0,49. Métricas para el paso 4: participación ≥ 0,43 y tiempo sin aliado a 1.500 ≤ 59 %.
-- **Qué se probó:** la exposición no separa las muertes contra un humano y se descartó. El ruido es enorme con el mismo código: con 4-8 partidas solo se lee mecanismo.
-- **Siguiente acción:** paso 4: primera ronda del paquete, rama `claude/con-el-equipo` (con el equipo, torres acompañado, no contestar un intercambio perdido a vida llena), máximo 2 rondas; luego, partida de Pedro.
-- Espera al dueño: nada
+- **Dónde quedó:** pasos 1 a 5 hechos (MEDICIONES 2026-11-07). Banco arreglado y paquete «con el equipo» fusionado en la variante `control_sniper`. Ronda 2, frente a `base2-propio` y OHA: tiempo sin aliado 40 % (66 %, 59 %), participación en kills 0,53 (0,36, 0,49). Coste mayor del previsto: 98 últimos golpes (168, 154), 17.113 de objetos (19.188, 21.070), 3,3 muertes (2, 3).
+- **Qué se probó:** la exposición no separa las muertes contra un humano. Ronda 1, fallida: iba y venía y perseguía grupos que duran 12 s. Con 4-8 partidas solo se lee mecanismo. Se agotaron las 2 rondas.
+- **Siguiente acción:** la partida de Pedro decide. Al jugar, el registro dice además si OHA acumula oro en Turbo real (`[bench] aliado`) y si las piezas secretas se compran directo (`prop compra ... secreta`): leerlo después. Si no ve el cambio, se cierra el Sniper y se pasa a los cinco con cerebro propio (DECISIONES 2026-11-06).
+- Espera al dueño: jugar contra el Sniper y decir si se nota · Recomendado: con Dota cerrado, `node tools/jugar-sniper.mjs`, una partida en Turbo, y al acabar `node tools/jugar-sniper.mjs quitar`
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -54,7 +54,7 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
   - el rival de mid farmea más que contra OHA (12,1 LH frente a 10,8): deuda aceptada por Pedro al cerrar la línea (DECISIONES 2026-11-05);
-  - menos kills y menos participación en medio juego frente a OHA con el banco arreglado (5 frente a 10, 0,36 frente a 0,49, `base2-*`); no tiene regla para pegar a torres; contesta con cualquier ratio a vida alta y muere desde vida llena (paso 4, sin fusionar);
+  - menos kills que OHA con el banco arreglado (6,7 frente a 10, `equipo2`), y 98 últimos golpes frente a 154 al ir con el equipo: el coste de ese paquete, sin decidir si compensa;
   - contra un humano, sin comprobar con este código: en sus partidas anteriores iba a 40-42 LH en el min 10 y 7-10 muertes;
   - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
     `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.
