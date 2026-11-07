@@ -116,7 +116,8 @@ anotados como un hecho del banco y no como contaminación, y se midieron horas e
 | El equipo de Valve lo juega Valve | ningún `[bench] load` (una línea por bot de dota-bot, siempre) ni `[bench] mode` de un pid de ese equipo; el archivo de equipo dura toda la partida | `dota-bot jugó en el equipo de Valve`, `sin registro de carga` |
 | Todos los héroes aparecen antes del inicio | `[dotabench] spawn ... t=` (primero de cada pid ≤ 0: una copia como Nothl Projection aparece más tarde) | `héroe aparecido tras el inicio`, `sin registro de aparición` |
 | Sorteo por equipo | `--espejo no` (Dire al azar) es solo para depurar | `espejo apagado` |
-| Variante y modo pedidos | `[dotabench] variant`, `turbo on/off` | `variante`, `modo` |
+| Variante y modo pedidos; Turbo con tienda universal | `[dotabench] variant`, `turbo on tienda=universal`/`off` | `variante`, `modo` |
+| OHA gasta su oro (con `--observar`; evaluación del 2026-11-06) | `obs hero`, oro sobre patrimonio en el min 25: antes del arreglo, mediana 37 %, y Valve 9 % | se lee antes de cada serie; muy por encima de 15 %, se para y se busca la causa |
 | Misma versión de Dota en toda la serie | `steam.inf` | `Dota cambió de versión` |
 | Mismo código, con commit, en toda la serie | árbol de git de `bots/` y `tools/bench/` y `git status` antes y después de cada partida (`codigo` = commit@árboles; un commit solo de documentos no la invalida) | `código sin commit`, `el código cambió en la serie` |
 | La partida termina en tiempo razonable | reloj de GSI: a los 60 min se corta (`resultado=tope`, válida, sin ganador); con `--corte N`, en el minuto N (`resultado=corte`, igual) | no la invalida |

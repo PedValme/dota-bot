@@ -1227,3 +1227,19 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Las diferencias de torres, muertes de aliados y daño por pelea dependen de un enfrentamiento con n=2 de OHA. No demostradas.
   - La corrección de `a3.py` (pendiente, listón e iteración) está en `revisor/`.
 - Decisión: pendiente de Pedro. Mientras tanto no se mide nada que compare con OHA.
+
+### 2026-11-06 · Sonda de compra (`sonda-tienda-no`, `sonda-tienda-si`, 2 y 2, cortadas en el min 7)
+- Pregunta: ¿qué responde el motor cuando un bot compra una pieza de tienda secreta lejos de ella, con y sin `SetUseUniversalShopMode`? No compara nada.
+- Qué cambió: variante temporal `sonda_compra`, que sustituye las compras de OHA. Código `bafb98c`; retirada después (el resultado queda aquí).
+- Máquina: CPU media 51-71 %, memoria libre 19-38 %.
+- Resultado, primer `item_point_booster` de cada bot y sus reintentos, a 7.000-13.500 de casa:
+
+  | | `item_point_booster` | `item_ogre_axe` (control) |
+  |---|---|---|
+  | Sin tienda universal | código 62 (no estás en la tienda secreta), 11 de 11 | −1 (comprado), 23 de 23 |
+  | Con tienda universal | **−1 (comprado), 11 de 11** | −1, 11 de 11 |
+
+  `GetItemStockCount` devuelve 0 en todos los intentos, también para objetos comprables.
+- Lectura: **causa confirmada.** En la ruta Turbo de OHA (`item_purchase_generic.lua:466-473`), un 62 pasa a «sin existencias», porque el stock siempre da 0, y la pieza se descarta en silencio; por eso no hay líneas de fallo y quedan recetas huérfanas. La tienda universal lo evita sin tocar OHA.
+- Validez: mecanismo, no resultado. **Sin comprobar en Turbo real:** el Sniper propio intenta ahora la compra directa y lo registra (`secreta, compra directa` o `sin compra directa, codigo=`), y las líneas `[bench] aliado` dan el oro de sus aliados: se resuelve en la próxima partida de Pedro.
+- Decisión: el Turbo del banco lleva la tienda universal siempre, comprobado en cada partida (`modo`). Toda serie Turbo anterior deja de ser comparable. Sigue la base nueva.

@@ -53,6 +53,9 @@ once it exists.
     a la serie, que sigue pidiendo máquina libre (DECISIONES.md, 2026-11-04 y 2026-11-05).
   - La partida de Pedro decide por encima de los números: la confirmación de la línea pasó y él vio el bot «nefasto»; por
     qué, los bots de Valve no presionan como un humano (DECISIONES.md, 2026-11-05).
+  - Sin vueltas de umbrales: un paquete, como mucho 2 rondas de mecanismo, y juega Pedro; una constante cambia solo por un fallo de
+    regla visto en el registro. Por qué: con estas partidas ni 12 vueltas detectan ±3,4 kills, y el mismo código dio 199 y 162 últimos
+    golpes (DECISIONES.md, 2026-11-06; `trabajo/evaluacion-adversarial-2026-11-06.md`).
   - Una rama y un PR por tarea; mientras corre una serie, el trabajo paralelo va en otro worktree (DECISIONES.md,
     2026-10-31).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).

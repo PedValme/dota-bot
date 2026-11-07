@@ -12,7 +12,7 @@ Scripts: `tools/analisis/evaluacion-2026-11-06/`. Se borra cuando Pedro decida y
 - Compras de piezas de tienda secreta hasta el min 20: de 2-5 por partida a 0,0-0,5. Valve sigue en 1-7.
 - Coincide con la ruta de compra Turbo activada en el banco (`item_purchase_generic.lua:1297`, #23). `base_sinturbo`, 4 %, pero n=1 y con S4.
 - En las derrotas contra Valve, OHA va **+5.561 en patrimonio y −13.946 en objetos** (min 25). **Buena parte de la «ventaja regalada» eran monedas.**
-- Causa: inferida. La ruta Turbo nunca activa `bot.SecretShop` y la pieza parece descartarse en silencio (`:471-473`). Ningún código de retorno visto.
+- Causa: confirmada después con la sonda (MEDICIONES 2026-11-06): la compra devuelve 62, el stock siempre da 0 y la pieza se descarta en silencio (`:466-473`). Con la tienda universal, −1 en 11 de 11.
 - **Abierto:** los lobbies de Pedro son Turbo real (`game_mode: 23`) y usan esa misma ruta; no registran el oro de los bots. Una fuente débil dice que allí
   las piezas secretas se compran en cualquier tienda. Si es así, es un defecto del banco; si no, también lo ve Pedro en sus aliados y rivales.
 
@@ -61,7 +61,5 @@ Min 25: 91-100 LH y 5-7 muertes contra un humano; 162 LH y 1,3 muertes en `fijo-
 
 Por qué esta ruta y no ir ya a los cinco: no toca lo que Pedro se queja ni el fallo del banco, y va contra DECISIONES 2026-11-05. Deuda: seguir a cuatro OHA hereda su macro; se acepta como puente, no como control completo.
 
-## Lo que pide decisión de Pedro
-- La ruta.
-- Reemplazar el listón del 2026-11-05 (necesita sus palabras).
-- Si el rumbo del 2026-11-03 sigue, sabiendo lo de arriba. Recomendado: sí, se apoya en el control.
+## Decisión de Pedro
+Aprobó la ruta, reemplazar el listón y mantener el rumbo (DECISIONES 2026-11-06). Avance: paso 1 hecho (tienda universal en el Turbo del banco, comprobada en cada partida; compra directa en el propio; oro de los aliados en el lobby).

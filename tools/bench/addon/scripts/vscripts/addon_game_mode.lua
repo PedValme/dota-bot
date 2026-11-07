@@ -59,6 +59,9 @@ end
 local function ApplyTurbo()
 	local mode = GameRules:GetGameModeEntity()
 	mode:SetUseTurboCouriers(true)
+	-- Secret shop items at any shop. OHA's Turbo purchase path never goes to the secret shop: refused (code 62, stock 0 for every item), it
+	-- drops the part in silence, and its teams left a median 37 % of their net worth unspent at minute 25 (MEDICIONES 2026-11-06).
+	GameRules:SetUseUniversalShopMode(true)
 	mode:SetRespawnTimeScale(TURBO.respawn)
 	mode:SetModifyGoldFilter(function(_, event)
 		if event.gold > 0 and INCOME[event.reason_const] then event.gold = math.floor(event.gold * TURBO.gold) end
@@ -72,7 +75,7 @@ local function ApplyTurbo()
 	end, {})
 	local n = 0
 	for _ in pairs(INCOME) do n = n + 1 end
-	print(string.format("[dotabench] turbo on gold=%s xp=%s respawn=%s couriers=turbo income_reasons=%d", TURBO.gold,
+	print(string.format("[dotabench] turbo on tienda=universal gold=%s xp=%s respawn=%s couriers=turbo income_reasons=%d", TURBO.gold,
 		TURBO.xp, TURBO.respawn, n))
 end
 

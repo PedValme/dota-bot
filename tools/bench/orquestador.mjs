@@ -549,10 +549,12 @@ export function parseVariant(text) {
   return m ? m[1] ?? "" : null;
 }
 
-// The mode the custom game applied ("[dotabench] turbo on ..." or "turbo off"); "" if it logged neither.
+// The mode the custom game applied ("[dotabench] turbo on tienda=universal ..." or "turbo off"); "" if it logged neither.
+// A Turbo without the universal shop is not "turbo": OHA's teams stop spending there (MEDICIONES 2026-11-06), and the match is invalid.
 export function parseModo(text) {
-  const m = text.match(/\[dotabench\] turbo (on|off)/);
-  return m ? (m[1] === "on" ? "turbo" : "normal") : "";
+  if (/\[dotabench\] turbo on tienda=universal /.test(text)) return "turbo";
+  if (/\[dotabench\] turbo on/.test(text)) return "turbo sin tienda universal";
+  return /\[dotabench\] turbo off/.test(text) ? "normal" : "";
 }
 
 // Dota's build, from <dota>/game/dota/steam.inf.

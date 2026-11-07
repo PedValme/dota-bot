@@ -2,11 +2,11 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Qué se estaba haciendo:** la evaluación adversarial pedida el 2026-11-06, sin partidas nuevas: `trabajo/evaluacion-adversarial-2026-11-06.md`, MEDICIONES 2026-11-06.
-- **Dónde quedó:** hecha y revisada por dos subagentes. Los equipos OHA guardan una mediana del 37 % de su patrimonio sin gastar en el banco desde el 2026-10-31 (antes 5 %), lo que afecta a toda comparación desde esa fecha. El Sniper propio tiene un 40 % más en objetos que el de OHA y hace un 33 % menos de daño. El listón propuesto no sirve (36 % bajo paridad).
-- **Qué se probó:** recalcular todo desde los registros. Se retiraron «el pulido no movió nada» (el método no tiene potencia para verlo) y «el propio hunde a sus aliados» (no demostrado).
-- **Siguiente acción:** con el sí de Pedro, el paso 1 de la ruta: la sonda de compra, sin tocar la base hasta verla. Nada que compare con OHA se mide antes.
-- Espera al dueño: la ruta de `trabajo/evaluacion-adversarial-2026-11-06.md`, reemplazar el listón del 2026-11-05 y confirmar el rumbo del 2026-11-03 · Recomendado: aprobar la ruta, reemplazar el listón con métricas de mecanismo fijadas tras la base nueva y mantener el rumbo
+- **Qué se estaba haciendo:** la ruta que Pedro aprobó tras la evaluación adversarial: `trabajo/evaluacion-adversarial-2026-11-06.md`, DECISIONES 2026-11-06.
+- **Dónde quedó:** paso 1 hecho. La sonda confirmó la causa (código 62 sin tienda universal; −1 con ella, 11 de 11) y el Turbo del banco lleva la tienda universal, comprobada en cada partida. El Sniper propio compra directo y, en el lobby, registra el oro de sus aliados.
+- **Qué se probó:** la evaluación retiró «el pulido no movió nada» (el método no tiene potencia para verlo) y «el propio hunde a sus aliados» (no demostrado). El listón anterior está reemplazado; las métricas nuevas se fijan tras la base.
+- **Siguiente acción:** paso 2, la base nueva con su puerta de medición: humo cotejado, revisor y pregunta escrita. Mirar que OHA gaste su oro (muy por encima de 15 % en el min 25, se para) y medir también el A contra A. Luego, pasos 3 y 4.
+- Espera al dueño: nada
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -37,7 +37,7 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
-- **Banco: los equipos OHA no compran piezas de tienda secreta desde el 2026-10-31** y guardan una mediana del 37 % de su patrimonio en el min 25 (`item_purchase_generic.lua:1297`; causa inferida). Afecta a toda serie desde esa fecha. Sin comprobar en Turbo real.
+- **OHA en Turbo real, sin comprobar:** en el banco no compraba piezas de tienda secreta desde el 2026-10-31 (código 62 descartado en silencio, `item_purchase_generic.lua:466-473`; mediana de 37 % de patrimonio sin gastar en el min 25). Arreglado en el banco con la tienda universal; toda serie Turbo anterior no es comparable. Si en Turbo real pasa igual, es un defecto de lo que Pedro juega: se ve en su próxima partida.
 - **Banco, sin medir:** el espejo `base_sniper-vs-base` va +25,3k en 7 de 8. Nunca hubo A contra A con `rival=dotabot`.
 - **Banco: Dota se cierra solo** al cambiar o crear héroes de Dire (5 de 16 partidas con espejo, 1 de 2 creando).
   Se dejó de hacer: cada equipo pide su propio sorteo. Sin comprobar aún en una serie que no vuelva a pasar (20 de 20
