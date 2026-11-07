@@ -1294,3 +1294,15 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - últimos golpes por debajo de 168: es el coste; por debajo de 130 no compensa;
   - muertes, no más de 3 (OHA, 3); si sube mucho, muere en tránsito o con el grupo: se mira cuál.
 - Máquina: se anota por partida. Si falla en mecanismo, una segunda ronda, y es la última (DECISIONES 2026-11-06).
+- Máquina medida: CPU media 42-63 %, memoria libre 32-38 %. Código `e3176bb`, 6 de 6 válidas, 0 errores.
+- Resultado (n=6): tiempo sin aliado **67 %** (predicho ≤ 59 %); participación **0,33** (predicho ≥ 0,43); `con_el_grupo` 16 %, antes 10 %; `linea`+`a_neutrales`+`farmear` 59 %, antes 62 %; últimos golpes 169; kills 4,7; muertes 1,7; daño a héroes 8.670, antes 13.059; `derribar` en 4 de 6.
+- **No cumple.** Fallos de regla vistos en el registro (`a10.py`):
+  - **Va y viene:** al llegar, la regla deja paso a `linea`, que lo aleja, hasta 10 veces por segundo (`equipo1-c`, t=900-905).
+  - **La vuelta a la línea por TP lo saca de allí** (t=914).
+  - **El grupo no dura:** existe el 38 % del tiempo, con mediana de 12 s; con TP desde lejos llega tarde (4-10 pergaminos por partida).
+  - **Corrige la premisa:** el Sniper de OHA está a 1.500 del grupo el 34 % del tiempo y el propio, el 33 %. Estar con el grupo no explica toda la brecha de participación.
+
+### 2026-11-07 · Paquete «con el equipo», ronda 2, la última (`equipo2-*`, los mismos 3 enfrentamientos): predicción antes de lanzar
+- Qué cambió: con ellos se queda (entra a 500, sale a 900) y no vuelve a la línea por TP ni camina a campamentos; sin grupo, el aliado más cercano a menos de 2.500; TP solo a grupos de 3 o más.
+- Predicción: desaparece el ir y venir; tiempo sin aliado ≤ 59 %, por ir con el aliado más cercano; `con_el_grupo` por encima del 25 %; `a_neutrales` por debajo del 10 %; últimos golpes bajan de 169 sin pasar de 130. Participación, **sin confianza** en llegar a 0,43, por lo anterior.
+- Pase lo que pase, esta es la última ronda: si el mecanismo queda limpio juega Pedro, y si no, se le dice con los datos.

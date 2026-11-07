@@ -29,6 +29,8 @@ local K = {
 	groupNear = 900,     -- allies this close to each other are a group
 	groupBehind = 500,   -- ...and it stands this far behind them, toward home
 	groupThere = 500,    -- this close to that spot is being with them
+	groupLeave = 900,    -- it stops being with them only this far from the spot: one limit made it go back and forth
+	teamTpN = 3,         -- a group this large is worth a teleport
 	teamEvery = 3,       -- seconds it keeps the spot it chose
 	teamWalk = 2500,     -- farther than this, by teleport if that saves at least this much
 	siegeCreeps = 700,   -- our creeps this close to a tower keep it busy
@@ -370,7 +372,7 @@ function M.Neutrals(bot, s, p)
 		return { intent = 'farmear', target = best, reason = string.format('%s vida %d', (string.gsub(best:GetUnitName(), 'npc_dota_', '')), bestHp) }
 	end
 	-- Walking to a camp only with no creeps in the lane and no enemy near. A camp begun is finished, above.
-	if #p.enemyHeroes > 0 or #p.enemyCreeps > 0 then return nil end
+	if #p.enemyHeroes > 0 or #p.enemyCreeps > 0 or s.atTeam then return nil end
 	s.campEmpty = s.campEmpty or {}
 	-- pairs, as OHA reads this list; the keys are not documented. The camp is chosen once a second: Risk per camp each tick is dear.
 	if s.camps == nil then
@@ -419,6 +421,14 @@ local function TeamSpot(bot, p)
 		end
 		if n > bestN then best, bestN = a, n end
 	end
+	-- OHA's groups last a median of 12 s and exist 38 % of the time (equipo1): with none, the nearest ally within a short walk.
+	if best == nil then
+		local nearest = K.teamWalk
+		for _, a in ipairs(allies) do
+			local d = D2(p.loc, a:GetLocation())
+			if d < nearest then best, nearest = a, d end
+		end
+	end
 	if best == nil then return nil end
 	local spot = Toward(best:GetLocation(), GetAncient(p.team):GetLocation(), K.groupBehind)
 	for _, tw in ipairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS) or {}) do
@@ -435,16 +445,18 @@ end
 -- deaths hunted while going to a lane): by teleport from far, and not on foot toward known risk. The spot is kept for a few seconds so it
 -- does not change its mind each tick. Returns a decision or nil; once there, nil: what it farms and hits is what comes by.
 function M.WithTeam(bot, s, p)
-	if p.hp < K.fightHp then return nil end
+	if p.hp < K.fightHp then s.atTeam = false return nil end
 	if p.now - (s.teamAt or -1000) >= K.teamEvery then
 		s.teamAt = p.now
 		s.teamSpot, s.teamN = TeamSpot(bot, p)
 	end
 	local spot = s.teamSpot
-	if spot == nil then return nil end
+	if spot == nil then s.atTeam = false return nil end
 	local d = D2(p.loc, spot)
-	if d < K.groupThere then return nil end
-	if d > K.teamWalk and #p.enemyHeroes == 0 and p.now - (s.tpAt or -1000) >= 5 then
+	if d < K.groupThere then s.atTeam = true elseif d > K.groupLeave then s.atTeam = false end
+	if s.atTeam then return nil end
+	-- Only for a group that may last: with two, it landed when they had already parted (4-10 scrolls a match, equipo1).
+	if (s.teamN or 0) >= K.teamTpN and d > K.teamWalk and #p.enemyHeroes == 0 and p.now - (s.tpAt or -1000) >= 5 then
 		local slot = bot:FindItemSlot('item_tpscroll')
 		local item = slot >= 0 and (slot <= 5 or slot == 15) and bot:GetItemInSlot(slot) or nil
 		local tower = M.NearestTower(spot)

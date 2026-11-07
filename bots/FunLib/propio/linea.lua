@@ -493,6 +493,8 @@ local function RuleTeleport(bot, s, p)
 	if p.t < 0 or #p.enemyHeroes > 0 or D2(p.loc, p.front) < K.tpFrom then return nil end
 	-- Farming a camp it is where it wants to be: the scroll stays for the next fight.
 	if s.intent == 'a_neutrales' or s.intent == 'farmear' then return nil end
+	-- With a team to be with, the scroll is not for going back to the lane: it left them at once (equipo1-c, t=914).
+	if s.late and s.teamSpot ~= nil then return nil end
 	if p.now - (s.tpAt or -1000) < 5 then return nil end -- an order the engine took and did nothing with is not repeated
 	local slot = bot:FindItemSlot('item_tpscroll')
 	if slot < 0 or (slot > 5 and slot ~= 15) then return nil end
@@ -620,6 +622,8 @@ local function Decide(bot, s, p)
 				to = moves and spot or nil }
 		end
 	end
+	-- With them it stays: falling through to the lane walked it out again, ten times a second (equipo1-c, t=900-905).
+	if late and s.atTeam then return { intent = 'con_el_grupo', reason = string.format('con ellos, %d aliados', s.teamN or 0) } end
 	if holdAt ~= nil then
 		return { intent = 'esperar', reason = string.format('solo y con riesgo %.1f: junto a la torre', Medio.Risk(bot, LanePoint(p))), to = holdAt }
 	end
