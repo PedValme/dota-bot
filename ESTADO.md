@@ -3,9 +3,9 @@
 <!-- pic-method: next-session -->
 ## Próxima sesión
 - **Qué se estaba haciendo:** la ruta que Pedro aprobó tras la evaluación adversarial: `trabajo/evaluacion-adversarial-2026-11-06.md`, DECISIONES 2026-11-06.
-- **Dónde quedó:** paso 1 hecho. La sonda confirmó la causa (código 62 sin tienda universal; −1 con ella, 11 de 11) y el Turbo del banco lleva la tienda universal, comprobada en cada partida. El Sniper propio compra directo y, en el lobby, registra el oro de sus aliados.
-- **Qué se probó:** la evaluación retiró «el pulido no movió nada» (el método no tiene potencia para verlo) y «el propio hunde a sus aliados» (no demostrado). El listón anterior está reemplazado; las métricas nuevas se fijan tras la base.
-- **Siguiente acción:** paso 2, la base nueva con su puerta de medición: humo cotejado, revisor y pregunta escrita. Mirar que OHA gaste su oro (muy por encima de 15 % en el min 25, se para) y medir también el A contra A. Luego, pasos 3 y 4.
+- **Dónde quedó:** pasos 1 a 3 hechos (MEDICIONES 2026-11-07). Con el banco arreglado todos gastan (oro ocioso 3-8 %), desaparece la diferencia de equipo y de torres, y queda la brecha del Sniper: participación en kills 0,36 frente a 0,49. Métricas para el paso 4: participación ≥ 0,43 y tiempo sin aliado a 1.500 ≤ 59 %.
+- **Qué se probó:** la exposición no separa las muertes contra un humano y se descartó. El ruido es enorme con el mismo código: con 4-8 partidas solo se lee mecanismo.
+- **Siguiente acción:** paso 4: primera ronda del paquete, rama `claude/con-el-equipo` (con el equipo, torres acompañado, no contestar un intercambio perdido a vida llena), máximo 2 rondas; luego, partida de Pedro.
 - Espera al dueño: nada
 
 ## Madurez
@@ -38,7 +38,6 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
 - **OHA en Turbo real, sin comprobar:** en el banco no compraba piezas de tienda secreta desde el 2026-10-31 (código 62 descartado en silencio, `item_purchase_generic.lua:466-473`; mediana de 37 % de patrimonio sin gastar en el min 25). Arreglado en el banco con la tienda universal; toda serie Turbo anterior no es comparable. Si en Turbo real pasa igual, es un defecto de lo que Pedro juega: se ve en su próxima partida.
-- **Banco, sin medir:** el espejo `base_sniper-vs-base` va +25,3k en 7 de 8. Nunca hubo A contra A con `rival=dotabot`.
 - **Banco: Dota se cierra solo** al cambiar o crear héroes de Dire (5 de 16 partidas con espejo, 1 de 2 creando).
   Se dejó de hacer: cada equipo pide su propio sorteo. Sin comprobar aún en una serie que no vuelva a pasar (20 de 20
   partidas de humo sin cierres).
@@ -55,7 +54,7 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
   - el rival de mid farmea más que contra OHA (12,1 LH frente a 10,8): deuda aceptada por Pedro al cerrar la línea (DECISIONES 2026-11-05);
-  - poco daño a héroes y pocas kills en medio juego frente a OHA con el mismo rival (`fijo-p5`: 13.956 frente a 21.823, 7,1 frente a 13,0), con más objetos: pelea menos tiempo; no tiene regla para pegar a torres;
+  - menos kills y menos participación en medio juego frente a OHA con el banco arreglado (5 frente a 10, 0,36 frente a 0,49, `base2-*`); no tiene regla para pegar a torres; contesta con cualquier ratio a vida alta y muere desde vida llena (paso 4, sin fusionar);
   - contra un humano, sin comprobar con este código: en sus partidas anteriores iba a 40-42 LH en el min 10 y 7-10 muertes;
   - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
     `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.

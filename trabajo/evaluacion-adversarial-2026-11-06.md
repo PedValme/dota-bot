@@ -62,4 +62,4 @@ Min 25: 91-100 LH y 5-7 muertes contra un humano; 162 LH y 1,3 muertes en `fijo-
 Por qué esta ruta y no ir ya a los cinco: no toca lo que Pedro se queja ni el fallo del banco, y va contra DECISIONES 2026-11-05. Deuda: seguir a cuatro OHA hereda su macro; se acepta como puente, no como control completo.
 
 ## Decisión de Pedro
-Aprobó la ruta, reemplazar el listón y mantener el rumbo (DECISIONES 2026-11-06). Avance: paso 1 hecho (tienda universal en el Turbo del banco, comprobada en cada partida; compra directa en el propio; oro de los aliados en el lobby).
+Aprobó la ruta, reemplazar el listón y mantener el rumbo (DECISIONES 2026-11-06). Avance: paso 1 hecho (tienda universal en el Turbo del banco, comprobada en cada partida; compra directa en el propio; oro de los aliados en el lobby). Pasos 2 y 3 hechos (MEDICIONES 2026-11-07): la brecha de equipo y de torres era del banco roto; queda la del Sniper. Métricas: participación en kills (≥ 0,43) y tiempo sin aliado a 1.500 (≤ 59 %); la exposición no separa las muertes. **Lo escrito arriba sobre torres y aliados queda superado por esa medición.** Sigue el paso 4, con el fallo de `contesto` a vida llena incluido.
