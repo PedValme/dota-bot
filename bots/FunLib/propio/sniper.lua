@@ -20,6 +20,26 @@ local function CastClear(bot)
 	return 900
 end
 
+-- The hits a unit lands on the target in these seconds (the first one at once), by its real damage per hit.
+local function HitsDamage(u, e, seconds)
+	local hits = seconds > 0 and 1 + math.floor(seconds / math.max(u:GetSecondsPerAttack(), 0.1)) or 0
+	return hits * e:GetActualIncomingDamage(u:GetAttackDamage(), DAMAGE_TYPE_PHYSICAL)
+end
+
+-- Whether an Assassinate on this target is wasted: it dies before the cast ends anyway, to our hits in range or to the allies already
+-- hitting it, or it is teleporting away, or the engine just refused it. 38 of 91 orders never went off, and in 29 the hero stood still
+-- for the whole cast (equipo2, revisión del 2026-11-08). OHA's Sniper leaves the same cases (hero_sniper.lua:536-545).
+local function Wasted(bot, s, p, e, castPoint)
+	if (s.castBan or {})[Short(e)] ~= nil and s.castBan[Short(e)] > p.now then return true end
+	if e:HasModifier('modifier_teleporting') then return true end
+	local hp, others = e:GetHealth(), 0
+	if D2(p.loc, e:GetLocation()) <= p.range and HitsDamage(bot, e, castPoint) >= hp then return true end
+	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if a ~= bot and Seen(a) and not a:IsIllusion() and a:GetAttackTarget() == e then others = others + HitsDamage(a, e, castPoint) end
+	end
+	return others >= hp
+end
+
 -- Assassinate: only to finish a visible enemy hero it kills for sure, with no other enemy hero on top of us during its
 -- long cast.
 function H.Finish(bot, s, p)
@@ -37,7 +57,7 @@ function H.Finish(bot, s, p)
 			for _, o in ipairs(p.enemyHeroes) do
 				if Seen(o) and o ~= e and D2(p.loc, o:GetLocation()) < clear then others = others + 1 end
 			end
-			if real >= e:GetHealth() and others == 0 then
+			if real >= e:GetHealth() and others == 0 and not Wasted(bot, s, p, e, a:GetCastPoint()) then
 				return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(),
 					reason = string.format('%s vida %d, assassinate quita %d (punto %.1fs)', Short(e), e:GetHealth(), real, a:GetCastPoint()) }
 			end
@@ -62,7 +82,7 @@ function H.FightCast(bot, s, p)
 	if dmg == nil or dmg <= 0 then dmg = a:GetAbilityDamage() end
 	local best, bestShare = nil, FIGHT_SHARE
 	for _, e in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES) or {}) do
-		if Seen(e) and not e:IsMagicImmune() and D2(p.loc, e:GetLocation()) <= range then
+		if Seen(e) and not e:IsMagicImmune() and D2(p.loc, e:GetLocation()) <= range and not Wasted(bot, s, p, e, a:GetCastPoint()) then
 			if e:IsChanneling() then
 				return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), reason = string.format('%s canaliza: la interrumpo', Short(e)) }
 			end

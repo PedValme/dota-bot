@@ -461,6 +461,7 @@ local function RuleTrade(bot, s, p, ready, soon)
 		if Valid(tw) and D2(p.loc, tw:GetLocation()) < K.towerMargin + 50 then return nil end
 	end
 	local hit = bot:WasRecentlyDamagedByAnyHero(2.0)
+	local alone = #p.enemyHeroes == 1 -- one enemy hero in sight
 	for _, e in ipairs(p.enemyHeroes) do
 		if Valid(e) and not e:IsIllusion() and not e:IsAttackImmune() then
 			local d = D2(p.loc, e:GetLocation())
@@ -470,8 +471,10 @@ local function RuleTrade(bot, s, p, ready, soon)
 				local kind = nil
 				-- Once the lane is over, alone: no pressing, and hitting back only from out of its reach.
 				local company = not s.late or Medio.Allies(bot) > 0
-				if d <= p.range + K.answerReach and hit and (v.ratio >= (p.hp < K.loseHp and K.loseEdge or K.loseEdgeFull) or v.outranged) and (company or v.outranged) then kind = 'contesto'
-				elseif company and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono'
+				if d <= p.range + K.answerReach and hit and (v.ratio >= (p.hp < K.loseHp and K.loseEdge or K.loseEdgeFull) or (v.outranged and alone))
+					and (company or (v.outranged and alone)) then kind = 'contesto'
+				-- Against two, neither: pressing with a second enemy in sight gave 3 deaths in 15 cases, and answering 7 in 32 (equipo1-2).
+				elseif company and alone and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono'
 				-- Alone, a free shot: in our range and well out of its reach, nobody else near, winning the trade. It is what the
 				-- range is for, and it stood there instead (presion3: 66 of 74 such seconds without firing).
 				elseif not company and ready == nil and d <= p.range and d >= e:GetAttackRange() + K.freeShotGap
@@ -582,6 +585,11 @@ local function Decide(bot, s, p)
 		-- Before the last hits: it leaves the creeps for the team, not the other way round.
 		r = Medio.WithTeam(bot, s, p)
 		if r then
+			-- A last hit ready without a step is taken first: walking to them it let them fall (equipo2, about 2 a match).
+			if r.intent == 'con_el_grupo' and not bot:IsInvisible() then
+				local lh = RuleLastHit(bot, s, p)
+				if lh ~= nil then return lh end
+			end
 			local hide = r.intent == 'con_el_grupo' and Medio.Hide(bot, s, p, r.to) or nil
 			return hide or r
 		end
@@ -716,6 +724,7 @@ local function Act(bot, s, p, d)
 	if d.intent == 'rematar' then
 		bot:Action_UseAbilityOnEntity(d.ability, d.target)
 		s.busyUntil = p.now + d.castPoint + 0.3
+		s.castCheck = { at = p.now + 0.3, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', '') }
 		Log(s, bot, 'habilidad', 'assassinate: ' .. d.reason)
 		s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
 			hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
@@ -894,6 +903,18 @@ function L.Think()
 		Log(s, bot, 'compra', string.format('botas montadas stat_api=%d agi=%d int=%d',
 			bot:GetItemInSlot(bot:FindItemSlot('item_power_treads')):GetPowerTreadsStat(),
 			bot:GetAttributeValue(ATTRIBUTE_AGILITY), bot:GetAttributeValue(ATTRIBUTE_INTELLECT)))
+	end
+	-- An Assassinate the engine did not start keeps the hero still for its whole cast: 29 of 38 such orders, some 14 s a match standing
+	-- there (equipo2). Free again, and that target is left alone for a few seconds so the order does not loop.
+	if s.castCheck ~= nil and p.now >= s.castCheck.at then
+		local c = s.castCheck
+		s.castCheck = nil
+		if bot:GetCurrentActionType() ~= BOT_ACTION_TYPE_USE_ABILITY and not bot:IsCastingAbility() then
+			s.busyUntil = p.now
+			s.castBan = s.castBan or {}
+			s.castBan[c.name] = p.now + 3
+			Log(s, bot, 'habilidad', 'assassinate no arranca sobre ' .. c.name .. ': libre')
+		end
 	end
 	local treads = (p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.TreadsToAgility(bot, s, p.now) or nil
 	local filler = (treads == nil and p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.FillerToDrop(bot, s, p.now) or nil
