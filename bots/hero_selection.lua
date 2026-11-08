@@ -937,6 +937,13 @@ local function InitPickScheduleOnce()
 		local jitter = RandomFloat(jitter_min, jitter_max)
 		PickSchedule.NextPickAt[slot] = base + (slot - 1) * step + jitter
 	end
+	-- Pedro's lobby (tools/jugar-sniper.mjs): the hero under test picks first, wherever the shuffle left its slot. Once the human has
+	-- picked, real Turbo gives the bots still waiting a random hero, and the Sniper was never picked (lobby 2026-11-07: picked in 2 s).
+	if type(LobbyVariant.lobby_mid) == 'string' and LobbyVariant.lobby_team == GetTeam() then
+		for slot = 1, #teamPlayers do
+			if sSelectList[slot] == LobbyVariant.lobby_mid then PickSchedule.NextPickAt[slot] = GameTime() end
+		end
+	end
 
 	PickSchedule.initialized = true
 
