@@ -1329,3 +1329,11 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Muere algo más que `base2-propio`; 2 partidas con 5. Sin leer aún dónde.
 - Validez: mismos enfrentamientos, corridas separadas, con el ruido medido en la base: solo mecanismo. Aliados y rivales son OHA, y un humano castiga distinto. Los 98 últimos golpes son iguales a los 91-100 de sus partidas, con otro código y sin relación demostrada.
 - Decisión: última ronda agotada. Fusionar y que juegue Pedro: su partida decide.
+
+### 2026-11-07 · Cuarta partida de Pedro contra el Sniper propio (lobby, Turbo real, Injusto; `lobby-202611072016.log`)
+- Pregunta: tras el paquete «con el equipo» (`f78cd0a`, con el arreglo de selección `ca15922`), ¿se nota? Pedro, de Alchemist en Radiant; Sniper propio en Dire con Ursa, Jakiro, Razor y Vengeful (OHA). Bots en Injusto en los dos equipos. Partida de 42 min.
+- Lo que contó: «mejoró sustancialmente, se oculta, se posiciona mejor, escapa, se siente mucho más orgánico».
+- Resultado del registro: min 10, 32 LH, 1 muerte, 3 kills; min 25, 87 LH, 3 muertes, 4 kills, patrimonio 18.377; min 42, 149 LH, 5 muertes, 11 kills. En el lobby anterior, min 25: 91 LH y 5 muertes; min 36-37: 7-10 muertes. `con_el_grupo` en 1.081 decisiones.
+- **Turbo real, resuelto:** las piezas secretas se compran directo (`secreta, compra directa, codigo=-1`, 4 de 4), y los aliados OHA gastan (1-7 % sin gastar en el min 25). **El acaparamiento era solo del banco**, no de lo que juega Pedro.
+- Validez: una partida, un humano; cuenta su juicio (DECISIONES 2026-11-05). Injusto da +25 % de oro y experiencia a todos los bots, también a los aliados de Pedro (docs/investigacion/2026-11-03-api-valve.md, §4; no medido aquí).
+- Decisión: el paquete se queda. El paso siguiente es de Pedro.
