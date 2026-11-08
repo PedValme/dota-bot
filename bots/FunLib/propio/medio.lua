@@ -163,6 +163,13 @@ function M.ChooseLane(bot, s, p)
 	return nil
 end
 
+-- An ally running away is no company: in 6 of 9 deaths after the lane the ally beside it was retreating 4-8 s before, and at
+-- the end nobody was within 1.500 (equipo2, revisión del 2026-11-08). A human ally's mode is not read: it always counts.
+local function Company(a)
+	local mode = a:GetActiveMode()
+	return mode ~= BOT_MODE_RETREAT and mode ~= BOT_MODE_EVASIVE_MANEUVERS
+end
+
 -- More enemies than friends right next to us: why it should leave now, or nil.
 function M.Outnumbered(bot, p)
 	local enemies, allies = 0, 0
@@ -170,7 +177,7 @@ function M.Outnumbered(bot, p)
 		if Valid(e) and D2(p.loc, e:GetLocation()) < K.outnumberedNear then enemies = enemies + 1 end
 	end
 	for _, a in ipairs(bot:GetNearbyHeroes(K.alliesNear, false, BOT_MODE_NONE) or {}) do
-		if a ~= bot and Valid(a) and not a:IsIllusion() then allies = allies + 1 end
+		if a ~= bot and Valid(a) and not a:IsIllusion() and Company(a) then allies = allies + 1 end
 	end
 	-- With an ally beside it, one enemy more is tolerated, like Fight's odds: else it joined and left in a loop.
 	if enemies - allies >= K.outnumbered + (allies > 0 and 1 or 0) then return string.format('superado %d enemigos, %d aliados', enemies, allies) end
@@ -193,7 +200,7 @@ end
 function M.Allies(bot)
 	local n = 0
 	for _, a in ipairs(bot:GetNearbyHeroes(K.alliesNear, false, BOT_MODE_NONE) or {}) do
-		if a ~= bot and Valid(a) and not a:IsIllusion() then n = n + 1 end
+		if a ~= bot and Valid(a) and not a:IsIllusion() and Company(a) then n = n + 1 end
 	end
 	return n
 end
@@ -280,7 +287,7 @@ end
 local function FightWithin(bot, p, enemies, reach)
 	local engaged, center = 0, nil
 	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
-		if a ~= bot and Valid(a) and not a:IsIllusion() and D2(p.loc, a:GetLocation()) < reach then
+		if a ~= bot and Valid(a) and not a:IsIllusion() and Company(a) and D2(p.loc, a:GetLocation()) < reach then
 			-- Hitting or being hit: an enemy merely in sight of an ally is no reason to drop the farm.
 			local target = a:GetAttackTarget()
 			local hurt = a:WasRecentlyDamagedByAnyHero(2.0)
@@ -371,8 +378,10 @@ function M.Neutrals(bot, s, p)
 	if best ~= nil then
 		return { intent = 'farmear', target = best, reason = string.format('%s vida %d', (string.gsub(best:GetUnitName(), 'npc_dota_', '')), bestHp) }
 	end
-	-- Walking to a camp only with no creeps in the lane and no enemy near. A camp begun is finished, above.
-	if #p.enemyHeroes > 0 or #p.enemyCreeps > 0 or s.atTeam then return nil end
+	-- Walking to a camp only with no creeps in the lane and no enemy near. A camp begun is finished, above. With the team, only a
+	-- camp next to them: forbidding every camp stood it there with nothing to hit, and its neutrals fell from 67 to 20 a match (equipo2).
+	if #p.enemyHeroes > 0 or #p.enemyCreeps > 0 then return nil end
+	local teamSpot = s.atTeam and s.teamSpot or nil
 	s.campEmpty = s.campEmpty or {}
 	-- pairs, as OHA reads this list; the keys are not documented. The camp is chosen once a second: Risk per camp each tick is dear.
 	if s.camps == nil then
@@ -396,7 +405,8 @@ function M.Neutrals(bot, s, p)
 		for _, c in ipairs(s.camps) do
 			local d = D2(p.loc, c.loc)
 			if d < bestD and (ancients or not c.ancient) and (s.campEmpty[c.key] or -1000) <= p.t
-				and D2(c.loc, home) < D2(c.loc, enemyHome) and M.Risk(bot, c.loc) < K.holdRisk then
+				and D2(c.loc, home) < D2(c.loc, enemyHome) and M.Risk(bot, c.loc) < K.holdRisk
+				and (teamSpot == nil or D2(c.loc, teamSpot) < K.alliesNear) then
 				s.campPick, bestD = c, d
 			end
 		end
@@ -411,7 +421,7 @@ end
 local function TeamSpot(bot, p)
 	local allies = {}
 	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
-		if a ~= bot and Valid(a) and not a:IsIllusion() then table.insert(allies, a) end
+		if a ~= bot and Valid(a) and not a:IsIllusion() and Company(a) then table.insert(allies, a) end
 	end
 	local best, bestN = nil, 1
 	for _, a in ipairs(allies) do
@@ -421,13 +431,21 @@ local function TeamSpot(bot, p)
 		end
 		if n > bestN then best, bestN = a, n end
 	end
-	-- OHA's groups last a median of 12 s and exist 38 % of the time (equipo1): with none, the nearest ally within a short walk.
+	-- OHA's groups last a median of 12 s and exist 38 % of the time (equipo1): with none, the nearest ally within a short walk, but
+	-- only with risk about: following a carry clearing camps or a support warding cost 224 s a match with nothing to hit (equipo2).
 	if best == nil then
 		local nearest = K.teamWalk
 		for _, a in ipairs(allies) do
 			local d = D2(p.loc, a:GetLocation())
 			if d < nearest then best, nearest = a, d end
 		end
+		local risky = best ~= nil and M.Risk(bot, p.loc) >= K.holdRisk
+		if best ~= nil and not risky then
+			for _, e in ipairs(VisibleEnemies(p.loc)) do
+				if D2(e:GetLocation(), best:GetLocation()) < K.riskRadius then risky = true break end
+			end
+		end
+		if not risky then best = nil end
 	end
 	if best == nil then return nil end
 	local spot = Toward(best:GetLocation(), GetAncient(p.team):GetLocation(), K.groupBehind)

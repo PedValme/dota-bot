@@ -1337,3 +1337,46 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - **Turbo real, resuelto:** las piezas secretas se compran directo (`secreta, compra directa, codigo=-1`, 4 de 4), y los aliados OHA gastan (1-7 % sin gastar en el min 25). **El acaparamiento era solo del banco**, no de lo que juega Pedro.
 - Validez: una partida, un humano; cuenta su juicio (DECISIONES 2026-11-05). Injusto da +25 % de oro y experiencia a todos los bots, también a los aliados de Pedro (docs/investigacion/2026-11-03-api-valve.md, §4; no medido aquí).
 - Decisión: el paquete se queda. El paso siguiente es de Pedro.
+
+### 2026-11-08 · Último retoque (`retoque-*`, 3 enfrentamientos, 2 y 2 y 2, min 25): predicción antes de lanzar
+- Pregunta (Pedro, DECISIONES 2026-11-06, acotado el 2026-11-08: «un último retoque [...] que así supere en todos los ámbitos a OHA»): ¿se mueven las stats que bajaron sin perder lo ganado? Mecanismo, contra `equipo2` y `base2-oha`, mismos enfrentamientos.
+- Origen: dos revisores Opus, uno de farm y otro de peleas, sobre los registros de `equipo2`, `base2-*` y la partida de Pedro. Hallazgos:
+  - Farm: el 80 % de los últimos golpes perdidos son neutrales (20 por partida, antes 67, OHA 41): con el equipo no podía ir a ningún campamento; el 65 % del tiempo «con el grupo» seguía a un solo aliado sin nada que pegar.
+  - Peleas: la brecha de kills está casi toda en la línea (2,0 frente a 4,25 antes del min 12; del 12 al 25, 4,8 frente a 5,5). La de daño son ataques (47 frente a 73 golpes por partida): 38 de 91 Assassinate no salen, y en 29 se queda quieto 2,3 s. En 6 de 9 muertes del medio juego, el aliado que lo acompañaba huía. `presiono` y `contesto` con dos enemigos a la vista: 10 muertes en 47 casos.
+- Qué cambió (6 reglas, sin tocar umbrales):
+  - con el equipo puede ir a un campamento a menos de 1.400 de ellos;
+  - el aliado suelto solo se sigue con riesgo cerca;
+  - un último golpe listo va antes del paseo al grupo;
+  - un aliado en retirada o evasión no cuenta como compañía;
+  - presionar y contestar por alcance, solo con un enemigo a la vista;
+  - Assassinate no se lanza si el objetivo muere antes por golpes propios o de aliados, si se teletransporta (`modifier_teleporting`, sin comprobar en el volcado) o si el motor acaba de rechazarlo; si a los 0,3 s no arranca, queda libre.
+- **Ajuste del agente:** el revisor de peleas pedía no tocar «con el equipo»; el del aliado suelto entra en su forma prudente, y se vigila que la participación no baje de 0,45.
+- Predicción frente a `equipo2` (98 LH, 6,7 kills, 3,3 muertes, 13.265 de daño, 0,53, 40 %, 17.113 de objetos):
+  - neutrales ≥ 32 por partida y últimos golpes ≥ 130;
+  - Assassinate que no sale ≤ 10 de cada 91 y quieto por él ≤ 4 s por partida; golpes a héroes ≥ 60 y daño ≥ 15.000;
+  - muertes ≤ 2,5, sin muertes con el aliado en retirada;
+  - tiempo sin aliado ≤ 55 % y participación ≥ 0,45;
+  - kills, sin confianza en llegar a 10: la brecha está en la línea y las rotaciones siguen apagadas (DECISIONES 2026-11-04).
+- Una ronda; luego juega Pedro.
+- Máquina: CPU media 21-24 %, memoria libre 57-59 %. Código `899024e`, 6 de 6 válidas, 0 errores.
+- Resultado (n=6; descriptivo, mismo enfrentamiento):
+
+  | | `retoque` | `equipo2` | `base2-oha` | Predicho | ¿Supera a OHA? |
+  |---|---|---|---|---|---|
+  | Últimos golpes | **162** | 98 | 154 | ≥ 130, cumple | sí |
+  | Neutrales del min 12 al 25 | 47 | 20 | 41 | ≥ 32, cumple | sí |
+  | Objetos | 20.192 | 17.113 | 21.070 | | casi (−4 %) |
+  | Muertes | **1,3** | 3,3 | 3 | ≤ 2,5, cumple | sí |
+  | Diferencia de torres | +2 | +2 | +1 | | sí |
+  | Participación en kills | 0,46 | 0,53 | 0,49 | ≥ 0,45, cumple | casi |
+  | Tiempo sin aliado | 59 % | 40 % | 59 % | ≤ 55 %, no cumple | igual |
+  | Kills | 7,3 | 6,7 | 10 | sin confianza | **no** |
+  | Daño a héroes, min 12-25 | **10.793** | 13.265 | 16.057 | ≥ 15.000, **no cumple** | **no** |
+
+  Assassinate: 60 órdenes en 6 partidas y 8 que no arrancan (13 %, antes 42 %), liberadas a los 0,3 s. `con_el_grupo` 22 %, `a_neutrales` 20 %.
+- Lectura:
+  - **Recupera el farm y muere la mitad que OHA**, sin perder la participación por debajo de lo fijado: el farm volvía de los campamentos, y la compañía que huía y el «contra dos» explican las muertes.
+  - **El daño baja en vez de subir:** menos tiempo con el grupo (22 % frente a 52 %) y menos Assassinate lanzados (los filtros quitan los que se perdían, pero también los que pegaban). La predicción del daño falló.
+  - **Kills, sigue la brecha**, que según la revisión está en la línea y en las rotaciones apagadas.
+- Validez: n=6 y el ruido medido en la base; solo mecanismo. Un humano castiga distinto.
+- Decisión: no hay más rondas sin Pedro. Fusionado y a su partida; si pierde lo que vio, se revierte.
