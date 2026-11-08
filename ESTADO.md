@@ -5,8 +5,10 @@
 - **Qué se estaba haciendo:** la ruta que Pedro aprobó tras la evaluación adversarial: `trabajo/evaluacion-adversarial-2026-11-06.md`, DECISIONES 2026-11-06.
 - **Dónde quedó:** pasos 1 a 5 hechos (MEDICIONES 2026-11-07). Banco arreglado y paquete «con el equipo» fusionado en la variante `control_sniper`. Ronda 2, frente a `base2-propio` y OHA: tiempo sin aliado 40 % (66 %, 59 %), participación en kills 0,53 (0,36, 0,49). Coste mayor del previsto: 98 últimos golpes (168, 154), 17.113 de objetos (19.188, 21.070), 3,3 muertes (2, 3).
 - **Qué se probó:** la exposición no separa las muertes contra un humano. Ronda 1, fallida: iba y venía y perseguía grupos que duran 12 s. Con 4-8 partidas solo se lee mecanismo. Se agotaron las 2 rondas.
-- **Siguiente acción:** la partida de Pedro decide. Al jugar, el registro dice además si OHA acumula oro en Turbo real (`[bench] aliado`) y si las piezas secretas se compran directo (`prop compra ... secreta`): leerlo después. Si no ve el cambio, se cierra el Sniper y se pasa a los cinco con cerebro propio (DECISIONES 2026-11-06).
-- Espera al dueño: jugar contra el Sniper y decir si se nota · Recomendado: con Dota cerrado, `node tools/jugar-sniper.mjs`, una partida en Turbo, y al acabar `node tools/jugar-sniper.mjs quitar`
+- **Pedro jugó (2026-11-07, Turbo real, Injusto):** «mejoró sustancialmente, se oculta, se posiciona mejor, escapa, se siente mucho más orgánico» (MEDICIONES). En Turbo real los bots OHA gastan su oro: el acaparamiento era solo del banco. Arreglado también que el Sniper no saliera si Pedro elegía rápido (#88).
+- **Siguiente acción:** con lo que decida Pedro, cerrar el medio juego del Sniper y pasar a la fase 2, los cinco en línea (`trabajo/bot-propio.md`), o antes recuperar farm.
+- Los archivos del lobby (`bots/Customize/bench_variant.lua`, `bench_observe.lua`) siguen puestos: todo lobby local juega con el Sniper propio hasta `node tools/jugar-sniper.mjs quitar`.
+- Espera al dueño: decidir el siguiente paso · Recomendado: cerrar el medio juego del Sniper con su visto bueno y pasar a la fase 2 (los cinco en línea), con el farm como deuda anotada
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -37,7 +39,6 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
-- **OHA en Turbo real, sin comprobar:** en el banco no compraba piezas de tienda secreta desde el 2026-10-31 (código 62 descartado en silencio, `item_purchase_generic.lua:466-473`; mediana de 37 % de patrimonio sin gastar en el min 25). Arreglado en el banco con la tienda universal; toda serie Turbo anterior no es comparable. Si en Turbo real pasa igual, es un defecto de lo que Pedro juega: se ve en su próxima partida.
 - **Banco: Dota se cierra solo** al cambiar o crear héroes de Dire (5 de 16 partidas con espejo, 1 de 2 creando).
   Se dejó de hacer: cada equipo pide su propio sorteo. Sin comprobar aún en una serie que no vuelva a pasar (20 de 20
   partidas de humo sin cierres).
