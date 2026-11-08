@@ -520,7 +520,7 @@ end
 -- carries its bonus.
 local function WithAim(bot, s, p, hero, r)
 	if hero == nil or r == nil or r.target == nil or (r.intent ~= 'acosar' and r.intent ~= 'matar') or bot:IsInvisible() then return r end
-	return hero.Aim(bot, s, p, r.target) or r
+	return Medio.Berserk(bot, s, p, r.target) or hero.Aim(bot, s, p, r.target) or r
 end
 
 local function Decide(bot, s, p)

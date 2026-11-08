@@ -4,6 +4,8 @@
 -- and brought by the courier.
 local P = {}
 
+local Build = require(GetScriptDirectory()..'/FunLib/propio/build')
+
 local LOADOUTS = {
 	-- Stealth and jump are Pedro's choice (2026-11-05): Shadow Blade then Silver Edge, Force Staff within Hurricane Pike. An
 	-- item made of an earlier one (Pike of the Lance, Silver Edge of the Blade) only buys what it still lacks.
@@ -39,20 +41,43 @@ local function BuyingOrder(parts)
 	return parts
 end
 
--- The queue of parts for a bot, built once.
-function P.Queue(bot, s)
-	if s.buyQueue ~= nil then return s.buyQueue end
-	s.buyQueue = {}
-	local have = {}
-	for _, item in ipairs(LOADOUTS[bot:GetUnitName()] or {}) do
+-- The parts of these items, in order, at the end of the queue. `have` holds the items already in it: a Pike only buys what the Lance
+-- lacks.
+local function Append(s, items, have)
+	for _, item in ipairs(items) do
 		local parts = FIXED_PARTS[item] or BuyingOrder(Parts(item, {}, have))
 		for _, part in ipairs(parts) do
 			if item ~= 'item_wraith_band' or not HAVE_AT_START[part] then table.insert(s.buyQueue, { part = part, of = item }) end
 		end
 		have[item] = true
 	end
+end
+
+-- The queue of parts for a bot: from its build plan against the enemies (build.lua) when it has a profile, else its fixed list.
+function P.Queue(bot, s)
+	if s.buyQueue ~= nil then return s.buyQueue end
+	s.buyQueue = {}
+	Append(s, Build.Plan(bot, s) or LOADOUTS[bot:GetUnitName()] or {}, {})
 	s.buyIndex = 1
 	return s.buyQueue
+end
+
+-- At the boundary between two whole items, if what the enemies threaten changed (an item seen on one), the rest of the plan is chosen
+-- again; what is bought stays. Returns a log line or nil.
+local function Replan(bot, s)
+	local queue = s.buyQueue
+	local next = queue[s.buyIndex]
+	if next == nil or Build.Profile(bot) == nil then return nil end
+	if s.buyIndex > 1 and queue[s.buyIndex - 1].of == next.of then return nil end
+	if s.buildSignature == Build.Signature(Build.Threats(bot)) then return nil end
+	local done, kept = {}, {}
+	for i = 1, s.buyIndex - 1 do
+		done[queue[i].of] = true
+		table.insert(kept, queue[i])
+	end
+	s.buyQueue = kept
+	Append(s, Build.Plan(bot, s, done) or {}, done)
+	return 'plan de nuevo: cambió lo que amenazan'
 end
 
 local function HasAnywhere(bot, name)
@@ -171,7 +196,16 @@ end
 
 -- Buys the next part when the gold allows; returns a log line when something happened, else nil.
 function P.Buy(bot, s, now)
-	local queue = P.Queue(bot, s)
+	P.Queue(bot, s)
+	-- Every 2 s, the items on the enemies in sight; at a boundary between items, the plan again if that changed what they threaten.
+	if now - (s.lookAt or -1000) >= 2 then
+		s.lookAt = now
+		local seen = Build.Look(bot)
+		if seen ~= nil then return seen end
+		local again = Replan(bot, s)
+		if again ~= nil then return again end
+	end
+	local queue = s.buyQueue
 	local next = queue[s.buyIndex]
 	if next == nil then return nil end
 	-- The next item waits until the Treads are assembled. A Belt of Strength (Dragon Lance) arriving with their parts makes them
