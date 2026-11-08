@@ -29,15 +29,27 @@ end
 -- Whether an Assassinate on this target is wasted: it dies before the cast ends anyway, to our hits in range or to the allies already
 -- hitting it, or it is teleporting away, or the engine just refused it. 38 of 91 orders never went off, and in 29 the hero stood still
 -- for the whole cast (equipo2, revisión del 2026-11-08). OHA's Sniper leaves the same cases (hero_sniper.lua:536-545).
+local out = BenchRawPrint or print
+-- Why it was left, once per target every 5 s: the retouch cut the casts from 5,0 to 2,0 between minutes 10 and 20 with no trace of
+-- which filter did it (MEDICIONES 2026-11-08, «Marcador»).
+local function Left(bot, s, p, e, why)
+	s.leftLog = s.leftLog or {}
+	if p.now - (s.leftLog[Short(e)] or -1000) >= 5 then
+		s.leftLog[Short(e)] = p.now
+		out(string.format('[bench] prop habilidad t=%.1f pid=%d descarto assassinate sobre %s: %s', DotaTime(), bot:GetPlayerID(), Short(e), why))
+	end
+	return true
+end
 local function Wasted(bot, s, p, e, castPoint)
-	if (s.castBan or {})[Short(e)] ~= nil and s.castBan[Short(e)] > p.now then return true end
-	if e:HasModifier('modifier_teleporting') then return true end
+	if (s.castBan or {})[Short(e)] ~= nil and s.castBan[Short(e)] > p.now then return Left(bot, s, p, e, 'rechazado hace poco') end
+	if e:HasModifier('modifier_teleporting') then return Left(bot, s, p, e, 'se teletransporta') end
 	local hp, others = e:GetHealth(), 0
-	if D2(p.loc, e:GetLocation()) <= p.range and HitsDamage(bot, e, castPoint) >= hp then return true end
+	if D2(p.loc, e:GetLocation()) <= p.range and HitsDamage(bot, e, castPoint) >= hp then return Left(bot, s, p, e, 'lo matan mis golpes') end
 	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
 		if a ~= bot and Seen(a) and not a:IsIllusion() and a:GetAttackTarget() == e then others = others + HitsDamage(a, e, castPoint) end
 	end
-	return others >= hp
+	if others >= hp then return Left(bot, s, p, e, string.format('lo matan los aliados (%d de %d)', others, hp)) end
+	return false
 end
 
 -- Assassinate: only to finish a visible enemy hero it kills for sure, with no other enemy hero on top of us during its
@@ -102,13 +114,15 @@ local function ManaToKeep(bot)
 	return u:GetManaCost()
 end
 
--- Shrapnel: harass the enemy laner when mana allows, only within our attack range plus a little (from afar it was
+-- Shrapnel: harass the enemy laner whenever a charge is ready, only within our attack range plus a little (from afar it was
 -- spent with nothing to follow it), aiming where it will be when the shards fall, and not on one already slowed by it.
--- The build learns it at the fifth point, which keeps it from the first minutes (mana was 27 % by t=38).
+-- The build learns it at the fifth point, which keeps it from the first minutes (mana was 27 % by t=38). It kept half its mana
+-- and waited 4 s between casts: 8 casts by minute 10 against OHA's 13, and a third less damage there (MEDICIONES 2026-11-08,
+-- «Marcador»). Now only Assassinate's mana is kept, and the charges set the pace.
 function H.Harass(bot, s, p)
 	local a = bot:GetAbilityByName('sniper_shrapnel')
 	if a == nil or not a:IsFullyCastable() then return nil end
-	if bot:GetMana() < 0.5 * bot:GetMaxMana() or p.now - (s.shrapnelAt or -1000) < 4 then return nil end
+	if p.now - (s.shrapnelAt or -1000) < 1.5 then return nil end
 	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
 	local range = math.min(a:GetCastRange(), p.range + 200)
 	for _, e in ipairs(p.enemyHeroes) do
