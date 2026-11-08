@@ -6,9 +6,9 @@
 - **Dónde quedó:** pasos 1 a 5 hechos (MEDICIONES 2026-11-07). Banco arreglado y paquete «con el equipo» fusionado en la variante `control_sniper`. Ronda 2, frente a `base2-propio` y OHA: tiempo sin aliado 40 % (66 %, 59 %), participación en kills 0,53 (0,36, 0,49). Coste mayor del previsto: 98 últimos golpes (168, 154), 17.113 de objetos (19.188, 21.070), 3,3 muertes (2, 3).
 - **Qué se probó:** la exposición no separa las muertes contra un humano. Ronda 1, fallida: iba y venía y perseguía grupos que duran 12 s. Con 4-8 partidas solo se lee mecanismo. Se agotaron las 2 rondas.
 - **Pedro jugó (2026-11-07, Turbo real, Injusto):** «mejoró sustancialmente, se oculta, se posiciona mejor, escapa, se siente mucho más orgánico» (MEDICIONES). En Turbo real los bots OHA gastan su oro: el acaparamiento era solo del banco. Arreglado también que el Sniper no saliera si Pedro elegía rápido (#88).
-- **Siguiente acción:** con lo que decida Pedro, cerrar el medio juego del Sniper y pasar a la fase 2, los cinco en línea (`trabajo/bot-propio.md`), o antes recuperar farm.
-- Los archivos del lobby (`bots/Customize/bench_variant.lua`, `bench_observe.lua`) siguen puestos: todo lobby local juega con el Sniper propio hasta `node tools/jugar-sniper.mjs quitar`.
-- Espera al dueño: decidir el siguiente paso · Recomendado: cerrar el medio juego del Sniper con su visto bueno y pasar a la fase 2 (los cinco en línea), con el farm como deuda anotada
+- **Último retoque (2026-11-08, pedido por Pedro, MEDICIONES):** dos revisores Opus y 6 reglas. Frente a OHA: últimos golpes 162 y 154, muertes 1,3 y 3, torres +2 y +1; casi a la par en objetos (20.192 y 21.070) y participación (0,46 y 0,49); **por debajo en kills (7,3 y 10) y daño (10.793 y 16.057, que bajó desde 13.265)**.
+- **Siguiente acción:** la partida de Pedro con este código. Si no supera lo que ya vio, revertir #90. Después, la fase 2 (`trabajo/bot-propio.md`). La brecha de kills está en la línea y en las rotaciones, apagadas por DECISIONES 2026-11-04.
+- Espera al dueño: jugar contra el Sniper retocado · Recomendado: `node tools/jugar-sniper.mjs` con Dota cerrado (el banco borró los archivos del lobby), una partida en Turbo, y `node tools/jugar-sniper.mjs quitar` al acabar
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego

@@ -1358,3 +1358,25 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - tiempo sin aliado ≤ 55 % y participación ≥ 0,45;
   - kills, sin confianza en llegar a 10: la brecha está en la línea y las rotaciones siguen apagadas (DECISIONES 2026-11-04).
 - Una ronda; luego juega Pedro.
+- Máquina: CPU media 21-24 %, memoria libre 57-59 %. Código `899024e`, 6 de 6 válidas, 0 errores.
+- Resultado (n=6; descriptivo, mismo enfrentamiento):
+
+  | | `retoque` | `equipo2` | `base2-oha` | Predicho | ¿Supera a OHA? |
+  |---|---|---|---|---|---|
+  | Últimos golpes | **162** | 98 | 154 | ≥ 130, cumple | sí |
+  | Neutrales del min 12 al 25 | 47 | 20 | 41 | ≥ 32, cumple | sí |
+  | Objetos | 20.192 | 17.113 | 21.070 | | casi (−4 %) |
+  | Muertes | **1,3** | 3,3 | 3 | ≤ 2,5, cumple | sí |
+  | Diferencia de torres | +2 | +2 | +1 | | sí |
+  | Participación en kills | 0,46 | 0,53 | 0,49 | ≥ 0,45, cumple | casi |
+  | Tiempo sin aliado | 59 % | 40 % | 59 % | ≤ 55 %, no cumple | igual |
+  | Kills | 7,3 | 6,7 | 10 | sin confianza | **no** |
+  | Daño a héroes, min 12-25 | **10.793** | 13.265 | 16.057 | ≥ 15.000, **no cumple** | **no** |
+
+  Assassinate: 60 órdenes en 6 partidas y 8 que no arrancan (13 %, antes 42 %), liberadas a los 0,3 s. `con_el_grupo` 22 %, `a_neutrales` 20 %.
+- Lectura:
+  - **Recupera el farm y muere la mitad que OHA**, sin perder la participación por debajo de lo fijado: el farm volvía de los campamentos, y la compañía que huía y el «contra dos» explican las muertes.
+  - **El daño baja en vez de subir:** menos tiempo con el grupo (22 % frente a 52 %) y menos Assassinate lanzados (los filtros quitan los que se perdían, pero también los que pegaban). La predicción del daño falló.
+  - **Kills, sigue la brecha**, que según la revisión está en la línea y en las rotaciones apagadas.
+- Validez: n=6 y el ruido medido en la base; solo mecanismo. Un humano castiga distinto.
+- Decisión: no hay más rondas sin Pedro. Fusionado y a su partida; si pierde lo que vio, se revierte.
