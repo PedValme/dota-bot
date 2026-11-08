@@ -600,6 +600,12 @@ local function Decide(bot, s, p)
 		r, ready, soon = RuleLastHit(bot, s, p)
 		if r then return r end
 	end
+	-- Shrapnel right after a last hit that is ready, before trading, the aggro or runes: behind them it barely got its turn, with 90 % of
+	-- the mana idle, 8,7 casts by minute 10 against OHA's 13,1 (MEDICIONES, `build1`).
+	if not NO_COMBAT and hero ~= nil and not hidden then
+		r = hero.Harass(bot, s, p)
+		if r then return r end
+	end
 	if not NO_COMBAT then
 		r = WithAim(bot, s, p, hero, RuleTrade(bot, s, p, ready, soon))
 		if r then return r end
@@ -612,10 +618,6 @@ local function Decide(bot, s, p)
 	end
 	r = Combate.Rune(bot, s, p)
 	if r then return r end
-	if not NO_COMBAT and hero ~= nil and not hidden then
-		r = hero.Harass(bot, s, p)
-		if r then return r end
-	end
 	if late and ready == nil and not hidden then
 		r = Medio.Siege(bot, s, p) or Medio.Neutrals(bot, s, p)
 		if r then return r end

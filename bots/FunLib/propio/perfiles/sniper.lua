@@ -6,11 +6,10 @@ return {
 	-- Measured core, the same against everyone (DECISIONES 2026-11-04): stats, agility Treads, Dragon Lance soon.
 	core = { 'item_wraith_band', 'item_power_treads', 'item_dragon_lance' },
 	points = {
-		-- After the Lance: attack speed for the fights of minutes 10-20, where OHA's Sniper hits twice as often with it (MEDICIONES
-		-- 2026-11-08, «Marcador»); with two or more heroes that jump on it, the Pike first.
+		-- After the Lance, with two or more heroes that jump on it, the Pike first. No Mask of Madness: in this build it cost 1.900 before
+		-- the Maelstrom and put Maelstrom and Blade 3-4 min later (MEDICIONES, `build1`; Pedro, 2026-11-08: «quita la máscara»).
 		{ name = 'A',
-			{ item = 'item_hurricane_pike', uso = 'pike', when = function(t) return t.salta >= 2 end, why = 'rivales que saltan encima' },
-			{ item = 'item_mask_of_madness', uso = 'berserk', why = 'ritmo de ataque en las peleas' } },
+			{ item = 'item_hurricane_pike', uso = 'pike', when = function(t) return t.salta >= 2 end, why = 'rivales que saltan encima' } },
 		{ name = 'Maelstrom', { item = 'item_maelstrom', uso = 'pasivo', why = 'núcleo' } },
 		-- Before the Blade: the Black King Bar, against a team built on magic or lock. With two or more it held in nearly every lineup of
 		-- the bench: a rule that always holds is a default, not a choice. Like this, 77 of 122 (planes sin partidas, 2026-11-08).

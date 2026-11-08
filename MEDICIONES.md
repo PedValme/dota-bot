@@ -1443,3 +1443,13 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Con MoM y Shrapnel juntos y n=6, no se separa qué pesa más. El daño por pelea sube (1.047 → 1.356) y el total baja: menos peleas atendidas y menos golpes.
 - Validez: n=6, mismo ruido; solo mecanismo.
 - Decisión: no se fusiona esta versión del perfil. Segunda ronda, la última, con lo que decida Pedro sobre la MoM.
+
+### 2026-11-08 · Paquete del marcador, ronda 2, la última (`build2-*`, mismos 3 enfrentamientos): predicción antes de lanzar
+- Qué cambió desde `build1`: sin Mask of Madness en el perfil del Sniper (Pedro: «ok, quita la máscara y dale con la segunda ronda»); Shrapnel justo después de un último golpe listo, antes del intercambio, el aggro y las runas. Sigue lo demás: módulo de build (Pike primero en `c`, BKB antes en `b`, MKB en `c`), registro de descartes de Assassinate y `obs edificios`.
+- Predicción, frente a `retoque` (sin el paquete) y `build1`:
+  - Maelstrom y Blade vuelven a su tiempo: ≤ 12,5 y ≤ 16,5 min;
+  - Shrapnel del min 0 al 10 ≥ 11 (8,2 y 8,7; OHA 13,1), y daño a héroes del min 0 al 10 ≥ 6.500 (5.734 y 4.761);
+  - daño a héroes del min 0 al 25 ≥ 18.234, el del retoque;
+  - kills ≥ 7, últimos golpes ≥ 150, muertes ≤ 2;
+  - sin confianza en cerrar la brecha de golpes del min 10 al 20 sin la MoM.
+- Es la última ronda: lo que salga se le presenta a Pedro, y no se juega hasta que haya una mejora plausible (DECISIONES 2026-11-08).
