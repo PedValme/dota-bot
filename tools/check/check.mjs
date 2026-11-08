@@ -53,6 +53,24 @@ for (const file of [...lua, ...ts]) {
   });
 }
 
+// Every item a build profile may buy names the rule that uses it, and that rule exists (trabajo/build-estrategica.md, firmado el
+// 2026-11-08): an active item nobody presses is gold thrown away.
+const buildSource = readFileSync(join(root, "bots", "FunLib", "propio", "build.lua"), "utf8");
+const uses = new Set([...(buildSource.match(/B\.USES = \{([^}]*)\}/)?.[1] ?? "").matchAll(/(\w+)\s*=\s*true/g)].map((m) => m[1]));
+if (uses.size === 0) errors.push("bots/FunLib/propio/build.lua: B.USES not found");
+const profiles = join(root, "bots", "FunLib", "propio", "perfiles");
+for (const file of filesUnder(profiles, [".lua"])) {
+  const rel = relative(root, file).replaceAll("\\", "/");
+  // One candidate per line, as perfiles/ writes them; quotes of either kind, fields in any order.
+  readFileSync(file, "utf8").split(/\r?\n/).forEach((line, i) => {
+    const item = line.match(/\bitem\s*=\s*['"](\w+)['"]/);
+    if (!item) return;
+    const uso = line.match(/\buso\s*=\s*['"](\w+)['"]/);
+    if (!uso) errors.push(`${rel}:${i + 1}: ${item[1]} has no 'uso'`);
+    else if (!uses.has(uso[1])) errors.push(`${rel}:${i + 1}: ${item[1]} uses '${uso[1]}', which no rule in build.lua's B.USES handles`);
+  });
+}
+
 if (errors.length) {
   console.error(errors.join("\n"));
   console.error(`check: ${errors.length} problem(s) in ${lua.length} Lua and ${ts.length} TS files`);

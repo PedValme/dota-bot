@@ -1409,3 +1409,68 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **Denies, 31 frente a 16:** quizá coste en acoso, sin medir.
 - Validez: descriptivo; la máscara y el ritmo de disparo van juntos en OHA y no se separan aquí. Sin daño a edificios en el registro (`obs dano` no lo guarda) ni curaciones, aturdimientos u oro perdido.
 - Decisión: proponer a Pedro; su partida, solo con una mejora plausible por una brecha encontrada y corregida.
+
+### 2026-11-08 · Paquete del marcador con build según los enemigos (`build1-*`, 3 enfrentamientos, 2 y 2 y 2, min 25): predicción antes de lanzar
+- Pregunta: ¿cierra el paquete aprobado (DECISIONES 2026-11-08) la brecha de daño y de ritmo de disparo frente al Sniper de OHA, sin perder el farm y las muertes del retoque? Mecanismo, frente a `retoque` y `base2-oha`.
+- Qué cambió:
+  - Shrapnel por cargas: solo guarda el maná de Assassinate;
+  - cada Assassinate descartado registra su motivo;
+  - el daño a edificios va en su propia línea, `obs edificios`;
+  - build según los enemigos (`bots/FunLib/propio/build.lua`, `amenazas.lua`, `perfiles/sniper.lua`; `trabajo/build-estrategica.md`), con Berserk de la MoM;
+  - el check exige regla de uso para cada objeto de un perfil.
+- Revisión: dos subagentes, uno sobre el banco y otro sobre el módulo, el check y los planes; aplicado lo que encontraron.
+- Planes sin partidas, sobre las 122 alineaciones ya vistas: MoM en 111, Pike primero en 11, BKB antes de la Blade en 77, MKB en 23. **En esta ronda:** `a`, MoM y Blade; `b`, BKB antes; `c`, Pike primero y MKB. Las tres reglas se activan en al menos 2 de 6 partidas.
+- Predicción, frente a `retoque` (n=6):
+  - Shrapnel del min 0 al 10 ≥ 11 (8,2; OHA 13,1), y daño a héroes del min 0 al 10 ≥ 6.500 (5.734; OHA 7.059);
+  - MoM antes del min 12 en `a` y `b`, con Berserk en sus peleas;
+  - golpes a héroes del min 10 al 20 ≥ 40 (24; OHA 56), y daño por pelea atendida ≥ 1.700 (1.047; OHA 2.295);
+  - últimos golpes ≥ 150 (162) y muertes ≤ 2 (1,3);
+  - aparecen `descarto assassinate` con motivo y `obs edificios`.
+- Validez prevista: MoM y Shrapnel van juntos y no se separan; la adaptación no se mide con este ruido: la juzgará Pedro.
+- Máquina y código: `f9e29b8`, 6 de 6 válidas, 0 errores. Planes en el registro: `a`, MoM y Blade; `b`, MoM y BKB antes; `c`, Pike primero, sin MoM. Las tres reglas actuaron.
+- Resultado (marcador, `a11.py`, `a12.py`; v2 `retoque` → v3 `build1`, OHA entre paréntesis):
+  - K/D/A: 7,3/1,3/5,3 → **4,8/2,0/6,8** (9,5/3,1/5,2);
+  - últimos golpes 162 → 154; GPM 837 → 773; XPM 1.522 → 1.397;
+  - daño a héroes del min 0 al 25: 18.234 → **14.718** (25.285); golpes a héroes 98 → 77 (133);
+  - Shrapnel del min 0 al 10: 8,2 → 8,7 (13,1). Golpes a héroes del min 10 al 20: 24 → 21 (56). Daño por pelea atendida: 1.047 → 1.356 (2.295);
+  - objetos: MoM en el min 13,0 (4 de 6), **Maelstrom en el 15,1 (antes 11,9) y Blade en el 19,9 (antes 15,4)**;
+  - Berserk: 0-3 por partida; `obs edificios` en las 6; descartes de Assassinate con motivo: 1-5 por partida (sus golpes, aliados, TP).
+- **Predicción fallida casi entera**: solo cumplen los últimos golpes (154 ≥ 150), las muertes (2,0 ≤ 2) y el registro nuevo.
+- Lectura:
+  - **Shrapnel no subió, pero no por falta de maná: maná medio del 90 %.** Harass va detrás del último golpe, el intercambio y las runas en `Decide` (`linea.lua`, ~605), y casi nunca le llega el turno. Fallo de orden de reglas, visto en el registro.
+  - **La MoM, en esta build, retrasa el núcleo.** En 7.41 cuesta 1.900 (`item_lifesteal` + `item_broadsword`) y entra antes del Maelstrom: Maelstrom 3 min más tarde y Blade 4,5. OHA la compra en el min 10,9 porque su build no lleva Blade.
+  - **El Berserk casi no se usa** (0-3 por partida): la regla lo veta con un enemigo a menos de 600, que es lo normal en pelea.
+  - Con MoM y Shrapnel juntos y n=6, no se separa qué pesa más. El daño por pelea sube (1.047 → 1.356) y el total baja: menos peleas atendidas y menos golpes.
+- Validez: n=6, mismo ruido; solo mecanismo.
+- Decisión: no se fusiona esta versión del perfil. Segunda ronda, la última, con lo que decida Pedro sobre la MoM.
+
+### 2026-11-08 · Paquete del marcador, ronda 2, la última (`build2-*`, mismos 3 enfrentamientos): predicción antes de lanzar
+- Qué cambió desde `build1`: sin Mask of Madness en el perfil del Sniper (Pedro: «ok, quita la máscara y dale con la segunda ronda»); Shrapnel justo después de un último golpe listo, antes del intercambio, el aggro y las runas. Sigue lo demás: módulo de build (Pike primero en `c`, BKB antes en `b`, MKB en `c`), registro de descartes de Assassinate y `obs edificios`.
+- Predicción, frente a `retoque` (sin el paquete) y `build1`:
+  - Maelstrom y Blade vuelven a su tiempo: ≤ 12,5 y ≤ 16,5 min;
+  - Shrapnel del min 0 al 10 ≥ 11 (8,2 y 8,7; OHA 13,1), y daño a héroes del min 0 al 10 ≥ 6.500 (5.734 y 4.761);
+  - daño a héroes del min 0 al 25 ≥ 18.234, el del retoque;
+  - kills ≥ 7, últimos golpes ≥ 150, muertes ≤ 2;
+  - sin confianza en cerrar la brecha de golpes del min 10 al 20 sin la MoM.
+- Es la última ronda: lo que salga se le presenta a Pedro, y no se juega hasta que haya una mejora plausible (DECISIONES 2026-11-08).
+- Máquina y código: CPU media 20-24 %, memoria libre 50-51 %. Código `eb89b49`, 6 de 6 válidas, 0 errores. Las compras siguen el plan en las 6 partidas (Pike primero solo en `c`, BKB antes solo en `b`, MKB en `c`), y el plan se rehízo a mitad de partida al ver objetos en los rivales.
+- Resultado (marcador; `retoque` → `build2`, OHA entre paréntesis):
+
+  | | `retoque` | `build2` | OHA | Predicho |
+  |---|---|---|---|---|
+  | Daño a héroes, min 0-25 | 18.234 | **21.313** | 25.285 | ≥ 18.234, cumple |
+  | Daño min 0-10 / 10-20 / 20-25 | 5.734 / 5.543 / 6.957 | 4.721 / 7.226 / **9.367** | 7.059 / 12.298 / 5.928 | min 0-10 ≥ 6.500, **no cumple** |
+  | Shrapnel min 0-10 / total | 8,2 / 21 | **11,2** / 27,7 | 13,1 / 30,5 | ≥ 11, cumple |
+  | Golpes a héroes, min 10-20 | 24 | 30 | 56 | sin confianza |
+  | Kills / muertes / asistencias | 7,3 / 1,3 / 5,3 | 5,2 / **1,0** / 7,3 | 9,5 / 3,1 / 5,2 | kills ≥ 7, **no cumple**; muertes, cumple |
+  | Últimos golpes / GPM | 162 / 837 | 153 / 799 | 154 / 892 | ≥ 150, cumple |
+  | Maelstrom / Blade (min) | 11,9 / 15,4 | 12,5 / 18,3 | 15,7 / — | Maelstrom cumple; Blade ≤ 16,5, no cumple |
+  | Peleas grandes atendidas, min 10-20 / 20-25 | 43 % / 58 % | 55 % / 74 % | 38 % / 39 % | |
+  | Remata cuando pega | 64 % | 48 % | 67 % | |
+
+- Lectura:
+  - **El mejor daño de las versiones propias y las menores muertes:** el Shrapnel vuelve a lanzarse (el orden de reglas era la causa) y, sin la MoM, el núcleo vuelve a su tiempo. Al final de la partida ya pega más que OHA (9.367 frente a 5.928) y atiende más peleas.
+  - **Las kills no suben:** pega en más muertes (5,5 frente a 3,3 del min 12 al 25) pero las remata otro (48 %), y las kills con Assassinate bajan (10 de 33). El filtro «lo matan mis golpes» puede estar quitando remates propios; sin aislar.
+  - **La línea pierde daño de ataque** (31 golpes a héroes frente a 44): parte del tiempo de disparo se va en Shrapnel. Las kills tempranas siguen en 1,0 al min 10 (OHA 3,2).
+- Validez: n=6, solo mecanismo; Shrapnel y build van juntos.
+- Decisión: rondas agotadas (2 de 2). Se fusiona: frente a la versión que Pedro jugó por última vez (`equipo2`), es una mejora plausible por brechas encontradas y corregidas: últimos golpes 98 → 153, muertes 3,3 → 1,0, daño 20.293 → 21.313. Kills por debajo (6,7 → 5,2). Juega Pedro.

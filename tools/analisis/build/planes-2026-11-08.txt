@@ -1,0 +1,368 @@
+drow_ranger lich lina sand_king skywrath_mage | drow_ranger lina sand_king skywrath_mage lich | e0 c5 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe bloodseeker chaos_knight death_prophet earthshaker | axe earthshaker chaos_knight death_prophet bloodseeker | e0 c5 m3 s3
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_black_king_bar > item_invis_sword > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+juggernaut lina pudge windrunner zuus | zuus juggernaut lina windrunner pudge | e1 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+dragon_knight drow_ranger jakiro oracle windrunner | oracle jakiro drow_ranger dragon_knight windrunner | e1 c4 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+drow_ranger lina lion luna tiny | luna lion drow_ranger tiny lina | e0 c4 m4 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bloodseeker bristleback viper windrunner zuus | bristleback bloodseeker viper zuus windrunner | e1 c2 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+chaos_knight necrolyte oracle pudge tidehunter | necrolyte pudge oracle chaos_knight tidehunter | e0 c3 m1 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_invis_sword > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bane juggernaut lion oracle windrunner | oracle windrunner lion bane juggernaut | e1 c3 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bane death_prophet jakiro phantom_assassin viper | death_prophet phantom_assassin bane viper jakiro | e1 c3 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+dragon_knight kunkka sven vengefulspirit witch_doctor | witch_doctor sven kunkka vengefulspirit dragon_knight | e0 c5 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bloodseeker bounty_hunter chaos_knight dragon_knight sand_king | sand_king bounty_hunter dragon_knight chaos_knight bloodseeker | e0 c4 m1 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_black_king_bar > item_invis_sword > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+jakiro lich lina nevermore skywrath_mage | jakiro lich nevermore skywrath_mage lina | e0 c4 m5 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+phantom_assassin tiny vengefulspirit windrunner witch_doctor | phantom_assassin windrunner tiny vengefulspirit witch_doctor | e2 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+nevermore omniknight phantom_assassin tiny warlock | tiny warlock omniknight phantom_assassin nevermore | e1 c2 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bloodseeker bristleback juggernaut kunkka lion | juggernaut kunkka bloodseeker bristleback lion | e0 c3 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+earthshaker kunkka pudge razor vengefulspirit | pudge kunkka razor earthshaker vengefulspirit | e0 c4 m1 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_black_king_bar > item_invis_sword > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback lich lina phantom_assassin vengefulspirit | vengefulspirit bristleback lina lich phantom_assassin | e1 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+dazzle jakiro lina sand_king sven | sven lina sand_king jakiro dazzle | e0 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bane oracle razor skeleton_king tidehunter | skeleton_king razor tidehunter bane oracle | e0 c3 m0 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+dazzle lina lion phantom_assassin tidehunter | phantom_assassin lina tidehunter lion dazzle | e1 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bane dazzle death_prophet juggernaut kunkka | juggernaut death_prophet kunkka bane dazzle | e0 c3 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bounty_hunter earthshaker nevermore pudge skywrath_mage | skywrath_mage bounty_hunter nevermore earthshaker pudge | e0 c3 m3 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_black_king_bar > item_invis_sword > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bloodseeker pudge tidehunter vengefulspirit warlock | pudge bloodseeker tidehunter warlock vengefulspirit | e0 c5 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dragon_knight lina oracle skeleton_king vengefulspirit | skeleton_king lina dragon_knight vengefulspirit oracle | e0 c4 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dazzle death_prophet sven tidehunter vengefulspirit | sven death_prophet tidehunter vengefulspirit dazzle | e0 c4 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+phantom_assassin sand_king skywrath_mage viper warlock | phantom_assassin viper sand_king skywrath_mage warlock | e1 c3 m3 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_black_king_bar > item_invis_sword > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+axe crystal_maiden lina skywrath_mage sven | sven lina axe skywrath_mage crystal_maiden | e0 c5 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+juggernaut lina nevermore sand_king witch_doctor | sand_king witch_doctor juggernaut lina nevermore | e0 c3 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dragon_knight lina razor sven warlock | sven dragon_knight warlock lina razor | e0 c4 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+kunkka lina lion luna warlock | warlock lion kunkka luna lina | e0 c4 m4 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+juggernaut lion omniknight oracle tiny | tiny oracle lion omniknight juggernaut | e0 c2 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback oracle skeleton_king vengefulspirit viper | skeleton_king viper bristleback vengefulspirit oracle | e0 c2 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bane drow_ranger kunkka phantom_assassin viper | drow_ranger bane viper phantom_assassin kunkka | e1 c3 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+lina omniknight oracle skeleton_king vengefulspirit | vengefulspirit skeleton_king omniknight lina oracle | e0 c3 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+dragon_knight earthshaker necrolyte omniknight skeleton_king | skeleton_king necrolyte earthshaker omniknight dragon_knight | e0 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bounty_hunter crystal_maiden earthshaker juggernaut skywrath_mage | bounty_hunter juggernaut skywrath_mage earthshaker crystal_maiden | e0 c3 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dragon_knight jakiro juggernaut lich razor | juggernaut razor dragon_knight jakiro lich | e0 c3 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+jakiro oracle phantom_assassin sand_king zuus | phantom_assassin zuus sand_king jakiro oracle | e1 c2 m2 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_invis_sword > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bane chaos_knight oracle tidehunter viper | chaos_knight viper tidehunter bane oracle | e0 c3 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+pudge razor skeleton_king sven tiny | tiny skeleton_king sven pudge razor | e0 c4 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bounty_hunter drow_ranger kunkka sand_king witch_doctor | bounty_hunter drow_ranger sand_king kunkka witch_doctor | e0 c4 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback dazzle necrolyte oracle tidehunter | tidehunter oracle necrolyte dazzle bristleback | e0 c1 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+death_prophet dragon_knight juggernaut oracle skywrath_mage | juggernaut death_prophet dragon_knight skywrath_mage oracle | e0 c3 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+jakiro necrolyte oracle sand_king skeleton_king | skeleton_king necrolyte sand_king jakiro oracle | e0 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+drow_ranger kunkka lina oracle vengefulspirit | drow_ranger lina kunkka vengefulspirit oracle | e0 c4 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+crystal_maiden drow_ranger jakiro lina tidehunter | drow_ranger lina tidehunter jakiro crystal_maiden | e0 c5 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+chaos_knight lion tidehunter viper witch_doctor | chaos_knight viper tidehunter lion witch_doctor | e0 c4 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe bane skeleton_king witch_doctor zuus | skeleton_king zuus axe bane witch_doctor | e0 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+crystal_maiden luna razor tidehunter vengefulspirit | luna razor tidehunter vengefulspirit crystal_maiden | e0 c3 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bane dragon_knight lina sven warlock | sven lina dragon_knight bane warlock | e0 c5 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe luna skywrath_mage warlock zuus | luna zuus axe skywrath_mage warlock | e0 c3 m4 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe lich skeleton_king vengefulspirit zuus | skeleton_king zuus axe vengefulspirit lich | e0 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bane dazzle death_prophet drow_ranger sand_king | drow_ranger death_prophet sand_king bane dazzle | e0 c4 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+juggernaut lich lion razor sand_king | juggernaut razor sand_king lion lich | e0 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+chaos_knight kunkka vengefulspirit viper warlock | chaos_knight viper kunkka vengefulspirit warlock | e0 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bane dazzle death_prophet sven tidehunter | sven death_prophet tidehunter bane dazzle | e0 c4 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe death_prophet lion luna witch_doctor | luna death_prophet axe lion witch_doctor | e0 c4 m4 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe lich lina phantom_assassin skywrath_mage | phantom_assassin lina axe skywrath_mage lich | e1 c4 m3 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_black_king_bar > item_invis_sword > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bane bristleback lich luna zuus | luna zuus bristleback bane lich | e0 c2 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback jakiro lina phantom_assassin warlock | phantom_assassin lina bristleback jakiro warlock | e1 c3 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bristleback dazzle luna razor vengefulspirit | luna razor bristleback vengefulspirit dazzle | e0 c1 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+drow_ranger lina tidehunter vengefulspirit warlock | drow_ranger lina tidehunter vengefulspirit warlock | e0 c5 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dazzle death_prophet dragon_knight phantom_assassin vengefulspirit | phantom_assassin death_prophet dragon_knight vengefulspirit dazzle | e1 c3 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bristleback juggernaut lich lina lion | juggernaut lina bristleback lion lich | e0 c3 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dazzle juggernaut lion razor tidehunter | juggernaut razor tidehunter lion dazzle | e0 c2 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+crystal_maiden death_prophet phantom_assassin sand_king vengefulspirit | phantom_assassin death_prophet sand_king vengefulspirit crystal_maiden | e1 c4 m2 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_black_king_bar > item_invis_sword > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bristleback lich lion necrolyte phantom_assassin | phantom_assassin necrolyte bristleback lion lich | e1 c2 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bristleback lina lion oracle sven | sven lina bristleback lion oracle | e0 c3 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+dragon_knight juggernaut lich necrolyte vengefulspirit | juggernaut necrolyte dragon_knight vengefulspirit lich | e0 c3 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+dazzle drow_ranger lina lion tidehunter | drow_ranger lina tidehunter lion dazzle | e0 c4 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bane sand_king skeleton_king warlock zuus | skeleton_king zuus sand_king bane warlock | e0 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe dazzle death_prophet luna vengefulspirit | luna death_prophet axe vengefulspirit dazzle | e0 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback juggernaut lich lina skywrath_mage | juggernaut lina bristleback skywrath_mage lich | e0 c3 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback dazzle drow_ranger jakiro viper | drow_ranger viper bristleback jakiro dazzle | e0 c2 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bane dazzle juggernaut sand_king viper | juggernaut viper sand_king bane dazzle | e0 c2 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bane death_prophet lich sven tidehunter | sven death_prophet tidehunter bane lich | e0 c5 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bane bristleback juggernaut viper witch_doctor | juggernaut viper bristleback bane witch_doctor | e0 c2 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback jakiro razor skeleton_king warlock | skeleton_king razor bristleback jakiro warlock | e0 c3 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+death_prophet drow_ranger lion oracle sand_king | drow_ranger death_prophet sand_king lion oracle | e0 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dazzle drow_ranger lion sand_king zuus | drow_ranger zuus sand_king lion dazzle | e0 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bane dragon_knight oracle sven zuus | sven zuus dragon_knight bane oracle | e0 c3 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bane dragon_knight lich razor skeleton_king | skeleton_king razor dragon_knight bane lich | e0 c4 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dragon_knight lion necrolyte sven witch_doctor | sven necrolyte dragon_knight lion witch_doctor | e0 c4 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bane dazzle juggernaut kunkka razor | juggernaut razor kunkka bane dazzle | e0 c2 m0 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback death_prophet lich lion phantom_assassin | phantom_assassin death_prophet bristleback lion lich | e1 c3 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+chaos_knight death_prophet kunkka lich vengefulspirit | chaos_knight death_prophet kunkka vengefulspirit lich | e0 c5 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback death_prophet lich luna skywrath_mage | luna death_prophet bristleback skywrath_mage lich | e0 c3 m4 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+chaos_knight dazzle dragon_knight jakiro lina | chaos_knight lina dragon_knight jakiro dazzle | e0 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dragon_knight luna necrolyte oracle vengefulspirit | luna necrolyte dragon_knight vengefulspirit oracle | e0 c2 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+dazzle dragon_knight lion skeleton_king zuus | skeleton_king zuus dragon_knight lion dazzle | e0 c3 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+dazzle dragon_knight jakiro phantom_assassin razor | phantom_assassin razor dragon_knight jakiro dazzle | e1 c2 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+bane dazzle dragon_knight juggernaut viper | juggernaut viper dragon_knight bane dazzle | e0 c2 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+chaos_knight dazzle skywrath_mage tidehunter viper | chaos_knight viper tidehunter skywrath_mage dazzle | e0 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback lich phantom_assassin skywrath_mage zuus | phantom_assassin zuus bristleback skywrath_mage lich | e1 c2 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+crystal_maiden dragon_knight skeleton_king vengefulspirit viper | skeleton_king viper dragon_knight vengefulspirit crystal_maiden | e0 c4 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback dazzle juggernaut lion razor | juggernaut razor bristleback lion dazzle | e0 c1 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+death_prophet kunkka phantom_assassin vengefulspirit witch_doctor | phantom_assassin death_prophet kunkka vengefulspirit witch_doctor | e1 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+jakiro lich sand_king skeleton_king zuus | skeleton_king zuus sand_king jakiro lich | e0 c4 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+kunkka necrolyte sven vengefulspirit warlock | sven necrolyte kunkka vengefulspirit warlock | e0 c4 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+drow_ranger jakiro razor tidehunter warlock | drow_ranger razor tidehunter jakiro warlock | e0 c4 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe bane death_prophet juggernaut oracle | juggernaut death_prophet axe bane oracle | e0 c3 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+chaos_knight lich lina tidehunter vengefulspirit | chaos_knight lina tidehunter vengefulspirit lich | e0 c5 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe death_prophet juggernaut vengefulspirit warlock | juggernaut death_prophet axe vengefulspirit warlock | e0 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe chaos_knight lina oracle vengefulspirit | chaos_knight lina axe vengefulspirit oracle | e0 c4 m1 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_black_king_bar > item_invis_sword > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+juggernaut kunkka lion warlock zuus | juggernaut zuus kunkka lion warlock | e0 c3 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe bane dazzle lina skeleton_king | skeleton_king lina axe bane dazzle | e0 c4 m1 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback drow_ranger razor vengefulspirit warlock | drow_ranger razor bristleback vengefulspirit warlock | e0 c3 m1 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback chaos_knight jakiro lina warlock | chaos_knight lina bristleback jakiro warlock | e0 c4 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback dazzle death_prophet lion luna | luna death_prophet bristleback lion dazzle | e0 c2 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback jakiro lina luna oracle | luna lina bristleback jakiro oracle | e0 c2 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+death_prophet drow_ranger lich sand_king vengefulspirit | drow_ranger death_prophet sand_king vengefulspirit lich | e0 c5 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bane death_prophet skeleton_king tidehunter warlock | skeleton_king death_prophet tidehunter bane warlock | e0 c5 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bane bristleback lich lina phantom_assassin | phantom_assassin lina bristleback bane lich | e1 c3 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+kunkka lich skywrath_mage sven zuus | sven zuus kunkka skywrath_mage lich | e0 c4 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+dragon_knight lich sven vengefulspirit zuus | sven zuus dragon_knight vengefulspirit lich | e0 c4 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+death_prophet kunkka lion oracle skeleton_king | skeleton_king death_prophet kunkka lion oracle | e0 c4 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+bristleback sven vengefulspirit viper witch_doctor | sven viper bristleback vengefulspirit witch_doctor | e0 c3 m2 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_invis_sword > item_hurricane_pike > item_black_king_bar > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_greater_crit, frente a item_monkey_king_bar
+jakiro lina luna oracle tidehunter | luna lina tidehunter jakiro oracle | e0 c3 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+axe jakiro lich phantom_assassin razor | phantom_assassin razor axe jakiro lich | e1 c3 m2 s2
+   item_wraith_band > item_power_treads > item_dragon_lance > item_hurricane_pike > item_maelstrom > item_invis_sword > item_black_king_bar > item_silver_edge > item_mjollnir > item_monkey_king_bar > item_satanic
+   B: item_invis_sword, frente a item_black_king_bar ; C: item_monkey_king_bar (evasión), frente a item_greater_crit
+lobby-11-05 | alchemist ursa centaur warlock crystal_maiden | e0 c4 m2 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+lobby-11-06 | alchemist terrorblade nevermore jakiro bloodseeker | e0 c3 m3 s0
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+lobby-11-07 | alchemist riki lion viper witch_doctor | e0 c3 m3 s1
+   item_wraith_band > item_power_treads > item_dragon_lance > item_maelstrom > item_black_king_bar > item_invis_sword > item_hurricane_pike > item_silver_edge > item_mjollnir > item_greater_crit > item_satanic
+   B: item_black_king_bar (mucha magia o control), frente a item_invis_sword ; C: item_greater_crit, frente a item_monkey_king_bar
+
+122 alineaciones

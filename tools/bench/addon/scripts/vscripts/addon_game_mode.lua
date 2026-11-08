@@ -465,6 +465,7 @@ end
 -- Damage to and from the followed hero, by source (attack or ability), printed and reset every 10 s: says whether
 -- Shrapnel hits and who hurts the hero. As the filter receives it; whether armour is already applied is not checked.
 local damage = {}
+local buildings = { total = 0, n = 0 }
 local function NoteDamage(e)
 	local l = LanePlayers()
 	if l.own < 0 then return end
@@ -473,7 +474,13 @@ local function NoteDamage(e)
 	if not attacker or not victim or not victim.IsRealHero or not attacker.GetUnitName then return end
 	local hero = PlayerResource:GetSelectedHeroEntity(l.own)
 	if not hero or (attacker ~= hero and victim ~= hero) then return end
-	if not victim:IsRealHero() then return end -- creeps and towers hit by the hero: creepkill tells those
+	-- Buildings hit by the hero, on a line of their own: inside "dano" the analyzers would count them as damage to heroes. Dota's end
+	-- screen has it, and nothing here did (Pedro, 2026-11-08).
+	if attacker == hero and victim.IsBuilding and victim:IsBuilding() then
+		buildings.total, buildings.n = buildings.total + e.damage, buildings.n + 1
+		return
+	end
+	if not victim:IsRealHero() then return end -- creeps hit by the hero: creepkill tells those
 	-- IsHero, not IsRealHero: an illusion is its hero's name, not a creep. A count with a total of 0 is a blocked hit.
 	local from = attacker:IsHero() and attacker:GetUnitName():gsub("npc_dota_hero_", "")
 		or (attacker:IsTower() and "torre") or "creep"
@@ -485,6 +492,10 @@ local function NoteDamage(e)
 	damage[key] = d
 end
 local function DamageSnapshot()
+	if buildings.n > 0 then
+		Obs("edificios danio=%d golpes=%d", math.floor(buildings.total), buildings.n)
+		buildings = { total = 0, n = 0 }
+	end
 	local parts = {}
 	for key, d in pairs(damage) do table.insert(parts, string.format("%s:%d:%d", key, math.floor(d.total), d.n)) end
 	if #parts == 0 then return end
