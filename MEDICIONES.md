@@ -1380,3 +1380,32 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **Kills, sigue la brecha**, que según la revisión está en la línea y en las rotaciones apagadas.
 - Validez: n=6 y el ruido medido en la base; solo mecanismo. Un humano castiga distinto.
 - Decisión: no hay más rondas sin Pedro. Fusionado y a su partida; si pierde lo que vio, se revierte.
+
+### 2026-11-08 · Marcador de fin de partida y por qué el Sniper de OHA hace más kills y daño (sin partidas nuevas)
+- Pregunta (Pedro: «el sniper de OHa nos va ganando en ambas versiones [...] ya se ve un patrón que podría estar asociado también al daño a heroes, hay cosas que no estamos midiendo»): ¿de dónde sale la brecha de kills y daño, con lo que Dota pone en su marcador final?
+- Datos: `base2-oha` (n=8) y las 3 versiones propias en los mismos enfrentamientos (n=6 cada una), min 25. Scripts: `tools/analisis/evaluacion-2026-11-06/a11.py` (marcador, curvas, objetos, cada kill), `a12.py` (por fase), `a13.py` (qué hace en las peleas). Solo registros ya guardados.
+- Marcador (OHA / v0 `base2` / v1 `equipo2` / v2 `retoque`):
+  - K/D/A: 9,5/3,1/5,2 · 4,8/1,5/6,3 · 6,7/3,3/8,8 · 7,3/1,3/5,3;
+  - GPM 892 · 794 · 711 · 837; XPM 1.631 · 1.520 · 1.360 · 1.522; tiempo muerto 143 s · 70 · 130 · 45;
+  - daño a héroes del min 0 al 25: 25.285 · 19.958 · 20.293 · 18.234; golpes de ataque a héroes 133 · 98 · 96 · 98.
+- Por fase (OHA frente a v2):
+
+  | | Min 0-10 | Min 10-20 | Min 20-25 |
+  |---|---|---|---|
+  | Daño a héroes | 7.059 / 5.734 | **12.298 / 5.543** | 5.928 / 6.957 |
+  | Shrapnel lanzados | **13,1 / 8,2** | 12,2 / 6,8 | 5,0 / 6,0 |
+  | Assassinate lanzados | 2,2 / 1,5 | **5,0 / 2,0** | 2,8 / 1,7 |
+  | Golpes a héroes | 47 / 44 | **56 / 24** | 26 / 30 |
+  | Peleas grandes atendidas | 50 % / 44 % | 38 % / 43 % | 39 % / 58 % |
+  | Daño por pelea atendida | 1.175 / 829 | **2.295 / 1.047** | 2.881 / 2.383 |
+
+- Cada muerte enemiga hasta el min 25: las del Sniper (OHA 4,2 antes del min 12 frente a 2,0-2,8; después, 5,5 frente a 4,7-4,8); con su daño pero rematadas por otro (5,1 frente a 3,5-4,1). **Remata igual que OHA** (64-72 % frente a 67 %): la brecha es de cuántas veces pega, no de convertir.
+- Objetos: OHA tiene Mask of Madness en el min 10,9 (8 de 8) y Aghanim en el 20,8 (7 de 8). El propio no compra ninguno, pero tiene antes Maelstrom (11,9 frente a 15,7) y Blade (15,4).
+- En las peleas que atiende, quieto con un enemigo al alcance solo el 3 % del tiempo y a menos de 300 de su alcance el 5 %: **no es pasividad**. Está a la misma distancia que OHA (mediana de 1.270, alcance de 1.000), pero dispara la mitad.
+- Lectura (correlacional, n pequeño):
+  - **Línea:** OHA lanza Shrapnel un 60 % más (el propio lo limita a maná ≥ 50 % y uno cada 4 s, `sniper.lua:108-123`). Es daño y ralentiza para la kill: encaja con su ventaja de kills antes del min 12.
+  - **Min 10-20:** OHA dispara el doble por pelea. Encaja con Mask of Madness (velocidad de ataque) y con más Assassinate.
+  - **El retoque bajó el Assassinate** de 5,0 a 2,0 entre los min 10 y 20: el filtro de `Wasted` quitó también disparos útiles, y no registra el porqué.
+  - **Denies, 31 frente a 16:** quizá coste en acoso, sin medir.
+- Validez: descriptivo; la máscara y el ritmo de disparo van juntos en OHA y no se separan aquí. Sin daño a edificios en el registro (`obs dano` no lo guarda) ni curaciones, aturdimientos u oro perdido.
+- Decisión: proponer a Pedro; su partida, solo con una mejora plausible por una brecha encontrada y corregida.

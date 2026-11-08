@@ -7,8 +7,9 @@
 - **Qué se probó:** la exposición no separa las muertes contra un humano. Ronda 1, fallida: iba y venía y perseguía grupos que duran 12 s. Con 4-8 partidas solo se lee mecanismo. Se agotaron las 2 rondas.
 - **Pedro jugó (2026-11-07, Turbo real, Injusto):** «mejoró sustancialmente, se oculta, se posiciona mejor, escapa, se siente mucho más orgánico» (MEDICIONES). En Turbo real los bots OHA gastan su oro: el acaparamiento era solo del banco. Arreglado también que el Sniper no saliera si Pedro elegía rápido (#88).
 - **Último retoque (2026-11-08, pedido por Pedro, MEDICIONES):** dos revisores Opus y 6 reglas. Frente a OHA: últimos golpes 162 y 154, muertes 1,3 y 3, torres +2 y +1; casi a la par en objetos (20.192 y 21.070) y participación (0,46 y 0,49); **por debajo en kills (7,3 y 10) y daño (10.793 y 16.057, que bajó desde 13.265)**.
-- **Siguiente acción:** la partida de Pedro con este código. Si no supera lo que ya vio, revertir #90. Después, la fase 2 (`trabajo/bot-propio.md`). La brecha de kills está en la línea y en las rotaciones, apagadas por DECISIONES 2026-11-04.
-- Espera al dueño: jugar contra el Sniper retocado · Recomendado: `node tools/jugar-sniper.mjs` con Dota cerrado (el banco borró los archivos del lobby), una partida en Turbo, y `node tools/jugar-sniper.mjs quitar` al acabar
+- **Marcador (2026-11-08, MEDICIONES):** remata igual que OHA; pega menos veces. Línea: un 60 % menos de Shrapnel. Min 10-20: la mitad de golpes y de Assassinate por pelea, con OHA ya con Mask of Madness. Pedro no juega hasta una mejora plausible (DECISIONES 2026-11-08).
+- **Siguiente acción:** con el sí de Pedro, el paquete propuesto (Shrapnel por cargas, Mask of Madness y Berserk, registrar por qué se descarta un Assassinate, daño a edificios en el registro) y una ronda medida con el marcador.
+- Espera al dueño: aprobar el paquete y añadir Mask of Madness a la build · Recomendado: sí, MoM tras Dragon Lance, igual que OHA
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego

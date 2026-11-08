@@ -56,6 +56,9 @@ once it exists.
   - Sin vueltas de umbrales: un paquete, como mucho 2 rondas de mecanismo, y juega Pedro; una constante cambia solo por un fallo de
     regla visto en el registro. Por qué: con estas partidas ni 12 vueltas detectan ±3,4 kills, y el mismo código dio 199 y 162 últimos
     golpes (DECISIONES.md, 2026-11-06; `trabajo/evaluacion-adversarial-2026-11-06.md`).
+  - La partida de Pedro va solo tras una mejora plausible por brechas encontradas y corregidas, y cada versión se compara con el
+    marcador de fin de partida (`tools/analisis/evaluacion-2026-11-06/a11.py`, `a12.py`). Por qué: su tiempo es lo más caro, y la media
+    de una métrica no dice dónde está la brecha (DECISIONES.md, 2026-11-08).
   - Una rama y un PR por tarea; mientras corre una serie, el trabajo paralelo va en otro worktree (DECISIONES.md,
     2026-10-31).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).
