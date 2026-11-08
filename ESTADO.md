@@ -8,8 +8,9 @@
 - **Pedro jugó (2026-11-07, Turbo real, Injusto):** «mejoró sustancialmente, se oculta, se posiciona mejor, escapa, se siente mucho más orgánico» (MEDICIONES). En Turbo real los bots OHA gastan su oro: el acaparamiento era solo del banco. Arreglado también que el Sniper no saliera si Pedro elegía rápido (#88).
 - **Último retoque (2026-11-08, pedido por Pedro, MEDICIONES):** dos revisores Opus y 6 reglas. Frente a OHA: últimos golpes 162 y 154, muertes 1,3 y 3, torres +2 y +1; casi a la par en objetos (20.192 y 21.070) y participación (0,46 y 0,49); **por debajo en kills (7,3 y 10) y daño (10.793 y 16.057, que bajó desde 13.265)**.
 - **Marcador (2026-11-08, MEDICIONES):** remata igual que OHA; pega menos veces. Línea: un 60 % menos de Shrapnel. Min 10-20: la mitad de golpes y de Assassinate por pelea, con OHA ya con Mask of Madness. Pedro no juega hasta una mejora plausible (DECISIONES 2026-11-08).
-- **Siguiente acción:** con el sí de Pedro, el paquete propuesto (Shrapnel por cargas, Mask of Madness y Berserk, registrar por qué se descarta un Assassinate, daño a edificios en el registro) y una ronda medida con el marcador.
-- Espera al dueño: aprobar el paquete y añadir Mask of Madness a la build · Recomendado: sí, MoM tras Dragon Lance, igual que OHA
+- **Paquete aprobado (DECISIONES 2026-11-08):** hechos en la rama `claude/paquete-marcador` Shrapnel por cargas, motivo de cada Assassinate descartado y daño a edificios en el registro (en revisión, es un control). La build por enemigos se diseñó con dos agentes: `trabajo/build-estrategica.md`.
+- **Siguiente acción:** con la firma de Pedro, construir el módulo de build (primera versión, Sniper) y medir todo junto en una ronda con el marcador.
+- Espera al dueño: firmar el diseño de `trabajo/build-estrategica.md` · Recomendado: firmarlo tal cual (reglas en orden, sin pesos; Blade y Pike se quedan)
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
