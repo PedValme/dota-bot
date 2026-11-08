@@ -9,9 +9,9 @@
 - **Último retoque (2026-11-08, pedido por Pedro, MEDICIONES):** dos revisores Opus y 6 reglas. Frente a OHA: últimos golpes 162 y 154, muertes 1,3 y 3, torres +2 y +1; casi a la par en objetos (20.192 y 21.070) y participación (0,46 y 0,49); **por debajo en kills (7,3 y 10) y daño (10.793 y 16.057, que bajó desde 13.265)**.
 - **Marcador (2026-11-08, MEDICIONES):** remata igual que OHA; pega menos veces. Línea: un 60 % menos de Shrapnel. Min 10-20: la mitad de golpes y de Assassinate por pelea, con OHA ya con Mask of Madness. Pedro no juega hasta una mejora plausible (DECISIONES 2026-11-08).
 - **Paquete aprobado (DECISIONES 2026-11-08):** hechos en la rama `claude/paquete-marcador` Shrapnel por cargas, motivo de cada Assassinate descartado y daño a edificios en el registro (en revisión, es un control). La build por enemigos se diseñó con dos agentes: `trabajo/build-estrategica.md`.
-- **Módulo de build hecho y medido (`build1`, MEDICIONES 2026-11-08), rama `claude/paquete-marcador` sin fusionar:** las reglas actúan, pero sale peor (daño 14.718, kills 4,8). La MoM retrasa Maelstrom y Blade 3-4 min, Shrapnel no llega a lanzarse por el orden de reglas (maná medio del 90 %) y el Berserk casi no se usa.
-- **Siguiente acción:** segunda ronda, la última: Shrapnel antes que el último golpe cuando tiene carga y objetivo, y la MoM según decida Pedro.
-- Espera al dueño: qué hacer con la MoM · Recomendado: quitarla como objeto por defecto del Sniper y dejar el módulo para el resto, porque en esta build retrasa el núcleo
+- **Paquete del marcador y build según los enemigos fusionados (MEDICIONES 2026-11-08, `build2`):** sin MoM (Pedro: «quita la máscara»), Shrapnel antes del intercambio. Frente a OHA: daño 21.313 y 25.285, muertes 1,0 y 3,1, últimos golpes 153 y 154; kills 5,2 y 9,5. Rondas agotadas.
+- **Siguiente acción:** leer la partida de Pedro con el marcador. Pendientes sin aislar: remata menos cuando pega (48 % frente a 67 %; quizá el filtro «lo matan mis golpes») y las kills de línea (1,0 al min 10 frente a 3,2; rotaciones apagadas, DECISIONES 2026-11-04). Después, la fase 2.
+- Espera al dueño: jugar contra el Sniper con este código · Recomendado: `node tools/jugar-sniper.mjs` con Dota cerrado, una partida en Turbo, y `node tools/jugar-sniper.mjs quitar` al acabar
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego

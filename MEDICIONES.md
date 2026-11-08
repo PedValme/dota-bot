@@ -1453,3 +1453,24 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - kills ≥ 7, últimos golpes ≥ 150, muertes ≤ 2;
   - sin confianza en cerrar la brecha de golpes del min 10 al 20 sin la MoM.
 - Es la última ronda: lo que salga se le presenta a Pedro, y no se juega hasta que haya una mejora plausible (DECISIONES 2026-11-08).
+- Máquina y código: CPU media 20-24 %, memoria libre 50-51 %. Código `eb89b49`, 6 de 6 válidas, 0 errores. Las compras siguen el plan en las 6 partidas (Pike primero solo en `c`, BKB antes solo en `b`, MKB en `c`), y el plan se rehízo a mitad de partida al ver objetos en los rivales.
+- Resultado (marcador; `retoque` → `build2`, OHA entre paréntesis):
+
+  | | `retoque` | `build2` | OHA | Predicho |
+  |---|---|---|---|---|
+  | Daño a héroes, min 0-25 | 18.234 | **21.313** | 25.285 | ≥ 18.234, cumple |
+  | Daño min 0-10 / 10-20 / 20-25 | 5.734 / 5.543 / 6.957 | 4.721 / 7.226 / **9.367** | 7.059 / 12.298 / 5.928 | min 0-10 ≥ 6.500, **no cumple** |
+  | Shrapnel min 0-10 / total | 8,2 / 21 | **11,2** / 27,7 | 13,1 / 30,5 | ≥ 11, cumple |
+  | Golpes a héroes, min 10-20 | 24 | 30 | 56 | sin confianza |
+  | Kills / muertes / asistencias | 7,3 / 1,3 / 5,3 | 5,2 / **1,0** / 7,3 | 9,5 / 3,1 / 5,2 | kills ≥ 7, **no cumple**; muertes, cumple |
+  | Últimos golpes / GPM | 162 / 837 | 153 / 799 | 154 / 892 | ≥ 150, cumple |
+  | Maelstrom / Blade (min) | 11,9 / 15,4 | 12,5 / 18,3 | 15,7 / — | Maelstrom cumple; Blade ≤ 16,5, no cumple |
+  | Peleas grandes atendidas, min 10-20 / 20-25 | 43 % / 58 % | 55 % / 74 % | 38 % / 39 % | |
+  | Remata cuando pega | 64 % | 48 % | 67 % | |
+
+- Lectura:
+  - **El mejor daño de las versiones propias y las menores muertes:** el Shrapnel vuelve a lanzarse (el orden de reglas era la causa) y, sin la MoM, el núcleo vuelve a su tiempo. Al final de la partida ya pega más que OHA (9.367 frente a 5.928) y atiende más peleas.
+  - **Las kills no suben:** pega en más muertes (5,5 frente a 3,3 del min 12 al 25) pero las remata otro (48 %), y las kills con Assassinate bajan (10 de 33). El filtro «lo matan mis golpes» puede estar quitando remates propios; sin aislar.
+  - **La línea pierde daño de ataque** (31 golpes a héroes frente a 44): parte del tiempo de disparo se va en Shrapnel. Las kills tempranas siguen en 1,0 al min 10 (OHA 3,2).
+- Validez: n=6, solo mecanismo; Shrapnel y build van juntos.
+- Decisión: rondas agotadas (2 de 2). Se fusiona: frente a la versión que Pedro jugó por última vez (`equipo2`), es una mejora plausible por brechas encontradas y corregidas: últimos golpes 98 → 153, muertes 3,3 → 1,0, daño 20.293 → 21.313. Kills por debajo (6,7 → 5,2). Juega Pedro.
