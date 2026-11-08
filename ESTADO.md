@@ -9,8 +9,9 @@
 - **Último retoque (2026-11-08, pedido por Pedro, MEDICIONES):** dos revisores Opus y 6 reglas. Frente a OHA: últimos golpes 162 y 154, muertes 1,3 y 3, torres +2 y +1; casi a la par en objetos (20.192 y 21.070) y participación (0,46 y 0,49); **por debajo en kills (7,3 y 10) y daño (10.793 y 16.057, que bajó desde 13.265)**.
 - **Marcador (2026-11-08, MEDICIONES):** remata igual que OHA; pega menos veces. Línea: un 60 % menos de Shrapnel. Min 10-20: la mitad de golpes y de Assassinate por pelea, con OHA ya con Mask of Madness. Pedro no juega hasta una mejora plausible (DECISIONES 2026-11-08).
 - **Paquete aprobado (DECISIONES 2026-11-08):** hechos en la rama `claude/paquete-marcador` Shrapnel por cargas, motivo de cada Assassinate descartado y daño a edificios en el registro (en revisión, es un control). La build por enemigos se diseñó con dos agentes: `trabajo/build-estrategica.md`.
-- **Siguiente acción:** con la firma de Pedro, construir el módulo de build (primera versión, Sniper) y medir todo junto en una ronda con el marcador.
-- Espera al dueño: firmar el diseño de `trabajo/build-estrategica.md` · Recomendado: firmarlo tal cual (reglas en orden, sin pesos; Blade y Pike se quedan)
+- **Módulo de build hecho y medido (`build1`, MEDICIONES 2026-11-08), rama `claude/paquete-marcador` sin fusionar:** las reglas actúan, pero sale peor (daño 14.718, kills 4,8). La MoM retrasa Maelstrom y Blade 3-4 min, Shrapnel no llega a lanzarse por el orden de reglas (maná medio del 90 %) y el Berserk casi no se usa.
+- **Siguiente acción:** segunda ronda, la última: Shrapnel antes que el último golpe cuando tiene carga y objetivo, y la MoM según decida Pedro.
+- Espera al dueño: qué hacer con la MoM · Recomendado: quitarla como objeto por defecto del Sniper y dejar el módulo para el resto, porque en esta build retrasa el núcleo
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego

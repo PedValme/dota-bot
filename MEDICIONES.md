@@ -1427,3 +1427,19 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - últimos golpes ≥ 150 (162) y muertes ≤ 2 (1,3);
   - aparecen `descarto assassinate` con motivo y `obs edificios`.
 - Validez prevista: MoM y Shrapnel van juntos y no se separan; la adaptación no se mide con este ruido: la juzgará Pedro.
+- Máquina y código: `f9e29b8`, 6 de 6 válidas, 0 errores. Planes en el registro: `a`, MoM y Blade; `b`, MoM y BKB antes; `c`, Pike primero, sin MoM. Las tres reglas actuaron.
+- Resultado (marcador, `a11.py`, `a12.py`; v2 `retoque` → v3 `build1`, OHA entre paréntesis):
+  - K/D/A: 7,3/1,3/5,3 → **4,8/2,0/6,8** (9,5/3,1/5,2);
+  - últimos golpes 162 → 154; GPM 837 → 773; XPM 1.522 → 1.397;
+  - daño a héroes del min 0 al 25: 18.234 → **14.718** (25.285); golpes a héroes 98 → 77 (133);
+  - Shrapnel del min 0 al 10: 8,2 → 8,7 (13,1). Golpes a héroes del min 10 al 20: 24 → 21 (56). Daño por pelea atendida: 1.047 → 1.356 (2.295);
+  - objetos: MoM en el min 13,0 (4 de 6), **Maelstrom en el 15,1 (antes 11,9) y Blade en el 19,9 (antes 15,4)**;
+  - Berserk: 0-3 por partida; `obs edificios` en las 6; descartes de Assassinate con motivo: 1-5 por partida (sus golpes, aliados, TP).
+- **Predicción fallida casi entera**: solo cumplen los últimos golpes (154 ≥ 150), las muertes (2,0 ≤ 2) y el registro nuevo.
+- Lectura:
+  - **Shrapnel no subió, pero no por falta de maná: maná medio del 90 %.** Harass va detrás del último golpe, el intercambio y las runas en `Decide` (`linea.lua`, ~605), y casi nunca le llega el turno. Fallo de orden de reglas, visto en el registro.
+  - **La MoM, en esta build, retrasa el núcleo.** En 7.41 cuesta 1.900 (`item_lifesteal` + `item_broadsword`) y entra antes del Maelstrom: Maelstrom 3 min más tarde y Blade 4,5. OHA la compra en el min 10,9 porque su build no lleva Blade.
+  - **El Berserk casi no se usa** (0-3 por partida): la regla lo veta con un enemigo a menos de 600, que es lo normal en pelea.
+  - Con MoM y Shrapnel juntos y n=6, no se separa qué pesa más. El daño por pelea sube (1.047 → 1.356) y el total baja: menos peleas atendidas y menos golpes.
+- Validez: n=6, mismo ruido; solo mecanismo.
+- Decisión: no se fusiona esta versión del perfil. Segunda ronda, la última, con lo que decida Pedro sobre la MoM.
