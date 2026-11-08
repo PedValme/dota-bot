@@ -35,6 +35,7 @@ local K = {
 	teamWalk = 2500,     -- farther than this, by teleport if that saves at least this much
 	siegeCreeps = 700,   -- our creeps this close to a tower keep it busy
 	berserkNear = 600,   -- no Berserk with an enemy hero this close: it costs armour
+	meleeRange = 300,    -- an attack range under this is melee
 	farmHp = 0.5,        -- no neutrals below this health
 	neutralNear = 900,   -- neutrals this close are hit
 	ancientLevel = 20,   -- ancients from this level on
@@ -553,8 +554,9 @@ end
 -- Not with an enemy hero on top of us, since it takes armour away, nor low on health.
 function M.Berserk(bot, s, p, target)
 	if target == nil or not target:IsHero() or D2(p.loc, target:GetLocation()) > p.range or p.hp < K.fightHp then return nil end
+	-- The target itself only counts if it hits from close: a ranged one at 600 is the fight it is bought for.
 	for _, e in ipairs(p.enemyHeroes) do
-		if Valid(e) and D2(p.loc, e:GetLocation()) < K.berserkNear then return nil end
+		if Valid(e) and D2(p.loc, e:GetLocation()) < K.berserkNear and (e ~= target or e:GetAttackRange() < K.meleeRange) then return nil end
 	end
 	local mom = ReadyItem(bot, s, p, { 'item_mask_of_madness' })
 	if mom == nil then return nil end

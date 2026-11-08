@@ -1409,3 +1409,21 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **Denies, 31 frente a 16:** quizá coste en acoso, sin medir.
 - Validez: descriptivo; la máscara y el ritmo de disparo van juntos en OHA y no se separan aquí. Sin daño a edificios en el registro (`obs dano` no lo guarda) ni curaciones, aturdimientos u oro perdido.
 - Decisión: proponer a Pedro; su partida, solo con una mejora plausible por una brecha encontrada y corregida.
+
+### 2026-11-08 · Paquete del marcador con build según los enemigos (`build1-*`, 3 enfrentamientos, 2 y 2 y 2, min 25): predicción antes de lanzar
+- Pregunta: ¿cierra el paquete aprobado (DECISIONES 2026-11-08) la brecha de daño y de ritmo de disparo frente al Sniper de OHA, sin perder el farm y las muertes del retoque? Mecanismo, frente a `retoque` y `base2-oha`.
+- Qué cambió:
+  - Shrapnel por cargas: solo guarda el maná de Assassinate;
+  - cada Assassinate descartado registra su motivo;
+  - el daño a edificios va en su propia línea, `obs edificios`;
+  - build según los enemigos (`bots/FunLib/propio/build.lua`, `amenazas.lua`, `perfiles/sniper.lua`; `trabajo/build-estrategica.md`), con Berserk de la MoM;
+  - el check exige regla de uso para cada objeto de un perfil.
+- Revisión: dos subagentes, uno sobre el banco y otro sobre el módulo, el check y los planes; aplicado lo que encontraron.
+- Planes sin partidas, sobre las 122 alineaciones ya vistas: MoM en 111, Pike primero en 11, BKB antes de la Blade en 77, MKB en 23. **En esta ronda:** `a`, MoM y Blade; `b`, BKB antes; `c`, Pike primero y MKB. Las tres reglas se activan en al menos 2 de 6 partidas.
+- Predicción, frente a `retoque` (n=6):
+  - Shrapnel del min 0 al 10 ≥ 11 (8,2; OHA 13,1), y daño a héroes del min 0 al 10 ≥ 6.500 (5.734; OHA 7.059);
+  - MoM antes del min 12 en `a` y `b`, con Berserk en sus peleas;
+  - golpes a héroes del min 10 al 20 ≥ 40 (24; OHA 56), y daño por pelea atendida ≥ 1.700 (1.047; OHA 2.295);
+  - últimos golpes ≥ 150 (162) y muertes ≤ 2 (1,3);
+  - aparecen `descarto assassinate` con motivo y `obs edificios`.
+- Validez prevista: MoM y Shrapnel van juntos y no se separan; la adaptación no se mide con este ruido: la juzgará Pedro.

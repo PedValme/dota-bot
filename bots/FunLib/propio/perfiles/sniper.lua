@@ -13,7 +13,7 @@ return {
 			{ item = 'item_mask_of_madness', uso = 'berserk', why = 'ritmo de ataque en las peleas' } },
 		{ name = 'Maelstrom', { item = 'item_maelstrom', uso = 'pasivo', why = 'núcleo' } },
 		-- Before the Blade: the Black King Bar, against a team built on magic or lock. With two or more it held in nearly every lineup of
-		-- the bench: a rule that always holds is a default, not a choice. Like this, 57 of 122 (planes sin partidas, 2026-11-08).
+		-- the bench: a rule that always holds is a default, not a choice. Like this, 77 of 122 (planes sin partidas, 2026-11-08).
 		{ name = 'B',
 			{ item = 'item_black_king_bar', uso = 'bkb', when = function(t) return t.magia >= 3 or t.control >= 4 end, why = 'mucha magia o control' },
 			{ item = 'item_invis_sword', uso = 'blade', why = 'entrar oculto (Pedro, 2026-11-05)' } },

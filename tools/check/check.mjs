@@ -61,11 +61,13 @@ if (uses.size === 0) errors.push("bots/FunLib/propio/build.lua: B.USES not found
 const profiles = join(root, "bots", "FunLib", "propio", "perfiles");
 for (const file of filesUnder(profiles, [".lua"])) {
   const rel = relative(root, file).replaceAll("\\", "/");
+  // One candidate per line, as perfiles/ writes them; quotes of either kind, fields in any order.
   readFileSync(file, "utf8").split(/\r?\n/).forEach((line, i) => {
-    for (const m of line.matchAll(/item\s*=\s*'(\w+)'\s*,\s*uso\s*=\s*'(\w+)'/g)) {
-      if (!uses.has(m[2])) errors.push(`${rel}:${i + 1}: ${m[1]} uses '${m[2]}', which no rule in build.lua's B.USES handles`);
-    }
-    if (/item\s*=\s*'\w+'/.test(line) && !/uso\s*=/.test(line)) errors.push(`${rel}:${i + 1}: an item with no 'uso'`);
+    const item = line.match(/\bitem\s*=\s*['"](\w+)['"]/);
+    if (!item) return;
+    const uso = line.match(/\buso\s*=\s*['"](\w+)['"]/);
+    if (!uso) errors.push(`${rel}:${i + 1}: ${item[1]} has no 'uso'`);
+    else if (!uses.has(uso[1])) errors.push(`${rel}:${i + 1}: ${item[1]} uses '${uso[1]}', which no rule in build.lua's B.USES handles`);
   });
 }
 

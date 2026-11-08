@@ -13,7 +13,7 @@ A.HEROES = {
 	alchemist = { control = true },                       -- Unstable Concoction
 	axe = { control = true, salta = true },               -- Berserker's Call after a Blink
 	bane = { control = true },                            -- Nightmare, Fiend's Grip
-	bloodseeker = { magia = true },                       -- Rupture
+	bloodseeker = { magia = true, control = true },       -- Rupture, Blood Rite silences
 	bounty_hunter = { invis = true },                     -- Shadow Walk
 	brewmaster = { evasion = true, control = true },      -- Drunken Brawler, Thunder Clap
 	bristleback = {},
@@ -22,23 +22,23 @@ A.HEROES = {
 	clinkz = { invis = true },                            -- Skeleton Walk
 	crystal_maiden = { control = true, magia = true },    -- Frostbite, Crystal Nova
 	dazzle = { curacion = true },                         -- Shallow Grave, Shadow Wave
-	death_prophet = { magia = true },                     -- Exorcism, Crypt Swarm
+	death_prophet = { magia = true, control = true },     -- Exorcism, Crypt Swarm, Silence
 	dragon_knight = { control = true },                   -- Dragon Tail
-	drow_ranger = {},
+	drow_ranger = { control = true },                     -- Gust silences
 	earthshaker = { control = true, salta = true, magia = true }, -- Fissure, Echo Slam after a Blink
 	faceless_void = { control = true, salta = true },     -- Chronosphere, Time Walk
 	jakiro = { control = true, magia = true },            -- Ice Path, Macropyre
 	juggernaut = { curacion = true },                     -- Healing Ward
 	kez = { salta = true },                               -- closes at once with its dashes
 	kunkka = { control = true },                          -- Torrent, X Marks the Spot
-	lich = { magia = true },                              -- Chain Frost
+	lich = { magia = true, control = true },              -- Chain Frost, Sinister Gaze
 	lina = { control = true, magia = true },              -- Light Strike Array, Laguna Blade
 	lion = { control = true, magia = true },              -- Hex, Impale, Finger of Death
 	luna = { magia = true },                              -- Eclipse
 	medusa = {},
 	mirana = { control = true },                          -- Sacred Arrow
-	monkey_king = { salta = true },                       -- Tree Dance
-	naga_siren = { ilusiones = true },                    -- Mirror Image
+	monkey_king = { salta = true, control = true },       -- Tree Dance, Boundless Strike
+	naga_siren = { ilusiones = true, control = true },    -- Mirror Image, Ensnare
 	necrolyte = { magia = true, curacion = true },        -- Reaper's Scythe, Death Pulse
 	nevermore = { magia = true },                         -- Shadowraze, Requiem
 	nyx_assassin = { invis = true, control = true },      -- Vendetta, Impale
@@ -53,7 +53,7 @@ A.HEROES = {
 	sand_king = { control = true, salta = true },         -- Burrowstrike
 	shadow_shaman = { control = true },                   -- Hex, Shackles
 	skeleton_king = { control = true },                   -- Wraithfire Blast
-	skywrath_mage = { magia = true },                     -- Mystic Flare
+	skywrath_mage = { magia = true, control = true },     -- Mystic Flare, Ancient Seal silences
 	slark = { salta = true, curacion = true },            -- Pounce, Shadow Dance
 	sniper = {},
 	sven = { control = true },                            -- Storm Hammer
@@ -64,7 +64,7 @@ A.HEROES = {
 	vengefulspirit = { control = true },                  -- Magic Missile
 	viper = { magia = true },                             -- Poison Attack, Viper Strike
 	warlock = { control = true, magia = true },           -- Chaotic Offering
-	weaver = { invis = true, evasion = true },            -- Shukuchi, Time Lapse
+	weaver = { invis = true },                            -- Shukuchi (Time Lapse is no evasion)
 	windrunner = { evasion = true, control = true },      -- Windrun, Shackleshot
 	witch_doctor = { control = true, magia = true, curacion = true }, -- Paralyzing Cask, Death Ward, Voodoo Restoration
 	zuus = { magia = true },                              -- Lightning Bolt, Thundergod's Wrath

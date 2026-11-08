@@ -76,6 +76,8 @@ local function Replan(bot, s)
 		table.insert(kept, queue[i])
 	end
 	s.buyQueue = kept
+	-- A courier sent for a secret part of the old plan would make the next one look late and skip it.
+	s.secretSince = nil
 	Append(s, Build.Plan(bot, s, done) or {}, done)
 	return 'plan de nuevo: cambió lo que amenazan'
 end
@@ -87,7 +89,8 @@ end
 
 -- With the inventory nearly full, the least useful item goes, only near the shop: far from it the sale failed without a
 -- word while the log said it sold (4 sales with 2 branches). Without this, a late item could never be assembled.
-local SELL_ORDER = { 'item_branches', 'item_tango', 'item_flask', 'item_wraith_band' }
+-- The Mask last: once the six slots are full of the late items, it is what gives way (else the answer to evasion stayed in the backpack).
+local SELL_ORDER = { 'item_branches', 'item_tango', 'item_flask', 'item_wraith_band', 'item_mask_of_madness' }
 local function MakeRoom(bot)
 	local used = 0
 	for slot = 0, 8 do if bot:GetItemInSlot(slot) ~= nil then used = used + 1 end end
@@ -261,7 +264,7 @@ end
 -- An item left in the backpack (slots 6-8) gives nothing: swap it with an empty main slot, else with a branch. In the lane
 -- never with a tango, which from the backpack could not be used; a tango that fell there comes back like any other item.
 -- Once the lane is over, consumables and the Wraith Band give way too: a Blade in the backpack is a fight lost.
-local LATE_FILLER = { item_tango = true, item_flask = true, item_wraith_band = true }
+local LATE_FILLER = { item_tango = true, item_flask = true, item_wraith_band = true, item_mask_of_madness = true }
 function P.Arrange(bot, s, now)
 	if now - (s.arrangeAt or -1000) < 3 then return nil end
 	local function filler(name) return name == 'item_branches' or (s.late and LATE_FILLER[name]) end

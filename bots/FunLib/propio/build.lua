@@ -77,6 +77,10 @@ function B.Choose(profile, t, done)
 	for _, item in ipairs(profile.core) do add(item) end
 	for _, point in ipairs(profile.points) do
 		local chosen, left = nil, {}
+		-- A point already settled by an item bought stays settled: else a new plan bought the Mask too after the Pike.
+		local settled = false
+		for _, c in ipairs(point) do if done[c.item] then settled = true end end
+		if settled then goto continue end
 		for _, c in ipairs(point) do
 			if not B.USES[c.uso] then
 				table.insert(left, c.item .. ' sin regla de uso')
@@ -90,6 +94,7 @@ function B.Choose(profile, t, done)
 			local tag = chosen.when ~= nil and string.format(' (%s)', chosen.why) or ''
 			add(chosen.item, #point > 1 and string.format('%s: %s%s, frente a %s', point.name, chosen.item, tag, table.concat(left, ' y ')) or nil)
 		end
+		::continue::
 	end
 	return list, reasons
 end
