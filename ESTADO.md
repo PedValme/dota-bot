@@ -10,8 +10,9 @@
 - **Marcador (2026-11-08, MEDICIONES):** remata igual que OHA; pega menos veces. Línea: un 60 % menos de Shrapnel. Min 10-20: la mitad de golpes y de Assassinate por pelea, con OHA ya con Mask of Madness. Pedro no juega hasta una mejora plausible (DECISIONES 2026-11-08).
 - **Paquete aprobado (DECISIONES 2026-11-08):** hechos en la rama `claude/paquete-marcador` Shrapnel por cargas, motivo de cada Assassinate descartado y daño a edificios en el registro (en revisión, es un control). La build por enemigos se diseñó con dos agentes: `trabajo/build-estrategica.md`.
 - **Paquete del marcador y build según los enemigos fusionados (MEDICIONES 2026-11-08, `build2`):** sin MoM (Pedro: «quita la máscara»), Shrapnel antes del intercambio. Frente a OHA: daño 21.313 y 25.285, muertes 1,0 y 3,1, últimos golpes 153 y 154; kills 5,2 y 9,5. Rondas agotadas.
-- **Siguiente acción:** leer la partida de Pedro con el marcador. Pendientes sin aislar: remata menos cuando pega (48 % frente a 67 %; quizá el filtro «lo matan mis golpes») y las kills de línea (1,0 al min 10 frente a 3,2; rotaciones apagadas, DECISIONES 2026-11-04). Después, la fase 2.
-- Espera al dueño: jugar contra el Sniper con este código · Recomendado: `node tools/jugar-sniper.mjs` con Dota cerrado, una partida en Turbo, y `node tools/jugar-sniper.mjs quitar` al acabar
+- **Pedro jugó (2026-11-12, MEDICIONES):** «se posiciona regular, antes se ocultaba mejor [...] pero su presión es mucho mayor, si es más agresivo y jodido, bastante jodido». En el registro: menos tiempo con el grupo (la regla del retoque de seguir al aliado suelto solo con riesgo) y entra oculto a 1 pelea frente a 13.
+- **Siguiente acción:** con el sí de Pedro, volver a seguir siempre al aliado más cercano (manteniendo los campamentos junto a él), una ronda de mecanismo y otra partida suya. Pendientes sin aislar: remata menos cuando pega (48 % frente a 67 %) y las kills de línea (rotaciones apagadas, DECISIONES 2026-11-04). Después, la fase 2.
+- Espera al dueño: aprobar el ajuste de posición · Recomendado: sí, volver a seguir al aliado más cercano sin perder la presión
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
