@@ -54,6 +54,7 @@ end
 
 -- Assassinate: only to finish a visible enemy hero it kills for sure, with no other enemy hero on top of us during its
 -- long cast.
+local SHARED_NEAR = 900 -- an ally this close to a target in attack range: shoot it instead
 function H.Finish(bot, s, p)
 	local a = bot:GetAbilityByName('sniper_assassinate')
 	if a == nil or not a:IsFullyCastable() then return nil end
@@ -69,7 +70,16 @@ function H.Finish(bot, s, p)
 			for _, o in ipairs(p.enemyHeroes) do
 				if Seen(o) and o ~= e and D2(p.loc, o:GetLocation()) < clear then others = others + 1 end
 			end
-			if real >= e:GetHealth() and others == 0 and not Wasted(bot, s, p, e, a:GetCastPoint()) then
+			-- In attack range with an ally on it, it keeps shooting: the 2 s cast stopped its hits just when the kill fell, and of 18
+			-- finishes 9 went to another 0-2 s later, many to spells the ally-attack count in Wasted does not see (build2).
+			local shared = false
+			if real >= e:GetHealth() and D2(p.loc, e:GetLocation()) <= p.range then
+				for _, al in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+					if al ~= bot and Seen(al) and not al:IsIllusion() and D2(al:GetLocation(), e:GetLocation()) < SHARED_NEAR then shared = true break end
+				end
+				if shared then Left(bot, s, p, e, 'a tiro con un aliado encima: sigo pegando') end
+			end
+			if not shared and real >= e:GetHealth() and others == 0 and not Wasted(bot, s, p, e, a:GetCastPoint()) then
 				return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(),
 					reason = string.format('%s vida %d, assassinate quita %d (punto %.1fs)', Short(e), e:GetHealth(), real, a:GetCastPoint()) }
 			end
@@ -98,6 +108,11 @@ function H.FightCast(bot, s, p)
 			if e:IsChanneling() then
 				return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), reason = string.format('%s canaliza: la interrumpo', Short(e)) }
 			end
+		end
+		-- Within attack range it shoots: 32 openings, 5 kills its own, 12 another's and 15 alive, and the ult on cooldown for the
+		-- finishes, which fell from 38 to 18 (retoque to build2). Only the ones its attacks do not reach.
+		if Seen(e) and not e:IsMagicImmune() and D2(p.loc, e:GetLocation()) <= range and D2(p.loc, e:GetLocation()) > p.range
+			and not Wasted(bot, s, p, e, a:GetCastPoint()) then
 			local share = e:GetActualIncomingDamage(dmg, DAMAGE_TYPE_MAGICAL) / math.max(e:GetHealth(), 1)
 			if share > bestShare then best, bestShare = e, share end
 		end
