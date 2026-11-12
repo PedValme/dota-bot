@@ -594,12 +594,18 @@ local function Decide(bot, s, p)
 		r = Medio.WithTeam(bot, s, p)
 		if r then
 			-- A last hit ready without a step is taken first: walking to them it let them fall (equipo2, about 2 a match).
+			local farm = false
 			if r.intent == 'con_el_grupo' and not bot:IsInvisible() then
-				local lh = RuleLastHit(bot, s, p)
+				local lh, ready, soon = RuleLastHit(bot, s, p)
 				if lh ~= nil then return lh end
+				-- Behind one ally alone, with no group, a wave to farm comes first: following it everywhere took the last hits from 153 to
+				-- 126 (lone-ally decisions 58 to 310, paquete1). With a group of two or more it still goes.
+				farm = (s.teamN or 0) < 2 and (ready ~= nil or soon ~= nil)
 			end
-			local hide = r.intent == 'con_el_grupo' and Medio.Hide(bot, s, p, r.to) or nil
-			return hide or r
+			if not farm then
+				local hide = r.intent == 'con_el_grupo' and Medio.Hide(bot, s, p, r.to) or nil
+				return hide or r
+			end
 		end
 	end
 	local hidden = bot:IsInvisible()

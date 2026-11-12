@@ -174,6 +174,13 @@ local function Evaluate(bot, p, e, d)
 	-- The allies keep hitting while we walk: the health left when we arrive. Scoring the health now made it rotate to the targets
 	-- the allies were killing (12 of 18 'objetivo_muerto' died to another 0-3 s later, scores x7 to x236; fase1c-f).
 	local allyDmg = dmg - hits - burst
+	-- Every ally near it, not only those attacking it: they kill with spells too, and 11 of 15 rotations still ended 'objetivo_muerto'
+	-- with '0 aliados' in the count (paquete1).
+	local nearDmg = 0
+	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if a ~= bot and Seen(a) and not a:IsIllusion() and D2(a:GetLocation(), e:GetLocation()) < K.alliesRadius then nearDmg = nearDmg + HitsDamage(a, e, K.window) end
+	end
+	allyDmg = math.max(allyDmg, nearDmg)
 	local hpArrive = e:GetHealth() - allyDmg * travel / K.window
 	-- Up to chaseFar it is the lane's kill, not a rotation: 10 vetoes on the mid rival at 1.221-1.498 with the score above the margin
 	-- (build2, to min 10).
