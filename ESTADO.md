@@ -2,17 +2,15 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Qué se estaba haciendo:** la ruta que Pedro aprobó tras la evaluación adversarial: `trabajo/evaluacion-adversarial-2026-11-06.md`, DECISIONES 2026-11-06.
-- **Dónde quedó:** pasos 1 a 5 hechos (MEDICIONES 2026-11-07). Banco arreglado y paquete «con el equipo» fusionado en la variante `control_sniper`. Ronda 2, frente a `base2-propio` y OHA: tiempo sin aliado 40 % (66 %, 59 %), participación en kills 0,53 (0,36, 0,49). Coste mayor del previsto: 98 últimos golpes (168, 154), 17.113 de objetos (19.188, 21.070), 3,3 muertes (2, 3).
-- **Qué se probó:** la exposición no separa las muertes contra un humano. Ronda 1, fallida: iba y venía y perseguía grupos que duran 12 s. Con 4-8 partidas solo se lee mecanismo. Se agotaron las 2 rondas.
-- **Pedro jugó (2026-11-07, Turbo real, Injusto):** «mejoró sustancialmente, se oculta, se posiciona mejor, escapa, se siente mucho más orgánico» (MEDICIONES). En Turbo real los bots OHA gastan su oro: el acaparamiento era solo del banco. Arreglado también que el Sniper no saliera si Pedro elegía rápido (#88).
-- **Último retoque (2026-11-08, pedido por Pedro, MEDICIONES):** dos revisores Opus y 6 reglas. Frente a OHA: últimos golpes 162 y 154, muertes 1,3 y 3, torres +2 y +1; casi a la par en objetos (20.192 y 21.070) y participación (0,46 y 0,49); **por debajo en kills (7,3 y 10) y daño (10.793 y 16.057, que bajó desde 13.265)**.
-- **Marcador (2026-11-08, MEDICIONES):** remata igual que OHA; pega menos veces. Línea: un 60 % menos de Shrapnel. Min 10-20: la mitad de golpes y de Assassinate por pelea, con OHA ya con Mask of Madness. Pedro no juega hasta una mejora plausible (DECISIONES 2026-11-08).
-- **Paquete aprobado (DECISIONES 2026-11-08):** hechos en la rama `claude/paquete-marcador` Shrapnel por cargas, motivo de cada Assassinate descartado y daño a edificios en el registro (en revisión, es un control). La build por enemigos se diseñó con dos agentes: `trabajo/build-estrategica.md`.
-- **Paquete del marcador y build según los enemigos fusionados (MEDICIONES 2026-11-08, `build2`):** sin MoM (Pedro: «quita la máscara»), Shrapnel antes del intercambio. Frente a OHA: daño 21.313 y 25.285, muertes 1,0 y 3,1, últimos golpes 153 y 154; kills 5,2 y 9,5. Rondas agotadas.
-- **Pedro jugó (2026-11-12, MEDICIONES):** «se posiciona regular, antes se ocultaba mejor [...] pero su presión es mucho mayor, si es más agresivo y jodido, bastante jodido». En el registro: menos tiempo con el grupo (la regla del retoque de seguir al aliado suelto solo con riesgo) y entra oculto a 1 pelea frente a 13.
-- **Siguiente acción:** con el sí de Pedro, volver a seguir siempre al aliado más cercano (manteniendo los campamentos junto a él), una ronda de mecanismo y otra partida suya. Pendientes sin aislar: remata menos cuando pega (48 % frente a 67 %) y las kills de línea (rotaciones apagadas, DECISIONES 2026-11-04). Después, la fase 2.
-- Espera al dueño: aprobar el ajuste de posición · Recomendado: sí, volver a seguir al aliado más cercano sin perder la presión
+- **Qué se estaba haciendo:** pulir el medio juego del Sniper propio (variante `control_sniper`) frente al de OHA, con el banco arreglado (tienda universal, #85), el marcador de fin de partida (`tools/analisis/evaluacion-2026-11-06/a11.py`, `a12.py`) y la build según los enemigos (`trabajo/build-estrategica.md`, #92). Historia completa en MEDICIONES, del 2026-11-06 al 2026-11-12.
+- **Dónde quedó:** última versión, `build2` (#92). Frente a OHA en el banco: daño 21.313 y 25.285, muertes 1,0 y 3,1, últimos golpes 153 y 154; kills 5,2 y 9,5. En la quinta partida de Pedro (2026-11-12): «se posiciona regular, antes se ocultaba mejor [...] pero su presión es mucho mayor, si es más agresivo y jodido, bastante jodido».
+- **Qué se probó:** de una en una, las mejoras dan poco (Pedro, 2026-11-12: «estamos atacando muy poco»). Lo que mejor funcionó fueron los paquetes de varias mejoras con causas leídas en el registro («con el equipo», #87).
+- **Siguiente acción:** un paquete de varias mejoras a la vez (DECISIONES 2026-11-12), con diagnóstico en los registros, a lo sumo 2 rondas de mecanismo y luego la partida de Pedro. Candidatas, todas con su causa vista:
+  - posición y sigilo: volver a seguir siempre al aliado más cercano, manteniendo los campamentos junto a él (la regla del retoque en `medio.lua`, `TeamSpot`; entra oculto a 1 pelea frente a 13);
+  - remates: 48 % de las muertes en las que pega frente a 67 % de OHA (¿el filtro «lo matan mis golpes» de `sniper.lua`?);
+  - kills de línea: 1,0 al min 10 frente a 3,2 (las rotaciones las apagó Pedro el 2026-11-04: pedirle su palabra para encenderlas);
+  - golpes a héroes entre los min 10 y 20: 30 frente a 56.
+- Espera al dueño: nada hasta que el paquete esté medido
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -32,9 +30,10 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-04 · Vuelta de la fase 1: banco con `--corte` y `--heroes` (#56), registro (#57), defectos y build (#58, #59),
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
+- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93).
 
 ## Siguientes pasos
-1. Medio juego del Sniper propio, hasta el visto bueno de Pedro: ruta propuesta en `trabajo/evaluacion-adversarial-2026-11-06.md`, pendiente de su decisión; `trabajo/bot-propio.md`.
+1. Medio juego del Sniper propio, hasta el visto bueno de Pedro: paquete de varias mejoras (ver «Próxima sesión»); `trabajo/bot-propio.md`.
 2. Fase 2, los cinco en línea: `trabajo/bot-propio.md`.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
@@ -59,8 +58,8 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
   - el rival de mid farmea más que contra OHA (12,1 LH frente a 10,8): deuda aceptada por Pedro al cerrar la línea (DECISIONES 2026-11-05);
-  - menos kills que OHA con el banco arreglado (6,7 frente a 10, `equipo2`), y 98 últimos golpes frente a 154 al ir con el equipo: el coste de ese paquete, sin decidir si compensa;
-  - contra un humano, sin comprobar con este código: en sus partidas anteriores iba a 40-42 LH en el min 10 y 7-10 muertes;
+  - menos kills que OHA (5,2 frente a 9,5, `build2`) y remata menos cuando pega (48 % frente a 67 %);
+  - contra Pedro (2026-11-12) se oculta y se posiciona peor que en la versión anterior (menos tiempo con el grupo);
   - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
     `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.
 - **Bot OHA:**
