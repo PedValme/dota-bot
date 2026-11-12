@@ -1474,3 +1474,16 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **La línea pierde daño de ataque** (31 golpes a héroes frente a 44): parte del tiempo de disparo se va en Shrapnel. Las kills tempranas siguen en 1,0 al min 10 (OHA 3,2).
 - Validez: n=6, solo mecanismo; Shrapnel y build van juntos.
 - Decisión: rondas agotadas (2 de 2). Se fusiona: frente a la versión que Pedro jugó por última vez (`equipo2`), es una mejora plausible por brechas encontradas y corregidas: últimos golpes 98 → 153, muertes 3,3 → 1,0, daño 20.293 → 21.313. Kills por debajo (6,7 → 5,2). Juega Pedro.
+
+### 2026-11-12 · Quinta partida de Pedro contra el Sniper propio (lobby, Turbo real; `lobby-202611122115.log`)
+- Pregunta: con la build según los enemigos y el paquete del marcador (`19932c5`), ¿se nota? Partida de 24 min. Plan del registro: Maelstrom, Blade, Pike y BKB; ninguna regla de amenaza activa.
+- Lo que contó: «se posiciona regular, antes se ocultaba mejor y hacia invisible mejor, pero su presión es mucho mayor, si es más agresivo y jodido, bastante jodido».
+- Resultado del registro: min 10, 50 LH, 0 muertes, 0 kills; min 24, 114 LH, 2 muertes, 4 kills, patrimonio 20.202. Blade en el min 11,4, Pike en el 13,8 y BKB en el 16,5.
+- Frente a su partida anterior (`lobby-202611072016`, 42 min), del min 12 en adelante:
+  - `con_el_grupo` pasa de dominante (221 muestras) a 45;
+  - `alejarse` sube de 5 a 77;
+  - entra oculto a una pelea 1 vez, antes 13;
+  - usos de Blade por minuto: 0,63, antes 0,71.
+- Lectura: **la causa es una regla del retoque** (`medio.lua`, `TeamSpot`): el aliado suelto solo se sigue con riesgo cerca. Devolvió el farm (162 LH en el banco), pero lo deja solo más tiempo. Así llega a las peleas sin estar ya oculto tras el grupo, que es lo que Pedro vio. La presión viene de Shrapnel antes del intercambio y de no contestar perdiendo.
+- Validez: una partida; cuenta su juicio (DECISIONES 2026-11-05).
+- Decisión: pendiente de Pedro.
