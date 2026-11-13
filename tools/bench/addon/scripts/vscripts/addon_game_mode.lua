@@ -530,7 +530,8 @@ end
 local FINE_UNTIL = 900
 local fineDamage = {} -- "attacker>victim:source" -> { total, n }, flushed every second
 local function FineOn()
-	return GameRules:GetDOTATime(false, true) <= FINE_UNTIL
+	local t = GameRules:GetDOTATime(false, true)
+	return t >= 0 and t <= FINE_UNTIL
 end
 local function ShortName(unit)
 	if unit == nil or unit.GetUnitName == nil then return "-" end
@@ -542,6 +543,17 @@ local function ShortName(unit)
 	if unit.IsCreep and unit:IsCreep() then return "creep" end
 	if unit.IsBuilding and unit:IsBuilding() then return "edificio" end
 	return (unit:GetUnitName():gsub("npc_dota_", ""))
+end
+-- An attack target as seen by `hero`: its kind, "+" allied or "-" enemy for creeps and towers (a deny, or a last hit or a harass), and
+-- its health in percent. GetAttackTarget may still point at a target while the hero walks: "atk" says whether it is attacking.
+local function TargetOf(hero, unit)
+	if unit == nil or unit.GetUnitName == nil or unit:IsNull() then return "-" end
+	local name = ShortName(unit)
+	if not (unit.IsHero and unit:IsHero()) then
+		name = name .. ((unit:GetTeamNumber() == hero:GetTeamNumber()) and "+" or "-")
+	end
+	local maxhp = unit:GetMaxHealth()
+	return string.format("%s:%d", name, maxhp > 0 and math.floor(100 * unit:GetHealth() / maxhp) or -1)
 end
 local function HeroesNear(team, pos, radius)
 	local own, foe = 0, 0
@@ -569,28 +581,35 @@ local function FineSnapshot()
 				local target = hero:IsAlive() and hero:GetAttackTarget() or nil
 				Obs("fino pid=%d team=%d %s alive=%d x=%d y=%d hp=%d maxhp=%d mp=%d obj=%s atk=%d ctl=%s", pid, hero:GetTeamNumber(),
 					HeroOf(pid), hero:IsAlive() and 1 or 0, pos.x, pos.y, hero:GetHealth(), hero:GetMaxHealth(), hero:GetMana(),
-					ShortName(target), (hero:IsAlive() and hero:IsAttacking()) and 1 or 0, Disables(hero))
+					TargetOf(hero, target), (hero:IsAlive() and hero:IsAttacking()) and 1 or 0, Disables(hero))
 			end
 		end
 	end
 end
+local creepLane = {} -- entindex -> lane
 local function FineFront()
 	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
-		local goal = nil
+		local goal, own = nil, nil
 		for _, fort in ipairs(Entities:FindAllByClassname("npc_dota_fort")) do
-			if fort:GetTeamNumber() ~= team then goal = fort:GetAbsOrigin() end
+			if fort:GetTeamNumber() ~= team then goal = fort:GetAbsOrigin() else own = fort:GetAbsOrigin() end
 		end
 		if goal == nil then return end
 		local best = {}
+			-- A creep's lane is fixed the first time it stands 3000 from its own ancient: near the bases the diagonal rule
+			-- would put a deep top or bottom creep in mid (review 2026-11-13).
 		local creeps = FindUnitsInRadius(team, Vector(0, 0, 0), nil, FIND_UNITS_EVERYWHERE, DOTA_UNIT_TARGET_TEAM_FRIENDLY,
 			DOTA_UNIT_TARGET_CREEP, DOTA_UNIT_TARGET_FLAG_NONE, FIND_ANY_ORDER, false)
 		for _, c in ipairs(creeps) do
 			local name = c:GetUnitName()
 			if c:IsAlive() and (name:find("creep_goodguys") or name:find("creep_badguys")) then
 				local p = c:GetAbsOrigin()
-				local lane = (p.y - p.x > 3000) and "top" or ((p.x - p.y > 3000) and "bot" or "mid")
+				local idx = c:entindex()
+				if creepLane[idx] == nil and own and (p - own):Length2D() > 3000 then
+					creepLane[idx] = (p.y - p.x > 3000) and "top" or ((p.x - p.y > 3000) and "bot" or "mid")
+				end
+				local lane = creepLane[idx]
 				local d = (p - goal):Length2D()
-				if best[lane] == nil or d < best[lane].d then best[lane] = { d = d, x = p.x, y = p.y } end
+				if lane and (best[lane] == nil or d < best[lane].d) then best[lane] = { d = d, x = p.x, y = p.y } end
 			end
 		end
 		local function At(lane) return best[lane] and string.format("%d,%d", best[lane].x, best[lane].y) or "-" end
@@ -599,19 +618,28 @@ local function FineFront()
 end
 local function FineCast(e)
 	if not FineOn() then return end
-	local hero = e.PlayerID ~= nil and e.PlayerID >= 0 and PlayerResource:GetSelectedHeroEntity(e.PlayerID) or nil
+	local hero = e.caster_entindex and EntIndexToHScript(e.caster_entindex) or nil
+	if not hero or not hero.IsHero or not hero:IsHero() then
+		hero = e.PlayerID ~= nil and e.PlayerID >= 0 and PlayerResource:GetSelectedHeroEntity(e.PlayerID) or nil
+	end
 	if not hero then return end
 	local pos = hero:GetAbsOrigin()
 	local ability = e.abilityname and (hero:FindAbilityByName(e.abilityname) or hero:FindItemInInventory(e.abilityname)) or nil
-	local target = ability and ability.GetCursorTarget and ability:GetCursorTarget() or nil
+	-- A no-target ability keeps the cursor of an older cast: nothing is written for it (review 2026-11-13). For the rest the cursor is
+	-- checked against the "golpe" lines of the same second in the smoke before the study uses it.
+	local noTarget = ability and ability.GetBehaviorInt and bit.band(ability:GetBehaviorInt(), DOTA_ABILITY_BEHAVIOR_NO_TARGET) ~= 0
+	local target = (not noTarget) and ability and ability.GetCursorTarget and ability:GetCursorTarget() or nil
 	local where = "-"
-	if target and target.GetAbsOrigin then
+	if noTarget then
+		where = "-"
+	elseif target and target.GetAbsOrigin then
 		where = string.format("%d", math.floor((target:GetAbsOrigin() - pos):Length2D()))
 	elseif ability and ability.GetCursorPosition then
 		local p = ability:GetCursorPosition()
 		if p and (p.x ~= 0 or p.y ~= 0) then where = string.format("%d,%d", p.x, p.y) end
 	end
 	local own, foe = HeroesNear(hero:GetTeamNumber(), pos, 1200)
+	own = own - ((hero:IsRealHero() and hero:IsAlive()) and 1 or 0) -- allies besides the caster
 	Obs("lanza pid=%d team=%d %s %s x=%d y=%d mp=%d obj=%s dist=%s aliados1200=%d rivales1200=%d", e.PlayerID, hero:GetTeamNumber(),
 		HeroOf(e.PlayerID), tostring(e.abilityname), pos.x, pos.y, hero:GetMana(), ShortName(target), where, own, foe)
 end
@@ -619,11 +647,22 @@ local function NoteFineDamage(e)
 	if not FineOn() then return end
 	local attacker = e.entindex_attacker_const and EntIndexToHScript(e.entindex_attacker_const)
 	local victim = e.entindex_victim_const and EntIndexToHScript(e.entindex_victim_const)
-	if not attacker or not victim or not victim.IsHero or not victim:IsHero() or not attacker.IsHero or not attacker:IsHero() then return end
+	if not attacker or not victim or not victim.IsHero or not victim:IsHero() or not attacker.GetTeamNumber then return end
 	if attacker:GetTeamNumber() == victim:GetTeamNumber() then return end
+	-- A summon or controlled unit counts for its owner's hero, marked "*"; creeps and towers on a hero are the price of the lane.
+	local from
+	if attacker.IsHero and attacker:IsHero() then
+		from = ShortName(attacker)
+	elseif attacker.IsTower and attacker:IsTower() then
+		from = "torre"
+	elseif attacker.GetPlayerOwnerID and attacker:GetPlayerOwnerID() >= 0 then
+		from = HeroOf(attacker:GetPlayerOwnerID()) .. "*"
+	else
+		from = "creep"
+	end
 	local inflictor = e.entindex_inflictor_const and EntIndexToHScript(e.entindex_inflictor_const)
 	local source = inflictor and inflictor.GetAbilityName and inflictor:GetAbilityName() or "ataque"
-	local key = ShortName(attacker) .. ">" .. ShortName(victim) .. ":" .. source
+	local key = from .. ">" .. ShortName(victim) .. ":" .. source
 	local d = fineDamage[key] or { total = 0, n = 0 }
 	d.total, d.n = d.total + e.damage, d.n + 1
 	fineDamage[key] = d

@@ -36,6 +36,9 @@ const obsFiles = new Set(readdirSync(obsDir));
 
 // Items and actions that are not part of a fight's chain.
 const NOT_COMBAT = /^(item_tpscroll|item_travel|ability_lamp_use|item_flask|item_clarity|item_enchanted_mango|item_faerie_fire|item_tango|item_ward|item_bottle|item_magic_stick|item_magic_wand|ability_capture|item_branches)/;
+// A hero's name without the illusion (~) or summon (*) mark; creeps and towers are not heroes.
+const bare = (n) => n.replace(/[~*]$/, "");
+const byHero = (h) => h.att !== "creep" && h.att !== "torre";
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const laneOf = (x, y) => (y - x > 3000 ? "top" : x - y > 3000 ? "bot" : "mid");
 const median = (xs) => {
@@ -117,11 +120,11 @@ function studyLane(d, ourTeam, ours, theirs, laneName) {
   const theirTeam = ourTeam === "2" ? "3" : "2";
   const lane = laneName === "segura" ? (ourTeam === "2" ? "bot" : "top") : (ourTeam === "2" ? "top" : "bot");
   const L = new Set([...ours, ...theirs]);
-  const side = (h) => (ours.includes(h.replace("~", "")) ? "nos" : theirs.includes(h.replace("~", "")) ? "ellos" : "otro");
+  const side = (h) => (ours.includes(bare(h)) ? "nos" : theirs.includes(bare(h)) ? "ellos" : "otro");
   const T = opt.hasta;
 
   // Fights: hero against hero damage touching a lane hero, gaps of at most 5 s.
-  const hits = d.hits.filter((h) => h.t >= 0 && h.t <= T && (L.has(h.att.replace("~", "")) || L.has(h.vic.replace("~", ""))));
+  const hits = d.hits.filter((h) => byHero(h) && h.t >= 0 && h.t <= T && (L.has(bare(h.att)) || L.has(bare(h.vic))));
   const fights = [];
   for (const h of hits) {
     const last = fights[fights.length - 1];
@@ -136,9 +139,9 @@ function studyLane(d, ourTeam, ours, theirs, laneName) {
     f.abreCon = firstSec.filter((h) => side(h.att) === f.abre || f.abre === "ambos").map((h) => `${h.att}:${h.src === "ataque" ? "ataque" : h.src}`).join("+");
     f.dmgNos = f.hits.filter((h) => side(h.att) === "nos").reduce((a, h) => a + h.dmg, 0);
     f.dmgEllos = f.hits.filter((h) => side(h.att) === "ellos").reduce((a, h) => a + h.dmg, 0);
-    f.nosPegan = new Set(f.hits.filter((h) => side(h.att) === "nos").map((h) => h.att.replace("~", "")));
-    f.ellosPegan = new Set(f.hits.filter((h) => side(h.att) === "ellos").map((h) => h.att.replace("~", "")));
-    f.otros = new Set(f.hits.filter((h) => side(h.att) === "otro").map((h) => h.att.replace("~", "")));
+    f.nosPegan = new Set(f.hits.filter((h) => side(h.att) === "nos").map((h) => bare(h.att)));
+    f.ellosPegan = new Set(f.hits.filter((h) => side(h.att) === "ellos").map((h) => bare(h.att)));
+    f.otros = new Set(f.hits.filter((h) => side(h.att) === "otro").map((h) => bare(h.att)));
     f.casts = d.casts.filter((c) => c.t >= f.start - 1 && c.t <= f.end && L.has(c.hero) && !NOT_COMBAT.test(c.ability));
     f.killsNos = d.kills.filter((k) => k.t >= f.start && k.t <= f.end + 3 && theirs.includes(k.victim));
     f.muertesNos = d.kills.filter((k) => k.t >= f.start && k.t <= f.end + 3 && ours.includes(k.victim));
@@ -165,16 +168,16 @@ function studyLane(d, ourTeam, ours, theirs, laneName) {
     const enemiesNear = at ? [...(d.fino.get(k.t - 1) ?? new Map())].filter(([h, s]) => s.team === theirTeam && s.alive && dist(s, at) <= 1200).length : NaN;
     const allyNear = at ? [...(d.fino.get(k.t - 1) ?? new Map())].filter(([h, s]) => s.team === ourTeam && h !== k.victim && s.alive && dist(s, at) <= 1200).length : NaN;
     const dmgFrom = {};
-    for (const h of d.hits) if (h.vic.replace("~", "") === k.victim && h.t >= k.t - 8 && h.t <= k.t) dmgFrom[h.att] = (dmgFrom[h.att] ?? 0) + h.dmg;
+    for (const h of d.hits) if (bare(h.vic) === k.victim && h.t >= k.t - 8 && h.t <= k.t) dmgFrom[h.att] = (dmgFrom[h.att] ?? 0) + h.dmg;
     // Did the victim hit an enemy hero in the 6 s before the damage began?
-    const firstDmg = d.hits.filter((h) => h.vic.replace("~", "") === k.victim && h.t >= k.t - 8 && h.t <= k.t).map((h) => h.t)[0] ?? k.t;
-    const atacoAntes = d.hits.some((h) => h.att.replace("~", "") === k.victim && h.t >= firstDmg - 6 && h.t <= firstDmg);
+    const firstDmg = d.hits.filter((h) => bare(h.vic) === k.victim && h.t >= k.t - 8 && h.t <= k.t).map((h) => h.t)[0] ?? k.t;
+    const atacoAntes = d.hits.some((h) => bare(h.att) === k.victim && h.t >= firstDmg - 6 && h.t <= firstDmg);
     return { t: k.t, hero: k.victim, killer: k.killer, hp10: before && before.alive ? before.hp / before.maxhp : NaN,
       enemigos: enemiesNear, aliados: allyNear, de: dmgFrom, modo: modeAt(d, k.t - 2, k.victim), atacoAntes };
   });
   const killsOf = d.kills.filter((k) => k.t >= 0 && k.t <= T && theirs.includes(k.victim)).map((k) => {
     const dmgFrom = {};
-    for (const h of d.hits) if (h.vic.replace("~", "") === k.victim && h.t >= k.t - 8 && h.t <= k.t) dmgFrom[h.att] = (dmgFrom[h.att] ?? 0) + h.dmg;
+    for (const h of d.hits) if (bare(h.vic) === k.victim && h.t >= k.t - 8 && h.t <= k.t) dmgFrom[h.att] = (dmgFrom[h.att] ?? 0) + h.dmg;
     return { t: k.t, hero: k.victim, killer: k.killer, de: dmgFrom };
   });
 
