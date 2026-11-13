@@ -620,7 +620,9 @@ local function RuleTrade(bot, s, p, ready, soon)
 					and (company or (v.outranged and alone))
 				-- Outnumbered in the lane (Perceive, p.alone), no answer and no press: the rival's partner kills us in the next 2 s
 				-- (plan, package 1: 8 of 16 deaths in the safe lane). Said once a second, so the log shows what was given up.
-				local press = company and (alone or pair) and ready == nil and v.ratio >= K.pressEdge
+				-- In a lane of two (dos.lua) the pair alone takes the initiative: Luna pressed Bristleback by its own trade (ratio 1,79),
+				-- got both enemies' answer and the pair left too late (dos-humo 2, t=453-461).
+				local press = not p.dos and company and (alone or pair) and ready == nil and v.ratio >= K.pressEdge
 				if (answer or press) and p.alone then
 					if p.now - (s.aloneLogAt or -1000) >= 1 then
 						s.aloneLogAt = p.now
@@ -818,7 +820,8 @@ local function Decide(bot, s, p)
 	-- The support with its core (dos.lua, Spot): OHA's pairs stand 520-740 apart.
 	if p.dos then
 		local spot = Dos.Spot(bot, s, p, LanePoint(p))
-		if spot then return { intent = 'con_pareja', reason = 'sigo a mi nucleo', to = spot } end
+		-- Once there it holds the spot (no order within 60): leaving it to the lane point flipped every tick (dos-humo 2, t=380).
+		if spot then return { intent = 'con_pareja', reason = 'junto a mi nucleo', to = spot } end
 	end
 	if ready ~= nil then
 		local spot = Toward(ready:GetLocation(), p.loc, p.range * 0.9)

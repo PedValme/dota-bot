@@ -316,8 +316,8 @@ function D.Act(bot, s, p, home)
 	return nil
 end
 
--- Where the support stands in the lane: its own lane point (laneAt), kept within `follow` of its core. nil for the core, when the core
--- is not in the lane, or when it already stands there.
+-- Where the support stands in the lane: its own lane point (laneAt), kept within `follow` of its core. nil for the core, or when the
+-- core is not in the lane. Also once there: returning nil handed it to the lane point, beyond `follow`, and it flipped every tick.
 function D.Spot(bot, s, p, laneAt)
 	local d = p.dos
 	if not d.support or d.mate == nil then return nil end
@@ -325,7 +325,6 @@ function D.Spot(bot, s, p, laneAt)
 	if D2(core, p.front) > 2500 then return nil end -- the core is not in the lane
 	local spot = laneAt
 	if D2(spot, core) > K.follow then spot = Toward(core, spot, K.follow) end
-	if D2(p.loc, spot) <= 150 then return nil end
 	return spot
 end
 
