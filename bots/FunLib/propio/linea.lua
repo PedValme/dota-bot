@@ -234,17 +234,23 @@ local function Perceive(bot)
 	p.pair = #p.enemyHeroes >= 2
 	-- The allied heroes near, one per hero (no illusions), and none retreating: one leaving is no company (its state is in S,
 	-- shared by our bots in the team's VM). For the trade (intercambio.lua) and for being outnumbered.
-	p.allyHeroes = {}
+	-- allyActive: the same at any distance, for the pair's kill (combate.lua, package 2), which looks for them near the target.
+	p.allyHeroes, p.allyActive = {}, {}
 	local nAlly = 1
 	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
-		if a ~= bot and Valid(a) and not a:IsIllusion() and D2(p0, a:GetLocation()) < K.allyNear then
+		if a ~= bot and Valid(a) and not a:IsIllusion() then
 			local st = S[a:GetPlayerID()]
 			if st == nil or not st.retreating then
-				table.insert(p.allyHeroes, a)
-				if D2(p0, a:GetLocation()) < K.aloneAlly then nAlly = nAlly + 1 end
+				table.insert(p.allyActive, a)
+				if D2(p0, a:GetLocation()) < K.allyNear then
+					table.insert(p.allyHeroes, a)
+					if D2(p0, a:GetLocation()) < K.aloneAlly then nAlly = nAlly + 1 end
+				end
 			end
 		end
 	end
+	-- The lane's rules or the middle game's (medio.lua, Late), as last decided: combate.lua counts the pair only in the lane.
+	p.late = State(bot).late == true
 	-- Outnumbered in the lane: more enemy heroes near than ours, ourselves included. Then no attack or harass spell on a hero and no
 	-- kill starts, only a sure kill (Finish): 8 of 16 deaths in the safe lane came some 2 s after an attack of our own, alone, with
 	-- the second enemy near (plan, package 1). Once the lane is over, medio.lua has its own count (Outnumbered, Allies).
@@ -570,6 +576,11 @@ local function RuleTrade(bot, s, p, ready, soon)
 	end
 	local hit = bot:WasRecentlyDamagedByAnyHero(2.0)
 	local alone = #p.enemyHeroes == 1 -- one enemy hero in sight
+	-- Two against two in the lane (package 2): a partner near, not retreating (Perceive's p.allyHeroes), and no more enemy heroes in
+	-- sight than the two of us. The trade already counts the partner's hits as it counts his partner's (intercambio.lua), so pressing
+	-- asks the same edge. Pressing needed one enemy in sight, and the lanes of two never pressed: a rival with its partner in sight
+	-- was never pushed off its farm (trabajo/plan-mejora-equipo.md, «Presionar en 2 contra 2 cuando la suma de las parejas lo da»).
+	local pair = not s.late and #p.allyHeroes >= 1 and #p.enemyHeroes <= #p.allyHeroes + 1
 	for _, e in ipairs(p.enemyHeroes) do
 		if Valid(e) and not e:IsIllusion() and not e:IsAttackImmune() then
 			local d = D2(p.loc, e:GetLocation())
@@ -585,7 +596,8 @@ local function RuleTrade(bot, s, p, ready, soon)
 					and (company or (v.outranged and alone))
 				-- Outnumbered in the lane (Perceive, p.alone), no answer and no press: the rival's partner kills us in the next 2 s
 				-- (plan, package 1: 8 of 16 deaths in the safe lane). Said once a second, so the log shows what was given up.
-				if (answer or (company and alone and ready == nil and v.ratio >= K.pressEdge)) and p.alone then
+				local press = company and (alone or pair) and ready == nil and v.ratio >= K.pressEdge
+				if (answer or press) and p.alone then
 					if p.now - (s.aloneLogAt or -1000) >= 1 then
 						s.aloneLogAt = p.now
 						Log(s, bot, 'superado', string.format('%s a %s descartado: %d enemigos a %d, %d de los nuestros a %d, ratio %.2f',
@@ -593,8 +605,9 @@ local function RuleTrade(bot, s, p, ready, soon)
 							p.nAllyNear, K.aloneAlly, v.ratio))
 					end
 				elseif answer then kind = 'contesto'
-				-- Against two, neither: pressing with a second enemy in sight gave 3 deaths in 15 cases, and answering 7 in 32 (equipo1-2).
-				elseif company and alone and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono'
+				-- Against two without a partner, neither: pressing with a second enemy in sight gave 3 deaths in 15 cases, and answering 7
+				-- in 32 (equipo1-2). With the partner near (pair), the press is the pair's, named apart so the log tells them.
+				elseif press then kind = alone and 'presiono' or 'presiono_2c2'
 				-- Alone, a free shot: in our range and well out of its reach, nobody else near, winning the trade. It is what the
 				-- range is for, and it stood there instead (presion3: 66 of 74 such seconds without firing).
 				elseif not company and ready == nil and d <= p.range and d >= e:GetAttackRange() + K.freeShotGap
@@ -646,6 +659,7 @@ end
 local function Decide(bot, s, p)
 	if p.t < -5 and not s.bought then return { intent = 'comprar', reason = 'objetos iniciales' } end
 	local late = not NO_COMBAT and Medio.Late(bot, s, p)
+	p.late = late == true
 	if late then
 		if not s.lateLogged then
 			s.lateLogged = true
@@ -685,6 +699,9 @@ local function Decide(bot, s, p)
 		r, ended = Combate.Continue(bot, s, p)
 		if ended then Log(s, bot, 'persecucion', ended) end
 		if r == nil then r = Combate.Start(bot, s, p) end
+		-- The partner opened on an enemy (a kill or a lock on the board, pareja.lua): join it now, so KillCast lands in the same second
+		-- (package 2). Lane only; it logs its own lines ("prop pareja").
+		if r == nil then r = Combate.Join(bot, s, p) end
 		if r then
 			local cast = hero ~= nil and r.intent == 'matar' and hero.KillCast(bot, s, p, r.target) or nil
 			return cast or WithAim(bot, s, p, hero, r)
@@ -870,11 +887,20 @@ local function Act(bot, s, p, d)
 	-- Abilities: protected for their cast point, so the cast is not cut by the next decision.
 	if d.intent == 'rematar' then
 		bot:Action_UseAbilityOnEntity(d.ability, d.target)
-		s.busyUntil = p.now + d.castPoint + 0.3
-		s.castCheck = { at = p.now + 0.3, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''), ability = d.ability:GetName() }
+		-- A target a few steps out of the cast range (Dragon Tail's reach is a melee one) is walked to first: the check that the cast
+		-- started waits that walk. Without it both of the smoke's Dragon Tails read 'no arranca' 0,3 s after the order, and the next
+		-- decision cut them (fase2-humo-equipo 1 t=58.6, 2 t=541.5); that the walk is the cause is an assumption to check in the log.
+		-- At most a second (an assumption: the rules cast from their range or a few steps more), and a target whose place reads nil
+		-- (OHA's GetLocation for an unseen unit, D2 = 1e9) must not freeze the hero.
+		local walk = math.min(1.0, math.max(0, D2(p.loc, d.target:GetLocation()) - d.ability:GetCastRange()) / math.max(p.moveSpeed, 1))
+		s.busyUntil = p.now + d.castPoint + 0.3 + walk
+		s.castCheck = { at = p.now + 0.3 + walk, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''), ability = d.ability:GetName() }
 		-- Every hero's unit-target cast goes here (phase 2); the kill check after it is the Assassinate's.
 		local name = d.ability:GetName()
 		Log(s, bot, 'habilidad', (name == 'sniper_assassinate' and 'assassinate' or name) .. ': ' .. d.reason)
+		-- An opening on an enemy hero (the hero module marks it: Hex, Dragon Tail, Lucent Beam, Lich's Frost Blast in a kill) goes on the
+		-- pair's board (package 2).
+		if d.opens ~= nil then Combate.AnnounceOpening(bot, s, p, d) end
 		if name == 'sniper_assassinate' then
 			s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
 				hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
@@ -906,6 +932,8 @@ local function Act(bot, s, p, d)
 		bot:Action_UseAbilityOnLocation(d.ability, d.at)
 		s.busyUntil, s.shrapnelAt = p.now + d.castPoint + 0.2, p.now
 		Log(s, bot, 'habilidad', (d.ability:GetName() == 'sniper_shrapnel' and 'shrapnel' or d.ability:GetName()) .. ': ' .. d.reason)
+		-- Earth Spike's lock is cast on the ground: the module names the enemy it aims at (package 2).
+		if d.opens ~= nil then Combate.AnnounceOpening(bot, s, p, d) end
 		return
 	end
 	if d.intent == 'acosar' then

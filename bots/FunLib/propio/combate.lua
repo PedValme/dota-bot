@@ -7,6 +7,9 @@
 local C = {}
 local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
 local Medio = require(GetScriptDirectory()..'/FunLib/propio/medio')
+-- The allies' own kill numbers (KillBurst, Disable) come from their hero modules; the lane pair's board from pareja.lua (package 2).
+local Heroes = require(GetScriptDirectory()..'/FunLib/propio/heroes')
+local Pareja = require(GetScriptDirectory()..'/FunLib/propio/pareja')
 
 local K = {
 	rotar = true,         -- walking out of the lane for a kill, to an enemy an ally is near (MayRotate)
@@ -30,6 +33,11 @@ local K = {
 	rotateTravel = 12,    -- seconds of walking allowed to reach a rotation
 	runeReach = 1800,     -- runes are checked only this close
 	runeNear = 700,       -- with a wave to farm, only a rune this close is worth it
+	-- Package 2, killing as a pair (trabajo/plan-mejora-equipo.md). Assumptions, not measured: no series has tuned them, and they change
+	-- only for a rule failure seen in the log (DECISIONES 2026-11-06).
+	lockCap = 4.0,        -- the side's lock seconds added to the window, at most this: chained locks overlap and wear off in practice
+	joinRadius = 1200,    -- a partner this close to the announced target joins (the lane's width, as alliesRadius)
+	joinGrace = 1.5,      -- a lock's announcement lasts its cast point and lock plus this: the time to land the hits after it
 }
 
 local function D2(a, b)
@@ -66,20 +74,74 @@ local function HitsDamage(u, e, seconds)
 	return hits * e:GetActualIncomingDamage(u:GetAttackDamage(), DAMAGE_TYPE_PHYSICAL)
 end
 
--- Our side's damage on the target in the window: our hits and abilities, and the hits of allies already attacking it
--- (an ally merely near may be doing anything else).
+-- An ally's own numbers on the target, as its hero module reads them from where the ally stands (a hero without a module adds
+-- nothing). Guarded: a nil from an ally's ability must not stop our Think, and the hero with it.
+local function AllyView(a, p)
+	return { loc = a:GetLocation(), range = a:GetAttackRange(), now = p.now, enemyHeroes = p.enemyHeroes }
+end
+local function HeroCall(a, name, pa, e, window)
+	local m = Heroes.MODULES[a:GetUnitName()]
+	if m == nil or m[name] == nil then return 0, 0 end
+	local ok, x, y = pcall(m[name], a, pa, e, window)
+	if not ok then return 0, 0 end
+	return x or 0, y or 0
+end
+
+-- The allied heroes that count as the pair in the lane: near the target, not retreating (linea.lua's Perceive, p.allyActive) and with
+-- the health to stay. Once the lane is over, none: the middle game is package 4 (trabajo/plan-mejora-equipo.md).
+local function Partners(p, e, radius)
+	local list = {}
+	if p.late then return list end
+	for _, a in ipairs(p.allyActive or {}) do
+		if Seen(a) and D2(a:GetLocation(), e:GetLocation()) < radius
+			and a:GetHealth() >= K.minHp * math.max(a:GetMaxHealth(), 1) then table.insert(list, a) end
+	end
+	return list
+end
+
+-- The player ids of the allies that count (p.allyActive: alive, seen, not retreating), for reading the board: an announcement from a
+-- partner that has since retreated or died no longer calls anyone (review of package 2).
+local function ActivePids(p)
+	local set = {}
+	for _, a in ipairs(p.allyActive or {}) do set[a:GetPlayerID()] = true end
+	return set
+end
+
+-- Our side's damage on the target in the window. In the lane, the pair (package 2): our hits and abilities, and for each allied hero
+-- near the target (Partners), its abilities (its module's KillBurst) and its hits once it has walked into range; the seconds of lock
+-- the side can cast now (each module's Disable) lengthen the window, since a locked target cannot walk out of the hits. Only the allies
+-- already hitting it counted before, with none of their spells: `aliados=0` in 97-99 % of the evaluations and Luna's best score 0,81
+-- against a margin of 1,15 to minute 12, so no kill ever started in a lane of two (fase2-humo-equipo 1 and 2). Once the lane is over,
+-- as before: the hits of allies already attacking it. With no ally near, nothing changes: the lone mid Sniper has no lock, so its window
+-- stays K.window. Returns the damage, helpers, our hits, our abilities' damage, the lock seconds and the window used.
 local function SideDamage(bot, p, e)
+	local lock, partners = 0, Partners(p, e, K.alliesRadius)
+	if not p.late then
+		lock = HeroCall(bot, 'Disable', p, e)
+		for _, a in ipairs(partners) do lock = lock + HeroCall(a, 'Disable', AllyView(a, p), e) end
+		lock = math.min(lock, K.lockCap)
+	end
+	local window = K.window + lock
 	local burst, casting = 0, 0
-	if p.hero ~= nil then burst, casting = p.hero.KillBurst(bot, p, e, K.window) end
-	local hits = HitsDamage(bot, e, K.window - casting)
+	if p.hero ~= nil then burst, casting = p.hero.KillBurst(bot, p, e, window) end
+	local hits = HitsDamage(bot, e, window - casting)
 	local allies, helpers = 0, 0
-	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
-		if a ~= bot and Seen(a) and a:GetAttackTarget() == e and D2(a:GetLocation(), e:GetLocation()) < K.alliesRadius then
-			allies = allies + HitsDamage(a, e, K.window)
+	if not p.late then
+		for _, a in ipairs(partners) do
+			local aBurst, aCasting = HeroCall(a, 'KillBurst', AllyView(a, p), e, window)
+			local walk = math.max(0, D2(a:GetLocation(), e:GetLocation()) - a:GetAttackRange()) / math.max(a:GetCurrentMovementSpeed(), 1)
+			allies = allies + aBurst + HitsDamage(a, e, window - aCasting - walk)
 			helpers = helpers + 1
 		end
+	else
+		for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+			if a ~= bot and Seen(a) and a:GetAttackTarget() == e and D2(a:GetLocation(), e:GetLocation()) < K.alliesRadius then
+				allies = allies + HitsDamage(a, e, K.window)
+				helpers = helpers + 1
+			end
+		end
 	end
-	return hits + burst + allies, helpers, hits, burst
+	return hits + burst + allies, helpers, hits, burst, lock, window
 end
 
 -- Damage the enemy heroes other than the target, near us or near the target (where a chase or rotation leads), can
@@ -109,6 +171,8 @@ local function Unsafe(bot, p, e)
 	return nil
 end
 
+local Evaluate -- defined below (the kill's numbers); a joined chase in Continue reads it too
+
 local function Ends(bot, s, p, why)
 	local c = s.chase
 	local kills = GetHeroKills(bot:GetPlayerID()) - c.kills0
@@ -117,11 +181,15 @@ local function Ends(bot, s, p, why)
 	-- The attack order goes on by itself: the next action must cancel it (linea.lua, Act). A chase without a kill
 	-- bans its target for a while, or it would restart two seconds later.
 	s.stopAttack = true
+	-- A joined chase too: Join keeps Start's gates, the ban among them (review of package 2).
 	if kills == 0 then
 		s.chaseBan = s.chaseBan or {}
 		s.chaseBan[c.name] = p.now + K.banAfter
 	end
-	return string.format('%s %s duró %.1fs kills+%d motivo=%s', c.kind, c.name, p.now - c.since, kills, why)
+	-- Our kill's announcement ends with it, so the partner does not stay on a fight we left.
+	if c.join == nil then Pareja.Clear(bot, 'kill', why) end
+	return string.format('%s %s duró %.1fs kills+%d motivo=%s%s', c.kind, c.name, p.now - c.since, kills, why,
+		c.join ~= nil and string.format(' pareja=%d', c.join.pid) or '')
 end
 
 -- Ends the current chase from outside (a retreat); returns its log line.
@@ -147,6 +215,17 @@ function C.Continue(bot, s, p)
 	if c.kind == 'matar' and d > K.chaseFar then return nil, Ends(bot, s, p, string.format('lejos %d', d)) end
 	local why = Unsafe(bot, p, e)
 	if why then return nil, Ends(bot, s, p, why) end
+	-- A joined chase lasts while a partner's announcement on that target is live, read again each tick from the board: a partner that
+	-- retreats or dies ends its kill's announcement (Ends, Pareja.Clear) and its locks stop counting (ActivePids), so the hero is not
+	-- left on a fight the partner has left (review of package 2: the end it had at the join kept it there up to 8 s). With none live,
+	-- the normal rules: outnumbered around us (package 1's p.alone, as Start) or the kill no longer holding by our own numbers ends it.
+	if c.join ~= nil and Pareja.Until(bot, c.name, p.now, ActivePids(p)) == nil then
+		if p.alone then return nil, Ends(bot, s, p, string.format('fin_de_pareja superado %d enemigos, %d de los nuestros', p.nEnemyNear or 0, p.nAllyNear or 0)) end
+		local v = Evaluate(bot, p, e, d)
+		if v.score < v.margin then
+			return nil, Ends(bot, s, p, string.format('fin_de_pareja x%.2f < %.2f', v.score, v.margin))
+		end
+	end
 	local myTower, mtd = NearestEnemyTower(p.loc)
 	if myTower ~= nil and mtd < 750 and e:GetHealth() > e:GetActualIncomingDamage(bot:GetAttackDamage(), DAMAGE_TYPE_PHYSICAL) then
 		return nil, Ends(bot, s, p, 'me_meteria_bajo_torre')
@@ -168,8 +247,8 @@ local function MayRotate(bot, s, e)
 end
 
 -- What a kill on this enemy looks like now: the numbers Start() decides on.
-local function Evaluate(bot, p, e, d)
-	local dmg, helpers, hits, burst = SideDamage(bot, p, e)
+Evaluate = function(bot, p, e, d)
+	local dmg, helpers, hits, burst, lock, window = SideDamage(bot, p, e)
 	local travel = math.max(0, d - p.range) / math.max(p.moveSpeed, 1)
 	-- The allies keep hitting while we walk: the health left when we arrive. Scoring the health now made it rotate to the targets
 	-- the allies were killing (12 of 18 'objetivo_muerto' died to another 0-3 s later, scores x7 to x236; fase1c-f).
@@ -181,10 +260,12 @@ local function Evaluate(bot, p, e, d)
 		if a ~= bot and Seen(a) and not a:IsIllusion() and D2(a:GetLocation(), e:GetLocation()) < K.alliesRadius then nearDmg = nearDmg + HitsDamage(a, e, K.window) end
 	end
 	allyDmg = math.max(allyDmg, nearDmg)
-	local hpArrive = e:GetHealth() - allyDmg * travel / K.window
+	-- Spread over the window it was counted in (longer with the side's locks), so a lock does not make the allies hit faster.
+	local hpArrive = e:GetHealth() - allyDmg * travel / window
 	-- Up to chaseFar it is the lane's kill, not a rotation: 10 vetoes on the mid rival at 1.221-1.498 with the score above the margin
 	-- (build2, to min 10).
-	return { dmg = dmg, helpers = helpers, hits = hits, burst = burst, score = dmg / math.max(hpArrive, 1), travel = travel,
+	return { dmg = dmg, helpers = helpers, hits = hits, burst = burst, lock = lock, window = window,
+		score = dmg / math.max(hpArrive, 1), travel = travel,
 		withoutMe = travel > 0 and hpArrive <= 0,
 		kind = d > K.chaseFar and 'rotar' or 'matar',
 		-- The damage window starts when we arrive: walking time asks for a bigger margin.
@@ -209,9 +290,11 @@ function C.KillEval(bot, s, p)
 			lines = lines or {}
 			-- intencion: the previous decision's. veto=- is not "it starts": the rules before Start() may still win.
 			local trade = Intercambio.Eval(bot, p, e)
-			table.insert(lines, string.format('objetivo=%s ilusion=%d vida=%d dist=%d dmg4s=%d golpes=%d habilidades=%d aliados=%d score=%.2f margen=%.2f veto=%s intencion=%s ratio=%.2f mi_dps=%d su_dps=%d altura=%d fuera_de_alcance=%s unsafe=%s',
+			-- dmg4s keeps its name for the readers of earlier logs; it is the damage in `ventana` seconds (4 plus the side's locks,
+			-- `bloqueo`, in the lane: package 2).
+			table.insert(lines, string.format('objetivo=%s ilusion=%d vida=%d dist=%d dmg4s=%d golpes=%d habilidades=%d aliados=%d score=%.2f margen=%.2f veto=%s intencion=%s ratio=%.2f mi_dps=%d su_dps=%d altura=%d fuera_de_alcance=%s unsafe=%s bloqueo=%.1f ventana=%.1f',
 				Short(e), e:IsIllusion() and 1 or 0, e:GetHealth(), d, v.dmg, v.hits, v.burst, v.helpers, v.score, v.margin, veto,
-				s.intent, trade.ratio, trade.mine, trade.against, trade.height, tostring(trade.outranged), unsafe or '-'))
+				s.intent, trade.ratio, trade.mine, trade.against, trade.height, tostring(trade.outranged), unsafe or '-', v.lock, v.window))
 		end
 	end
 	return lines
@@ -236,7 +319,7 @@ function C.Start(bot, s, p)
 			if not v.withoutMe and v.score >= v.margin and Medio.MayStart(bot, s, v.score, v.margin)
 				and (v.kind == 'matar' or (MayRotate(bot, s, e) and v.travel <= K.rotateTravel and p.hp > 0.6))
 				and Unsafe(bot, p, e) == nil and v.score > bestScore then
-				best, bestScore = { e = e, d = d, dmg = v.dmg, helpers = v.helpers, kind = v.kind }, v.score
+				best, bestScore = { e = e, d = d, dmg = v.dmg, helpers = v.helpers, kind = v.kind, lock = v.lock, window = v.window }, v.score
 			end
 		end
 	end
@@ -244,9 +327,80 @@ function C.Start(bot, s, p)
 	local e = best.e
 	s.chase = { target = e, name = Short(e), kind = best.kind, since = p.now, seenAt = p.now, lastLoc = e:GetLocation(),
 		kills0 = GetHeroKills(bot:GetPlayerID()) }
+	-- A lane kill with a partner near the target is announced, so the partner opens with us (Join) instead of going on farming.
+	if best.kind == 'matar' and not p.late and #Partners(p, e, K.joinRadius) > 0 then
+		Pareja.Announce(bot, e, 'kill', p.now + K.chaseMax, p.now,
+			string.format('kill x%.2f, %d aliados, bloqueo %.1fs', bestScore, best.helpers, best.lock))
+	end
 	return { intent = best.kind, target = e, start = true,
-		reason = string.format('%s vida %d, daño de mi lado en %.0fs %d (x%.2f, %d aliados) a %d', s.chase.name,
-			e:GetHealth(), K.window, best.dmg, bestScore, best.helpers, best.d) }
+		-- The text before package 2 (`en 4s <daño>`, which tools/analisis/revision-2026-11-04/a6.mjs reads), then the window the damage
+		-- was counted in (4 s plus the side's locks, in the lane) and the locks.
+		reason = string.format('%s vida %d, daño de mi lado en %.0fs %d (x%.2f, %d aliados) a %d, ventana %.1fs, bloqueo %.1fs', s.chase.name,
+			e:GetHealth(), K.window, best.dmg, bestScore, best.helpers, best.d, best.window, best.lock) }
+end
+
+-- Joining the partner (package 2): a live announcement on the board (pareja.lua) from an ally that started a kill, or cast a lock or an
+-- opener inside one (KillCast; harass casts do not announce), is answered at once, as a chase on that target, so the hero's KillCast opens
+-- on it in the same second (linea.lua, Decide) and Continue keeps it safe. The announcement says where and when; whether to go is ours,
+-- with Start's gates (review of package 2): not within 2 s of a chase's end, not on a target banned after a failed chase, not
+-- outnumbered around us (package 1's p.alone) nor around the target, not unsafe (low health, the other enemies' burst, the target under
+-- its tower), and only when the pair's kill holds by our own numbers (Evaluate: score over the margin, not dead before we arrive). So
+-- the ultimates KillCast may spend (Finger, Chain Frost, Elder Dragon Form) go only into a kill the estimate gives. A sure kill is still
+-- the hero's Finish, which runs before. Re-checked four times a second while the announcement lives; the first refusal of each one is
+-- logged, and each is joined at most once.
+function C.Join(bot, s, p)
+	if p.late or s.chase ~= nil or p.now - (s.lastChaseEnd or -1000) < 2 then return nil end
+	if p.now - (s.joinCheckAt or -1000) < 0.25 then return nil end
+	s.joinCheckAt = p.now
+	s.joined, s.joinRefused = s.joined or {}, s.joinRefused or {}
+	for _, call in ipairs(Pareja.Calls(bot, p.now, ActivePids(p))) do
+		local e = call.target
+		local d = D2(p.loc, e:GetLocation())
+		-- Out of the lane's width it is not this pair's fight: no decision, no line (the board holds the other lane's too).
+		if not s.joined[call.id] and d <= K.joinRadius then
+			-- One per hero: the API does not tell every enemy illusion from its hero (intercambio.lua, OnePerHero).
+			local enemies, allies = 0, 1 + #Partners(p, e, K.joinRadius)
+			for _, o in ipairs(Intercambio.OnePerHero(e:GetLocation(), VisibleEnemies())) do
+				if D2(o:GetLocation(), e:GetLocation()) < K.joinRadius then enemies = enemies + 1 end
+			end
+			local v = Evaluate(bot, p, e, d)
+			local why = nil
+			if s.chaseBan ~= nil and (s.chaseBan[call.name] or -1000) > p.now then why = 'veto_reciente'
+			elseif p.alone then why = string.format('superado_aqui %d enemigos, %d de los nuestros', p.nEnemyNear or 0, p.nAllyNear or 0)
+			elseif enemies > allies then why = string.format('superado %d enemigos, %d de los nuestros', enemies, allies)
+			elseif v.withoutMe then why = 'lo_matan_sin_mi'
+			elseif v.score < v.margin then why = string.format('margen x%.2f < %.2f', v.score, v.margin)
+			else why = Unsafe(bot, p, e) end
+			local head = string.format('id=%d de_pid=%d tipo=%s objetivo=%s vida=%d dist=%d enemigos=%d nuestros=%d score=%.2f margen=%.2f',
+				call.id, call.pid, call.kind, call.name, e:GetHealth(), d, enemies, allies, v.score, v.margin)
+			if why ~= nil then
+				if not s.joinRefused[call.id] then
+					s.joinRefused[call.id] = true
+					Pareja.Log(bot, 'no_me_uno ' .. head .. ' motivo=' .. why)
+				end
+			else
+				s.joined[call.id] = true
+				Pareja.Log(bot, 'me_uno ' .. head .. ' motivo=' .. call.why)
+				s.chase = { target = e, name = call.name, kind = 'matar', since = p.now, seenAt = p.now, lastLoc = e:GetLocation(),
+					kills0 = GetHeroKills(bot:GetPlayerID()), join = { id = call.id, pid = call.pid } }
+				return { intent = 'matar', target = e, start = true,
+					reason = string.format('pareja con pid %d sobre %s (%s), vida %d a %d, x%.2f', call.pid, call.name, call.why, e:GetHealth(), d, v.score) }
+			end
+		end
+	end
+	return nil
+end
+
+-- An opening of ours on an enemy hero in the lane, with a partner near the target, goes on the board: the partner opens on it in the
+-- same second (Join). For linea.lua's Act, on every cast a hero module marks as one (decision.opens: the enemy; decision.lockSec: its
+-- lock, 0 for an opener that does not lock, as Lich's Frost Blast). Kind 'bloqueo' with a lock, 'apertura' without.
+function C.AnnounceOpening(bot, s, p, d)
+	local e = d.opens
+	if p.late or not Seen(e) or e:IsIllusion() or #Partners(p, e, K.joinRadius) == 0 then return end
+	local name = d.ability ~= nil and d.ability:GetName() or '?'
+	local lock = d.lockSec or 0
+	Pareja.Announce(bot, e, lock > 0 and 'bloqueo' or 'apertura', p.now + (d.castPoint or 0) + lock + K.joinGrace, p.now,
+		string.format('%s %.1fs', name, lock))
 end
 
 -- Runes: a visible rune near is picked up; at a power rune's spawn time (every 2 min from 6:00, as in normal Dota,

@@ -71,6 +71,16 @@ local function Beam(bot)
 	return a
 end
 
+-- Lucent Beam's ministun in seconds, read live: 'stun_duration' (assumed key, as Valve's data names it for this spell), else the
+-- ability's own duration, else LOCK_UNKNOWN.
+local LOCK_UNKNOWN = 0.5 -- an assumption, not measured: a ministun, shorter than a lane stun
+local function BeamLock(a)
+	local v = a:GetSpecialValueFloat('stun_duration')
+	if v == nil or v <= 0 then v = a:GetDuration() end
+	if v == nil or v <= 0 then v = LOCK_UNKNOWN end
+	return v
+end
+
 -- Lucent Beam to finish a visible enemy hero it surely kills. Not when our own hits in range kill it before the beam's cast point
 -- ends: the beam would be spent for nothing and miss the next kill.
 function H.Finish(bot, s, p)
@@ -102,6 +112,8 @@ function H.Harass(bot, s, p)
 	for _, e in ipairs(p.enemyHeroes) do
 		if Beamable(s, p, a, e) and D2(p.loc, e:GetLocation()) <= reach then
 			s.beamAt = p.now
+			-- A harass beam does not go on the pair's board (no `opens`): it would drag Lich into a fight no kill estimate gave (review
+			-- of package 2). The Beam opens for the pair from KillCast, inside a kill.
 			return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(),
 				reason = string.format('acoso a %s a %d (alcance %d), maná %.0f%%', Short(e), D2(p.loc, e:GetLocation()), reach,
 					100 * bot:GetMana() / math.max(bot:GetMaxMana(), 1)) }
@@ -116,7 +128,7 @@ function H.KillCast(bot, s, p, e)
 	if a == nil or not Beamable(s, p, a, e) then return nil end
 	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
 	s.beamAt = p.now
-	return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(),
+	return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = BeamLock(a),
 		reason = string.format('en la kill sobre %s', Short(e)) }
 end
 
@@ -156,6 +168,15 @@ end
 -- Nothing to cast before an attack: Luna has no attack buff of her own (Lunar Orbit has no rule yet).
 function H.Aim(bot, s, p, e)
 	return nil
+end
+
+-- The seconds of lock Luna can cast on this enemy now, from where she stands (p.loc), and its range: Lucent Beam's ministun, under
+-- KillBurst's own conditions (ready, in range, Eclipse's mana kept), else 0. For the pair's kill estimate (combate.lua, package 2).
+function H.Disable(bot, p, e)
+	local a = Beam(bot)
+	if a == nil or not Seen(e) or e:IsMagicImmune() or D2(p.loc, e:GetLocation()) > a:GetCastRange() then return 0, 0 end
+	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return 0, 0 end
+	return BeamLock(a), a:GetCastRange()
 end
 
 -- What the abilities add to a kill on this enemy within the window, read live, counting only what would really be cast: a

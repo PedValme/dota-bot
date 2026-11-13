@@ -102,12 +102,24 @@ end
 -- A disabled target does not need the stun yet: it is kept for when the disable ends or the target runs.
 local function Locked(e) return e:IsStunned() or e:IsHexed() end
 
+-- Dragon Tail's stun in seconds, read live: 'stun_duration' (assumed key, as Valve's data names it for this spell), else the ability's
+-- own duration, else LOCK_UNKNOWN.
+local LOCK_UNKNOWN = 1.0 -- an assumption, not measured: the order of a lane stun, so a key that reads 0 still counts the lock
+local function TailSeconds(a)
+	local v = a:GetSpecialValueFloat('stun_duration')
+	if v == nil or v <= 0 then v = a:GetDuration() end
+	if v == nil or v <= 0 then v = LOCK_UNKNOWN end
+	return v
+end
+local TAIL_WALK = 100 -- its cast range is a melee one (longer in Elder Dragon Form); a few steps more are walked by the engine
+
+-- The decision names the enemy it locks and for how long (opens, lockSec): linea.lua's Act puts it on the pair's board, so Lion opens in
+-- the same second (combate.lua, package 2).
 local function DragonTailOn(bot, s, p, e, why)
 	local a = Ready(bot, 'dragon_knight_dragon_tail')
 	if a == nil or not Seen(e) or e:IsMagicImmune() or e:IsInvulnerable() then return nil end
-	-- Its cast range is a melee one (longer in Elder Dragon Form); a few steps more are walked by the engine.
-	if D2(p.loc, e:GetLocation()) > a:GetCastRange() + 100 then return nil end
-	return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(),
+	if D2(p.loc, e:GetLocation()) > a:GetCastRange() + TAIL_WALK then return nil end
+	return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = TailSeconds(a),
 		reason = string.format('dragon_tail sobre %s: %s', Short(e), why) }
 end
 
@@ -170,19 +182,22 @@ function H.Harass(bot, s, p)
 	return nil
 end
 
--- During a kill: Elder Dragon Form as the fight starts near, Dragon Tail to start or hold it (not on a target already locked),
--- then Breathe Fire on the target, keeping the mana for the stun while it is still to come.
+-- During a kill: Dragon Tail first when in reach, to open or hold it (not on a target already locked), then Elder Dragon Form as the
+-- fight is near, then Breathe Fire on the target, keeping the mana for the stun while it is still to come. The Tail opens: the form's
+-- cast went first and the stun came late or never (Dragon Tail 1 cast in a smoke against OHA's 13, fase2-humo-equipo and
+-- fase2-ref-oha; OHA opens its lane kills with it and Hex, package 2). Out of the Tail's reach, Breathe Fire opens, as OHA's does with
+-- Earth Spike in the same second.
 local KILL_FORM_NEAR = 700 -- the target this close: the fight is here, worth the form
 function H.KillCast(bot, s, p, e)
 	if not Seen(e) then return nil end
 	local d = D2(p.loc, e:GetLocation())
-	if d <= KILL_FORM_NEAR then
-		local form = ElderForm(bot, s, p, string.format('kill sobre %s a %d', Short(e), d))
-		if form then return form end
-	end
 	if not Locked(e) then
 		local tail = DragonTailOn(bot, s, p, e, string.format('kill, vida %d', e:GetHealth()))
 		if tail then return tail end
+	end
+	if d <= KILL_FORM_NEAR then
+		local form = ElderForm(bot, s, p, string.format('kill sobre %s a %d', Short(e), d))
+		if form then return form end
 	end
 	local a = Ready(bot, 'dragon_knight_breathe_fire')
 	if a == nil or e:IsMagicImmune() or p.now - (s.shrapnelAt or -1000) < 1 or d > a:GetCastRange() then return nil end
@@ -215,16 +230,28 @@ function H.FightCast(bot, s, p)
 	return nil
 end
 
+-- The seconds of lock Dragon Knight can cast on this enemy now, from where it stands (p.loc), and its range: Dragon Tail's stun, ready,
+-- paid for and within reach (cast range plus the steps DragonTailOn allows), else 0. For the pair's kill estimate (combate.lua, package
+-- 2), which calls it for an ally too, with the ally's place.
+function H.Disable(bot, p, e)
+	local a = Ready(bot, 'dragon_knight_dragon_tail')
+	if a == nil or e:IsMagicImmune() or bot:GetMana() < a:GetManaCost() then return 0, 0 end
+	if D2(p.loc, e:GetLocation()) > a:GetCastRange() + TAIL_WALK then return 0, 0 end
+	return TailSeconds(a), a:GetCastRange() + TAIL_WALK
+end
+
 -- What the abilities add to a kill on this enemy within the window, read live, counting only what would really be cast:
--- Breathe Fire if ready, in range and paid for, and Dragon Tail's damage if ready (the stun also keeps the target in reach of
--- our hits). Returns the damage and the seconds of casting, in which no attack lands. For combate.lua.
+-- Breathe Fire if ready, in range and paid for, and Dragon Tail's damage if ready and within its reach (cast range plus the steps
+-- DragonTailOn allows), as DragonTailOn would cast it. It counted the Tail at any distance, which inflated the pair's score when the
+-- estimate reads it for Dragon Knight as an ally (review of package 2). Returns the damage and the seconds of casting, in which no
+-- attack lands. For combate.lua.
 function H.KillBurst(bot, p, e, window)
 	local total, casting = 0, 0
 	if e:IsMagicImmune() then return 0, 0 end
 	local mana = bot:GetMana()
 	local d = D2(p.loc, e:GetLocation())
 	local t = Ready(bot, 'dragon_knight_dragon_tail')
-	if t ~= nil and mana >= t:GetManaCost() then
+	if t ~= nil and mana >= t:GetManaCost() and d <= t:GetCastRange() + TAIL_WALK then
 		local dmg = t:GetSpecialValueInt('damage')
 		if dmg == nil or dmg <= 0 then dmg = t:GetAbilityDamage() end
 		total = total + e:GetActualIncomingDamage(dmg, DAMAGE_TYPE_MAGICAL)
