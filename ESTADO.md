@@ -2,10 +2,18 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Qué se estaba haciendo:** pulir el medio juego del Sniper propio (variante `control_sniper`) frente al de OHA con un paquete de varias mejoras (DECISIONES 2026-11-12). Historia en MEDICIONES, del 2026-11-06 al 2026-11-12.
-- **Dónde quedó:** versión `paquete1` (este PR): sigue siempre al aliado más cercano, rotaciones encendidas solo hacia un enemigo con un aliado cerca (Pedro: «Sí, con su causa»), Assassinate no corta los golpes a tiro con un aliado encima ni se gasta abriendo peleas sobre objetivos a tiro, y dispara a un enemigo a tiro si es seguro. Frente a `build2` en el banco: kills 5,2 → 7,3 (OHA 9,5), remates 48 % → 59 % (67 %), muertes 1,0 → 0,7, daño 21.313 → 24.549 (25.285); últimos golpes 153 → 126 (154).
-- **Qué se probó:** en la ronda 2, farmear antes de seguir a un aliado suelto devolvió los últimos golpes (154) pero bajó kills, daño y remates: se deshizo. Contar a todo aliado cerca del objetivo no arregla las rotaciones (17 de 22 acaban `objetivo_muerto`: los aliados matan con hechizos que la estimación no ve); cuestan poco y dan 2 kills por ronda.
-- **Siguiente acción:** la partida de Pedro contra `paquete1` (rondas agotadas). Después, según lo que vea: farm frente a presencia, y si las rotaciones se quedan.
+- **Qué se estaba haciendo:** fase 2, los cinco héroes propios (Luna, Sniper, Dragon Knight, Lion y Lich; DECISIONES 2026-11-13). Pedro juega cuando haya un equipo completo que juegue bien; el Sniper quedó en `paquete1` sin su partida. Plan y avance en `trabajo/fase2.md`.
+- **Dónde quedó:** pasos 1 a 3 hechos (#97):
+  - la variante `control_equipo` del banco controla a los cinco (exige `--heroes` con los cinco);
+  - registro de héroes (`propio/heroes.lua`) y línea por posición;
+  - módulos de habilidades y builds de los cuatro nuevos, y la regla de apoyo.
+  
+  Primer humo del equipo (MEDICIONES 2026-11-13): 0 errores y todos compran, suben de nivel y lanzan, pero pierden las líneas de dos (kills 3-13 y 6-14 al min 12; Luna en nivel 7; Lion y Lich con 3-6 muertes).
+- **Qué se probó:** el Sniper solo tras la reorganización juega igual (35-39 últimos golpes al min 10 contra Viper, dentro del rango de 27-59 del mismo enfrentamiento).
+- **Siguiente acción:**
+  - leer la referencia `fase2-ref-oha` (OHA con los mismos cinco héroes y rivales, min 12; lanzada al cerrar esta sesión);
+  - diagnosticar en los registros por qué pierden las líneas de dos: las reglas de retirada e intercambio son del 1 contra 1 del Sniper en mid;
+  - un paquete de mejoras y como mucho 2 rondas. Juega Pedro cuando el equipo aguante las líneas.
 - Lo que espera a Pedro vive en OmniBrain (P-177): `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
 ## Madurez
@@ -26,11 +34,11 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-04 · Vuelta de la fase 1: banco con `--corte` y `--heroes` (#56), registro (#57), defectos y build (#58, #59),
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
-- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95).
+- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97).
 
 ## Siguientes pasos
-1. Medio juego del Sniper propio, hasta el visto bueno de Pedro: paquete de varias mejoras (ver «Próxima sesión»); `trabajo/bot-propio.md`.
-2. Fase 2, los cinco en línea: `trabajo/bot-propio.md`.
+1. Fase 2, los cinco héroes propios: `trabajo/fase2.md` (ver «Próxima sesión»).
+2. Medio juego del Sniper: farm frente a presencia y las rotaciones, con lo que Pedro vea al jugar contra el equipo.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
 4. Una prueba en el entorno real: lobby Local Host con amigos, Turbo real.

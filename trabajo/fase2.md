@@ -25,4 +25,4 @@ Grande: varias sesiones. Cada paso deja el check verde y el bot por defecto sin 
 Fuera de este plan: dejar de cargar los reemplazos de la API de OHA (`aba_global_overrides`) y el cerebro de equipo (fase 3).
 
 ## Avance
-- 2026-11-13: plan escrito; paso 1 en curso.
+- 2026-11-13: pasos 1 a 3 hechos (#97). Revisión de Opus: arreglados un fallo de `Replan` (compras sin héroe tras rehacer el plan, también afectaba al Sniper), los talentos de Lion (los de OHA no existen en 7.41f) y que `control_equipo` exija los cinco en `--heroes`. Primer humo del equipo: mecanismo bien, líneas de dos perdidas (MEDICIONES 2026-11-13). Siguiente: referencia de OHA con los mismos héroes y diagnóstico de las líneas de dos (paso 4).
