@@ -1668,3 +1668,27 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - n = 6 + 6, mecanismo;
   - sin medición de antes del paquete con este diseño: el humo previo es de una sola alineación y n = 2;
   - la diferencia de velocidad entre brazos queda anotada como posible contaminación hasta explicarla.
+- Diagnóstico (Opus, en los registros):
+  - **la brecha de nivel viene sobre todo de las kills y asistencias:** OHA suma 6,6-8,5 por héroe fuera del mid, y el propio unas 0,3. Por correlación, son 3-4 niveles;
+  - el tiempo muerto es igual que el de OHA, salvo Lion;
+  - **defecto del paquete:** la retención marcaba `lowHp`, y una retirada para recuperar vida, con `stepBack` heredado de un intercambio perdido, cruzaba el mapa a pie en pasos de 350 (Luna, `p1-prueba-a-1`, t=276-300). Por eso el tiempo cerca del frente bajó de 481 a 299 s en Luna y Lich;
+  - `recuperando_ante_dos` no salió nunca (código muerto);
+  - la velocidad real distinta no cambia las decisiones por segundo de juego (30 en los dos brazos).
+- Decisión:
+  - ronda 2 del paquete 1, la última, con el defecto corregido (`fa02542`);
+  - se mide en la misma tanda que el paquete 2 (`4acdfa9`, encima del 1), porque las kills son la causa principal.
+
+### 2026-11-13 · Paquetes 1 (ronda 2) y 2 (ronda 1) en una tanda de tres brazos: predicción antes de lanzar
+- Pregunta:
+  - ¿el paquete 1 corregido baja las muertes sin perder tiempo de línea?
+  - ¿el paquete 2 («matar en pareja», revisado por Opus con 5 hallazgos aplicados) da kills en las líneas de dos?
+- Diseño:
+  - tres brazos: referencia (OHA con los mismos héroes, `base_sniper,base`), `p1r2` (rama `claude/paquete1`) y `p2` (rama `claude/paquete2`);
+  - 2 partidas por brazo y alineación, 18 partidas al min 12, unas 2 h;
+  - orden en cuadrado latino: a: R, 1, 2; b: 1, 2, R; c: 2, R, 1;
+  - entre invocaciones se cambia de rama en este clon, con el árbol limpio.
+  
+  Análisis: `equipo.mjs` con `p1r2-.*` y `p2-.*` frente a `p12ref-.*`, y `p2-.*` frente a `p1r2-.*`.
+- Predicción (prueba menos referencia, min 12):
+  - `p1r2`: muertes de las líneas de dos ≤ +1 en cada una; nivel de Luna y Lich mejor que en `p1-prueba` (−5,3 y −4,7);
+  - `p2`: kills de los héroes de las líneas de dos ≥ 3 en cada línea (hoy 0,2-0,3); diferencia de kills del equipo mejor que −10; nivel de los cuatro a −2 o mejor.
