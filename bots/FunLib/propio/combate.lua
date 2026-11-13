@@ -203,7 +203,8 @@ function C.KillEval(bot, s, p)
 			local v = Evaluate(bot, p, e, d)
 			local unsafe = Unsafe(bot, p, e)
 			local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
-			local veto = (banned and 'veto_reciente') or (v.withoutMe and 'lo_matan_sin_mi') or (v.score < v.margin and 'margen') or (unsafe and 'inseguro')
+			local veto = (banned and 'veto_reciente') or (v.withoutMe and 'lo_matan_sin_mi') or (v.score < v.margin and 'margen')
+				or (p.alone and 'superado') or (unsafe and 'inseguro')
 				or (v.kind == 'rotar' and not (MayRotate(bot, s, e) and v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
 			lines = lines or {}
 			-- intencion: the previous decision's. veto=- is not "it starts": the rules before Start() may still win.
@@ -219,6 +220,10 @@ end
 -- Starts a kill (in reach) or a rotation (farther), when our side's damage kills it and it is safe.
 function C.Start(bot, s, p)
 	if p.now - (s.lastChaseEnd or -1000) < 2 then return nil end
+	-- Outnumbered in the lane (linea.lua, Perceive: p.alone), no kill starts: 8 of 16 deaths in the safe lane came some 2 s after an
+	-- attack of our own, alone, with the second enemy near (trabajo/plan-mejora-equipo.md, package 1). A sure kill still goes: the
+	-- hero's Finish runs before this.
+	if p.alone then return nil end
 	-- Many damage estimates per check (each enemy, each ally near it): four times a second is enough.
 	if p.now - (s.killCheckAt or -1000) < 0.25 then return nil end
 	s.killCheckAt = p.now

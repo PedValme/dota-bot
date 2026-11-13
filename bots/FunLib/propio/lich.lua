@@ -187,6 +187,12 @@ function H.Aim(bot, s, p, e)
 	return Shield(bot, s, p)
 end
 
+-- What may still be cast when outnumbered in the lane, where linea.lua does not call Harass (package 1): Frost Shield on an ally
+-- being hit, which is when it matters most. A hero without Protect casts nothing then.
+function H.Protect(bot, s, p)
+	return Shield(bot, s, p)
+end
+
 -- What the abilities add to a kill on this enemy within the window, read live, counting only what would really be cast: Frost
 -- Blast, then Chain Frost if the mana left pays for it and its projectile arrives within the window. Returns the damage and the
 -- seconds of casting, in which no attack lands. For combate.lua.

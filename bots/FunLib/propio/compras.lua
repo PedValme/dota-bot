@@ -85,7 +85,7 @@ end
 -- With the inventory nearly full, the least useful item goes, only near the shop: far from it the sale failed without a
 -- word while the log said it sold (4 sales with 2 branches). Without this, a late item could never be assembled.
 -- The Mask last: once the six slots are full of the late items, it is what gives way (else the answer to evasion stayed in the backpack).
-local SELL_ORDER = { 'item_branches', 'item_tango', 'item_flask', 'item_wraith_band', 'item_mask_of_madness' }
+local SELL_ORDER = { 'item_branches', 'item_tango', 'item_clarity', 'item_flask', 'item_wraith_band', 'item_mask_of_madness' }
 local function MakeRoom(bot)
 	local used = 0
 	for slot = 0, 8 do if bot:GetItemInSlot(slot) ~= nil then used = used + 1 end end
@@ -120,11 +120,18 @@ function P.Consumables(bot, s, now)
 	if now - (s.consumablesAt or -1000) < 2 then return nil end
 	s.consumablesAt = now
 	-- The TP waits for t=180: the first gold goes to the Wraith Band, and nothing sends the hero home before that. Salves stop
-	-- with the lane: their slot is for items, and 130 gold no longer heals what a fight takes.
-	for _, c in ipairs({ { name = 'item_flask', wait = 45, from = -1000, upTo = 15 }, { name = 'item_tpscroll', wait = 45, from = 180, upTo = 99 } }) do
+	-- with the lane: their slot is for items, and 130 gold no longer heals what a fight takes. Which ones by role (heroes.lua,
+	-- R.ROL): a support also keeps a clarity, under the salve's rules; one that is working is not bought again.
+	local list = {}
+	for _, name in ipairs((Heroes.Rol(bot)).consumibles or { 'item_flask' }) do
+		table.insert(list, { name = name, wait = 45, from = -1000, upTo = 15 })
+	end
+	table.insert(list, { name = 'item_tpscroll', wait = 45, from = 180, upTo = 99 })
+	local working = { item_flask = 'modifier_flask_healing', item_clarity = 'modifier_clarity_potion' }
+	for _, c in ipairs(list) do
 		s.refillAt = s.refillAt or {}
 		if DotaTime() >= c.from and bot:GetLevel() < c.upTo and not HasAnywhere(bot, c.name) and now - (s.refillAt[c.name] or -1000) >= c.wait
-			and not (c.name == 'item_flask' and bot:HasModifier('modifier_flask_healing'))
+			and not (working[c.name] ~= nil and bot:HasModifier(working[c.name]))
 			and bot:GetGold() >= GetItemCost(c.name) and bot:GetItemInSlot(14) == nil then
 			s.refillAt[c.name] = now
 			local code = bot:ActionImmediate_PurchaseItem(c.name)
@@ -258,7 +265,7 @@ end
 -- An item left in the backpack (slots 6-8) gives nothing: swap it with an empty main slot, else with a branch. In the lane
 -- never with a tango, which from the backpack could not be used; a tango that fell there comes back like any other item.
 -- Once the lane is over, consumables and the Wraith Band give way too: a Blade in the backpack is a fight lost.
-local LATE_FILLER = { item_tango = true, item_flask = true, item_wraith_band = true, item_mask_of_madness = true }
+local LATE_FILLER = { item_tango = true, item_flask = true, item_clarity = true, item_wraith_band = true, item_mask_of_madness = true }
 function P.Arrange(bot, s, now)
 	if now - (s.arrangeAt or -1000) < 3 then return nil end
 	local function filler(name) return name == 'item_branches' or (s.late and LATE_FILLER[name]) end
