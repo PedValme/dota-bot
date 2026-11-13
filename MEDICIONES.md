@@ -1780,3 +1780,20 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - muertes ≤ 8 en la segura (antes 8,8) y ≤ 6 en la difícil (antes 7,0);
   - al menos la mitad de los viajes a la base con TP (antes 0 de 39).
 - Es la ronda 1 de 2 del paquete (DECISIONES 2026-11-06).
+- Máquina y código: código `8ea6181` (el árbol de `bots/` es el de la rama), 6 de 6 válidas, CPU media 34-38 %, máxima 37-48 %.
+- Resultado (min 12, por línea; antes `propio-dos-*`):
+
+  | Línea | Kills (antes) | Muertes (antes) |
+  |---|---|---|
+  | Segura | 0,8 (0,8) | 9,0 (8,8) |
+  | Difícil | 0,8 (2,5) | 8,5 (7,0) |
+
+  - Viajes a la base con TP: 41 de 54 (antes 0 de 39).
+  - Tablero: 20 entradas, 218 de línea y 210 salidas.
+  - **No cumple.**
+- Lectura:
+  - las muertes llegan con el 87-95 % de vida 10 s antes, ante 2 rivales y sin aliado a 1200;
+  - casi todas en peleas que abre el rival, con nuestra pareja a 2900-4800;
+  - la amenaza de 3 s no las anticipa (0,0-0,5), porque cierran con aturdimientos y saltos;
+  - la sombra da «suyo» cerca de 1,0, frente a 0,5-0,7 en OHA: nuestros héroes van por detrás en nivel y daño.
+- Decisión: ronda 2, la última del paquete. Nunca solo ante dos: el núcleo vuelve con su apoyo si está a más de 800 con rivales a la vista, y un héroe sin compañero a 1500 se queda junto a su torre ante dos rivales. Misma predicción que la ronda 1.

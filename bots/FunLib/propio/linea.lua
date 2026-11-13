@@ -738,7 +738,7 @@ local function Decide(bot, s, p)
 	end
 	-- The lane of two: the pair's entry (its hero opens with KillCast in the same second as the partner) or its leaving together.
 	if p.dos then
-		r = Dos.Act(bot, s, p, Home(p.team))
+		r = Dos.Act(bot, s, p, Home(p.team), (SafeSpot(p.team, s.lane)))
 		if r then
 			local cast = hero ~= nil and r.intent == 'matar' and hero.KillCast(bot, s, p, r.target) or nil
 			return cast or WithAim(bot, s, p, hero, r)

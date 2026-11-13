@@ -43,6 +43,10 @@ local K = {
 	enemyAround = 1600, -- enemy heroes this close to one of ours are the lane's
 	evalEvery = 0.25,   -- the pair's board is decided at most this often
 	joinMax = 1400,     -- one of ours this far from the target does not join the entry
+	-- Never alone before two (round 1, dos1-*: 105 deaths at 87-95 % of health 10 s before, two enemies and no ally within 1200, the
+	-- fights opened by them with our pair 2.900-4.800 apart; the 3 s threat did not see them coming, they close in with stuns and jumps).
+	aloneFrom = 1500,   -- the partner farther than this (or dead, or home) is no company
+	regroupFrom = 800,  -- the core walks back to its support when farther than this with an enemy hero in sight
 	-- The race (dos-humo: combate.lua's 4 s kill estimate stayed under half its margin in 80 % of the readings with an enemy within
 	-- 900, so the pair entered 10 times in two matches, while OHA goes in on rivals at 91-95 % of health and wins by chasing 15-21 s).
 	raceWindow = 10,    -- seconds of the race: our damage on the target against the enemies' on the weaker of ours
@@ -313,7 +317,7 @@ end
 
 -- The pair's action for this bot: an entry (a chase on the board's target, opened with the hero's KillCast by linea.lua), a step out
 -- of the enemies' reach, or nil (the lane: last hits and Spot).
-function D.Act(bot, s, p, home)
+function D.Act(bot, s, p, home, safeSpot)
 	local b = p.dos.board
 	if b.mode == 'entrar' and b.target ~= nil and not b.target:IsNull() then
 		local e = b.target
@@ -357,6 +361,18 @@ function D.Act(bot, s, p, home)
 		end
 		-- Already out: stay out, a short step home, not back to the creeps.
 		return { intent = 'alejarse', reason = 'pareja_fuera ' .. (b.why or ''), to = Toward(p.loc, home, 80) }
+	end
+	local mate = p.dos.mate
+	local mateDist = mate ~= nil and D2(p.loc, mate:GetLocation()) or 1e9
+	local enemiesNear = #(p.enemyHeroes or {})
+	-- Alone before two: by its tower, not in the lane, until the partner is back.
+	if mateDist > K.aloneFrom and enemiesNear >= 2 then
+		return { intent = 'esperar_torre', reason = string.format('solo ante %d, pareja a %d', enemiesNear, math.min(mateDist, 99999)),
+			to = safeSpot }
+	end
+	-- The core back to its support (the support already keeps near its core, Spot): the pair is the unit.
+	if not p.dos.support and mateDist > K.regroupFrom and mateDist <= K.aloneFrom and enemiesNear >= 1 then
+		return { intent = 'con_pareja', reason = string.format('vuelvo con mi apoyo, a %d', mateDist), to = Toward(mate:GetLocation(), home, 150) }
 	end
 	return nil
 end
