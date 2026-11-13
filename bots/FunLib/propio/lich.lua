@@ -168,6 +168,45 @@ function H.Harass(bot, s, p)
 			100 * bot:GetMana() / math.max(bot:GetMaxMana(), 1)) }
 end
 
+-- Package 3: Frost Blast on the hero we trade hits with, as OHA casts it on its attack target (hero_lich.lua:462-474): in range plus
+-- 30, with the spell at level 2 or more, the mana over 68 %, the target under 48 % or ourselves under 28 %. Chain Frost's and the
+-- shield's mana kept.
+function H.TradeCast(bot, s, p, e)
+	local a = Ready(bot, 'lich_frost_nova')
+	if a == nil or not Castable(e) or e:IsIllusion() or D2(p.loc, e:GetLocation()) > a:GetCastRange() + 30 then return nil end
+	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
+	local mana = bot:GetMana() / math.max(bot:GetMaxMana(), 1)
+	if not (a:GetLevel() >= 2 or mana > 0.68 or e:GetHealth() < 0.48 * e:GetMaxHealth() or p.hp < 0.28) then return nil end
+	return { intent = ON_UNIT, ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = 0,
+		reason = string.format('frost blast en el intercambio con %s', Short(e)) }
+end
+
+-- Package 3: Frost Blast to last-hit a lane creep within 800 it surely kills, OHA's lane rule (hero_lich.lua:431-457): a ranged one
+-- with over 330 mana, a melee one with over 400 that half the blast would not kill (the attack takes those), never a creep an allied
+-- hero is hitting, and only with at most one allied hero near, as OHA asks.
+function H.FarmCast(bot, s, p)
+	local a = Ready(bot, 'lich_frost_nova')
+	if a == nil or #(p.allyHeroes or {}) > 1 then return nil end
+	local dmg = BlastDamage(a)
+	for _, c in ipairs(p.enemyCreeps) do
+		if Castable(c) and D2(p.loc, c:GetLocation()) <= math.min(800, a:GetCastRange() + 200) then
+			local name, real = c:GetUnitName(), c:GetActualIncomingDamage(dmg, DAMAGE_TYPE_MAGICAL)
+			local takenByAlly = false
+			for _, ally in ipairs(p.allyHeroes or {}) do
+				if ally:GetAttackTarget() == c then takenByAlly = true end
+			end
+			local kind = nil
+			if string.find(name, 'ranged') and bot:GetMana() > 330 then kind = 'lejos'
+			elseif string.find(name, 'melee') and bot:GetMana() > 400 and c:GetHealth() > 0.5 * real then kind = 'cerca' end
+			if kind ~= nil and not takenByAlly and c:GetHealth() <= real then
+				return { intent = ON_UNIT, ability = a, target = c, castPoint = a:GetCastPoint(),
+					reason = string.format('frost blast remata un creep (%s), vida %d', kind, c:GetHealth()) }
+			end
+		end
+	end
+	return nil
+end
+
 -- During a kill: Frost Blast on the target (damage and slow), then Chain Frost if learned and in range. The mana is spent: this is
 -- what it was kept for.
 function H.KillCast(bot, s, p, e)

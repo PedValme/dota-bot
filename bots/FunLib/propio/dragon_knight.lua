@@ -153,7 +153,9 @@ end
 -- Breathe Fire to harass the enemy laner(s), from where we stand (its cast range is longer than our melee reach, so no walking
 -- in for it). Freely when the flame takes two heroes or a hero and a creep wave; on a lone hero only with plenty of mana, since
 -- the pool is small and Dragon Tail's mana is kept. Not on a hero already under its damage reduction, unless it hits two.
-local SOLO_MANA = 0.6  -- a flame on one hero alone only with this share of mana left after it
+-- Package 3: OHA casts it on its attack target with no share of mana kept beyond Dragon Tail and the form (hero_dragon_knight.lua:311-
+-- 330); with 60 % it cast 11,8 flames a lane against OHA's 23,3 (MEDICIONES 2026-11-13). ManaToKeep already keeps those.
+local SOLO_MANA = 0    -- a flame on one hero alone with this share of mana left after it
 local WAVE_CREEPS = 2  -- creeps in the flame that make a hero's flame worth it
 function H.Harass(bot, s, p)
 	local a = Ready(bot, 'dragon_knight_breathe_fire')
@@ -183,6 +185,27 @@ function H.Harass(bot, s, p)
 		end
 	end
 	return nil
+end
+
+-- Package 3: on the hero we trade hits with, as OHA on its attack target: Dragon Tail when in reach and the target is not locked (hero_
+-- dragon_knight.lua:562-576: no mana kept but the form's), else Breathe Fire (311-330). OHA tails 11,8 times a lane, ours 1,7.
+function H.TradeCast(bot, s, p, e)
+	if not Seen(e) or e:IsIllusion() then return nil end
+	if not Locked(e) then
+		local a = Ready(bot, 'dragon_knight_dragon_tail')
+		local u = bot:GetAbilityByName('dragon_knight_elder_dragon_form')
+		local keep = (u ~= nil and u:GetLevel() > 0 and u:GetCooldownTimeRemaining() < 10) and u:GetManaCost() or 0
+		if a ~= nil and bot:GetMana() - a:GetManaCost() >= keep then
+			local tail = DragonTailOn(bot, s, p, e, string.format('intercambio, vida %d', e:GetHealth()))
+			if tail then return tail end
+		end
+	end
+	local a = Ready(bot, 'dragon_knight_breathe_fire')
+	if a == nil or e:IsMagicImmune() or p.now - (s.shrapnelAt or -1000) < 1 or D2(p.loc, e:GetLocation()) > a:GetCastRange() then return nil end
+	if e:HasModifier('modifier_dragonknight_breathefire_reduction') then return nil end
+	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
+	return { intent = 'shrapnel', ability = a, at = (FireAt(a, Fire(a), p.loc, e)), castPoint = a:GetCastPoint(), opens = e, lockSec = 0,
+		reason = string.format('breathe_fire en el intercambio con %s', Short(e)) }
 end
 
 -- During a kill: Dragon Tail first when in reach, to open or hold it (not on a target already locked), then Elder Dragon Form as the

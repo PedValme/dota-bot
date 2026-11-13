@@ -1821,3 +1821,15 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - la sombra.
 
   El siguiente paso lo decide Pedro.
+
+### 2026-11-13 · Paquete 3, héroes, ronda de mecanismo 1 (`h1-*`): predicción antes de lanzar
+- Pregunta (Pedro: «Paquete 3: héroes (Recomendado)»): ¿lanzan más hechizos nuestros héroes, al estilo de OHA, y con ello ganan nivel y kills en las líneas de dos?
+- Qué cambió desde `dos2-*` (rama `claude/paquete3-heroes`). Reglas de OHA leídas en `BotLib/hero_*.lua`:
+  - `TradeCast`: al cambiar golpes con un héroe, Dragon Tail o Breathe Fire, Earth Spike o Hex, Lucent Beam y Frost Blast;
+  - `FarmCast`: Lucent Beam y Frost Blast para rematar creeps;
+  - menos espera y reserva en el acoso: Lucent Beam de 8 a 3 s, Earth Spike de 20 a 6 s y sin la mitad del maná, Breathe Fire sin el 60 %.
+- Diseño: el de `dos1` y `dos2` (6 partidas, alineaciones a, b y c, min 12). Se compara con `dos2-*` (`equipo.mjs`) y con `oha-dos-*` (`linea-dos.mjs`).
+- Predicción (min 12, por línea):
+  - lanzamientos: Lucent Beam ≥ 18, Breathe Fire ≥ 18, Dragon Tail ≥ 6, Hex ≥ 5 y Frost Blast ≥ 12 (en `dos2`: 8-10, 10-12, 1-2, 1-2 y 7-8);
+  - nivel de los cuatro héroes de las líneas de dos +1 o más frente a `dos2`;
+  - kills sobre sus rivales ≥ 2 en cada línea.
