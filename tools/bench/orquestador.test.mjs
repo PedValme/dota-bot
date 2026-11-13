@@ -17,6 +17,14 @@ test("a variant that follows a hero needs dota-bot to have that hero", () => {
   assert.match(laneHeroProblem(["base_sniper"], undefined, rivalSniper), /sniper/);
 });
 
+test("a team under control needs all its heroes in dota-bot's fixed group", () => {
+  const equipo = parseFixedHeroes("luna,sniper,dragon_knight,lion,lich/sven,razor,kunkka,bane,oracle");
+  const otro = parseFixedHeroes("luna,sniper,axe,lion,lich/sven,razor,kunkka,bane,oracle");
+  assert.equal(laneHeroProblem(["control_equipo", "base"], undefined, equipo), "");
+  assert.match(laneHeroProblem(["control_equipo"], "sniper", undefined), /dragon_knight/);
+  assert.match(laneHeroProblem(["control_equipo"], undefined, otro), /dragon_knight/);
+});
+
 test("--corte fires only with the option, from its minute on, never in the pre-game", () => {
   assert.equal(cutReached(720, undefined), false);
   assert.equal(cutReached(-30, 12), false);

@@ -269,6 +269,8 @@ end
 
 -- Between attacks, a step away from whoever is on top of us: the range is the advantage.
 function M.Kite(bot, s, p, home)
+	-- A melee hero stepping away between hits would never hit (Dragon Knight, trabajo/fase2.md).
+	if p.range < K.meleeRange then return nil end
 	local cooldown = bot:GetLastAttackTime() + bot:GetSecondsPerAttack() - p.now
 	if cooldown < 0.3 then return nil end
 	for _, e in ipairs(p.enemyHeroes) do

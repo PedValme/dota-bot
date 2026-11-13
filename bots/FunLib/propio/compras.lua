@@ -73,7 +73,7 @@ local function Replan(bot, s)
 	s.buyQueue = kept
 	-- A courier sent for a secret part of the old plan would make the next one look late and skip it.
 	s.secretSince = nil
-	Append(s, Build.Plan(bot, s, done) or {}, done)
+	Append(s, Build.Plan(bot, s, done) or {}, done, Heroes.Datos(bot:GetUnitName()))
 	return 'plan de nuevo: cambió lo que amenazan'
 end
 

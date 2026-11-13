@@ -334,6 +334,12 @@ export function laneHeroProblem(variantes, mid, fijos) {
     if (hero && mid !== hero && !fijos?.[0].includes("npc_dota_hero_" + hero)) {
       return `--variantes ${v}: dota-bot debe llevar a ${hero} (--mid ${hero} o en el primer grupo de --heroes)`;
     }
+    // A team under control (phase 2): every one of its heroes in dota-bot's fixed group, or each draw would put a different
+    // number of them under control and a series would mix lineups (review of 2026-11-13).
+    const team = String(VARIANTS[v]?.control_completo ?? "").split(",").filter(Boolean);
+    if (team.length > 1 && !team.every((h) => fijos?.[0].includes("npc_dota_hero_" + h))) {
+      return `--variantes ${v}: --heroes debe llevar en el primer grupo a ${team.join(", ")}`;
+    }
   }
   return "";
 }

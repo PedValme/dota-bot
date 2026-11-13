@@ -4,7 +4,7 @@
 -- new hero touches no shared file but this list.
 local R = {}
 
-local NAMES = { 'sniper' }
+local NAMES = { 'luna', 'sniper', 'dragon_knight', 'lion', 'lich' }
 
 R.MODULES, R.PROFILES = {}, {}
 for _, name in ipairs(NAMES) do

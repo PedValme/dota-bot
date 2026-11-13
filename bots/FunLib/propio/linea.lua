@@ -27,6 +27,7 @@ local NO_COMBAT = Variant.sin_combate == true
 -- Thresholds of the rules (one place, so the log and the rules agree).
 local K = {
 	retreatHp = 0.30,     -- retreat below this health fraction
+	coreNear = 1500,      -- a support leaves the last hits to a core ally this close
 	exposedHp = 0.45,     -- ...or below this one with an enemy hero able to reach us
 	learnFade = 0.9954,   -- per second, what is learned of an enemy's damage fades by this: half in 150 s
 	returnHp = 0.65,      -- come back to the lane above it
@@ -422,7 +423,16 @@ local function RuleLastHit(bot, s, p)
 	local allies = {}
 	for _, u in ipairs(p.allyCreeps) do table.insert(allies, u) end
 	for _, u in ipairs(p.allyTowers) do table.insert(allies, u) end
-	consider(p.enemyCreeps, allies, false)
+	-- A support leaves the last hits to a core ally beside it (trabajo/fase2.md, step 3), and still denies. A hero it does not know counts
+	-- as a core.
+	local leave = false
+	if Heroes.Datos(bot:GetUnitName()).rol == 'apoyo' then
+		for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+			if a ~= bot and Valid(a) and not a:IsIllusion() and Heroes.Datos(a:GetUnitName()).rol ~= 'apoyo'
+				and D2(p.loc, a:GetLocation()) < K.coreNear then leave = true break end
+		end
+	end
+	if not leave then consider(p.enemyCreeps, allies, false) end
 	if best == nil and not soon then consider(p.allyCreeps, enemies, true) end
 	if best ~= nil then
 		local c = best.creep
@@ -733,11 +743,15 @@ local function Act(bot, s, p, d)
 	if d.intent == 'rematar' then
 		bot:Action_UseAbilityOnEntity(d.ability, d.target)
 		s.busyUntil = p.now + d.castPoint + 0.3
-		s.castCheck = { at = p.now + 0.3, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', '') }
-		Log(s, bot, 'habilidad', 'assassinate: ' .. d.reason)
-		s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
-			hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
-			illusion = d.target:IsIllusion() }
+		s.castCheck = { at = p.now + 0.3, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''), ability = d.ability:GetName() }
+		-- Every hero's unit-target cast goes here (phase 2); the kill check after it is the Assassinate's.
+		local name = d.ability:GetName()
+		Log(s, bot, 'habilidad', (name == 'sniper_assassinate' and 'assassinate' or name) .. ': ' .. d.reason)
+		if name == 'sniper_assassinate' then
+			s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
+				hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
+				illusion = d.target:IsIllusion() }
+		end
 		return
 	end
 	if d.intent == 'usar_objeto' then
@@ -751,7 +765,7 @@ local function Act(bot, s, p, d)
 	if d.intent == 'apuntar' then
 		bot:Action_UseAbility(d.ability)
 		s.busyUntil, s.moveTo = p.now + d.castPoint + 0.05, nil
-		Log(s, bot, 'habilidad', 'take_aim: ' .. d.reason)
+		Log(s, bot, 'habilidad', (d.ability:GetName() == 'sniper_take_aim' and 'take_aim' or d.ability:GetName()) .. ': ' .. d.reason)
 		return
 	end
 	if d.intent == 'teleporte' then
@@ -763,7 +777,7 @@ local function Act(bot, s, p, d)
 	if d.intent == 'shrapnel' then
 		bot:Action_UseAbilityOnLocation(d.ability, d.at)
 		s.busyUntil, s.shrapnelAt = p.now + d.castPoint + 0.2, p.now
-		Log(s, bot, 'habilidad', 'shrapnel: ' .. d.reason)
+		Log(s, bot, 'habilidad', (d.ability:GetName() == 'sniper_shrapnel' and 'shrapnel' or d.ability:GetName()) .. ': ' .. d.reason)
 		return
 	end
 	if d.intent == 'acosar' then
@@ -922,7 +936,7 @@ function L.Think()
 			s.busyUntil = p.now
 			s.castBan = s.castBan or {}
 			s.castBan[c.name] = p.now + 3
-			Log(s, bot, 'habilidad', 'assassinate no arranca sobre ' .. c.name .. ': libre')
+			Log(s, bot, 'habilidad', ((c.ability == nil or c.ability == 'sniper_assassinate') and 'assassinate' or c.ability) .. ' no arranca sobre ' .. c.name .. ': libre')
 		end
 	end
 	local treads = (p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.TreadsToAgility(bot, s, p.now) or nil
