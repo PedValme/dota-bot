@@ -71,6 +71,16 @@ function I.Eval(bot, p, e)
 	for _, o in ipairs(p.enemyHeroes) do
 		if Valid(o) and o ~= e and D2(p.loc, o:GetLocation()) < K.othersNear then others = others + Dps(o, bot) end
 	end
+	-- Our side as his: the allied heroes near us (linea.lua's Perceive, one per hero, none retreating) hit him as his partner hits
+	-- us, within the same distance. It added his partner and not ours, so a 2 against 2 read as 1 against 2 and was never answered
+	-- (trabajo/plan-mejora-equipo.md: «el intercambio no suma al compañero»). With no ally near, as before: the lone mid is unchanged.
+	local allies = 0
+	for _, a in ipairs(p.allyHeroes or {}) do
+		if Valid(a) and D2(p.loc, a:GetLocation()) < K.othersNear then
+			mine = mine + Dps(a, e)
+			allies = allies + 1
+		end
+	end
 	local outranged = e:GetAttackRange() + K.rangeMargin <= p.range and dist > e:GetAttackRange()
 	if outranged then his = his * K.outrange end
 	-- What this enemy has really done to us alone in this match counts (linea.lua, Perceive): venom, toxin and passives are in no
@@ -87,7 +97,8 @@ function I.Eval(bot, p, e)
 	local against = math.max(his + creeps + others, (p.dps or 0) * K.measuredShare)
 	local tHim = e:GetHealth() / math.max(mine, 1)
 	local tMe = p.hpAbs / math.max(against, 1)
-	return { ratio = tMe / math.max(tHim, 0.1), mine = mine, against = against, height = myHeight - hisHeight, outranged = outranged }
+	return { ratio = tMe / math.max(tHim, 0.1), mine = mine, against = against, height = myHeight - hisHeight, outranged = outranged,
+		allies = allies }
 end
 
 return I

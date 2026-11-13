@@ -111,12 +111,24 @@ local function SpikeHits(bot, p, a, at)
 	return n
 end
 
+-- Seconds a lock lasts, read live: its special value, else the ability's own duration, else LOCK_UNKNOWN. 'duration' is the key OHA
+-- reads for Lion's spells (hero_lion.lua:716, Mana Drain) and is assumed for Earth Spike and Hex; a wrong key degrades to the fallbacks.
+local LOCK_UNKNOWN = 1.0 -- an assumption, not measured: the order of a lane stun, so a key that reads 0 still counts the lock
+local function LockSeconds(a, key)
+	local v = a:GetSpecialValueFloat(key)
+	if v == nil or v <= 0 then v = a:GetDuration() end
+	if v == nil or v <= 0 then v = LOCK_UNKNOWN end
+	return v
+end
+
+-- Each lock decision names the enemy it locks and for how long (opens, lockSec): linea.lua's Act puts it on the pair's board, so the
+-- partner opens in the same second (combate.lua, package 2).
 local function SpikeOn(bot, s, p, e, why)
 	local a = bot:GetAbilityByName('lion_impale')
 	if a == nil or not a:IsFullyCastable() or not Seen(e) or e:IsMagicImmune() then return nil end
 	if D2(p.loc, e:GetLocation()) > a:GetCastRange() then return nil end
 	return { intent = ON_GROUND, ability = a, at = e:GetExtrapolatedLocation(a:GetCastPoint() + 0.3), castPoint = a:GetCastPoint(),
-		reason = string.format('earth spike sobre %s: %s', Short(e), why) }
+		opens = e, lockSec = LockSeconds(a, 'duration'), reason = string.format('earth spike sobre %s: %s', Short(e), why) }
 end
 
 local function HexOn(bot, s, p, e, why)
@@ -124,7 +136,7 @@ local function HexOn(bot, s, p, e, why)
 	if a == nil or not a:IsFullyCastable() or not Seen(e) or e:IsMagicImmune() then return nil end
 	if D2(p.loc, e:GetLocation()) > a:GetCastRange() then return nil end
 	return { intent = ON_UNIT, ability = a, target = e, castPoint = a:GetCastPoint(),
-		reason = string.format('hex sobre %s: %s', Short(e), why) }
+		opens = e, lockSec = LockSeconds(a, 'duration'), reason = string.format('hex sobre %s: %s', Short(e), why) }
 end
 
 -- Finger of Death: only to finish a visible enemy hero it kills for sure, its magic damage after resistance against the health it will
@@ -209,6 +221,9 @@ function H.Harass(bot, s, p)
 		if Seen(e) and not e:IsMagicImmune() and not e:IsIllusion() and not Locked(e, 0.3)
 			and D2(p.loc, e:GetLocation()) <= a:GetCastRange() then
 			local d = SpikeOn(bot, s, p, e, string.format('acoso, maná %.0f%%', 100 * bot:GetMana() / math.max(bot:GetMaxMana(), 1)))
+			-- The spike keeps its `opens` (SpikeOn): a harass spike goes on the pair's board too, announced only with the partner near
+			-- the target (54 harass spikes against 13 in kills, never announced: p2 logs, package 2 round 2). It drags no one in: the
+			-- partner joins only when its own pair estimate gives the kill (combate.lua, Join).
 			if d ~= nil then s.spikeHarassAt = p.now end
 			return d
 		end
@@ -238,6 +253,23 @@ end
 
 -- Lion has nothing to cast before attacking.
 function H.Aim(bot, s, p, e) return nil end
+
+-- The seconds of lock Lion can cast on this enemy now, from where it stands (p.loc), and the longest cast range among them: Earth
+-- Spike's stun, then Hex with the mana left, each ready and in range. For the pair's kill estimate (combate.lua, package 2), which
+-- calls it for an ally too, with the ally's place: a locked target cannot walk out of the side's hits. Lion's lock is what it brings
+-- to the lane's kill; OHA's kills in that lane open with it (fase2-ref-oha 2, t=454 Spike, 457 Hex, 459 Finger).
+function H.Disable(bot, p, e)
+	if e:IsMagicImmune() then return 0, 0 end
+	local mana, d = bot:GetMana(), D2(p.loc, e:GetLocation())
+	local secs, range = 0, 0
+	for _, name in ipairs({ 'lion_impale', 'lion_voodoo' }) do
+		local a = bot:GetAbilityByName(name)
+		if a ~= nil and a:GetLevel() > 0 and a:IsFullyCastable() and mana >= a:GetManaCost() and d <= a:GetCastRange() then
+			secs, range, mana = secs + LockSeconds(a, 'duration'), math.max(range, a:GetCastRange()), mana - a:GetManaCost()
+		end
+	end
+	return secs, range
+end
 
 -- What the abilities add to a kill on this enemy within the window, read live, counting only what would really be cast with the mana
 -- it has, in the chain's order: Earth Spike, Hex (no damage, but its cast point counts), Finger. Returns the damage and the seconds of

@@ -197,6 +197,10 @@ function H.Aim(bot, s, p, e)
 		reason = string.format('antes de pegar a %s', Short(e)) }
 end
 
+-- The seconds of lock the Sniper can cast now: none (Shrapnel slows, Headshot's knockback is a passive's chance). For the pair's kill
+-- estimate (combate.lua, package 2): with no lock its window stays 4 s, so the lone mid's kill numbers are as before.
+function H.Disable(bot, p, e) return 0, 0 end
+
 -- What the abilities add to a kill on this enemy within the window, read live, counting only what would really be
 -- cast: Assassinate first (under Finish's own conditions), then Shrapnel if the mana left pays for it or it is already
 -- on the target. Returns the damage and the seconds of casting, in which no attack lands. For combate.lua.
@@ -221,7 +225,9 @@ function H.KillBurst(bot, p, e, window)
 	local a = bot:GetAbilityByName('sniper_shrapnel')
 	if a ~= nil and a:GetLevel() > 0 then
 		local slowed = e:HasModifier('modifier_sniper_shrapnel_slow')
-		if slowed or (a:IsFullyCastable() and mana >= a:GetManaCost()) then
+		-- In its cast range, as KillCast casts it (review of package 2: each KillBurst counts only what reaches the target from where
+		-- the hero stands). A lane kill (up to 1400) is always in its range, so only a far rotation's estimate changes.
+		if slowed or (a:IsFullyCastable() and mana >= a:GetManaCost() and D2(p.loc, e:GetLocation()) <= a:GetCastRange()) then
 			total = total + e:GetActualIncomingDamage(a:GetSpecialValueInt('shrapnel_damage') * window, DAMAGE_TYPE_MAGICAL)
 			if not slowed then casting = casting + a:GetCastPoint() end
 		end

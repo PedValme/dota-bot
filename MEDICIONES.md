@@ -1633,3 +1633,109 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Los paquetes alternan el orden de los brazos (ABBA por alineación), para que la deriva de orden no se confunda con el efecto.
   - Ronda de mecanismo: 6 + 6 partidas (1 por estrato), suficiente para las brechas actuales.
   - Series de confirmación: 12 + 12 o más.
+
+### 2026-11-13 · Paquete 1 «sobrevivir en la línea de dos», ronda 1 (`p1-prueba-*` frente a `p1-ref-*`): predicción antes de lanzar
+- Pregunta (plan firmado el 2026-11-13, paquete 1): ¿mueren menos los héroes propios de las líneas de dos?
+- Qué cambió desde `fase2-humo-equipo` (`3f25ac0`; revisado por Opus, con sus 4 hallazgos aplicados):
+  - retirada con histéresis ante dos rivales: hasta 0,65 de vida o salvia, como mucho 8 s fuera de su alcance;
+  - el paso atrás sale del alcance de los rivales;
+  - sin acoso, intercambio ni inicio de kill en inferioridad numérica;
+  - el intercambio cuenta a nuestros aliados;
+  - clarity para los apoyos;
+  - en el cuerpo a cuerpo, soltar el aggro solo con poca vida.
+- Diseño:
+  - brazos: prueba `--variantes control_equipo,base` y referencia `--variantes base_sniper,base`;
+  - 2 partidas por brazo y alineación (a, b y c), en orden ABBA (a: prueba y referencia; b: referencia y prueba; c: prueba y referencia);
+  - 12 partidas al min 12, unas 1,4 h. Análisis: `node tools/bench/equipo.mjs "p1-prueba-.*" "p1-ref-.*"`.
+- Métrica principal: `linea.segura.muertes_heroes` y `linea.dificil.muertes_heroes` en el min 12, prueba menos referencia. Hoy, frente a OHA y en el min 10, es +3,5 y +2 (n=2, alineación a).
+- Predicción, en el min 12:
+  - las dos diferencias ≤ +1;
+  - `equipo.kills_dif` de prueba menos referencia mejor que −10 (hoy −17,5).
+  
+  Con 6 estratos y 1 partida por estrato, la DMD es de unas 3,5-7 muertes: es mecanismo, no una serie.
+- Lo que no debe empeorar: el mid (`linea.mid.*`) y el nivel de cada héroe.
+- Máquina y código: código `9898ce6`, 12 de 12 válidas, 0 avisos.
+- Velocidad real: prueba ×2,53 y referencia ×2,39. **Es una asimetría nueva entre los brazos, sin explicar todavía.**
+- Resultado en el min 12 (prueba menos referencia, IC 95 %):
+  - **Muertes de los héroes de las líneas de dos:** segura +1,8 (−2,2 a 5,9), difícil +3,2 (0,2 a 6,1). La predicción era ≤ +1: **no cumple**.
+  - **Nivel:**
+    - Luna −5,3, Dragon Knight −5,7, Lion −4,8 y Lich −4,7, todos con el IC fuera del 0;
+    - Sniper −2,8.
+  - **Kills de los héroes de las líneas de dos:** segura 0,2 frente a 6,5; difícil 0,3 frente a 8.
+  - **Equipo:** diferencia de kills −23 (−29,6 a −16,4) y de patrimonio −23k. La predicción era mejor que −10: **no cumple**.
+- Lectura: el paquete 1 no reduce las muertes. Los héroes de las líneas de dos van unos 5 niveles por detrás de los de OHA. Diagnóstico en curso en los registros: tiempo fuera del alcance de experiencia, coste de las retenciones y cómo mueren ahora.
+- Validez:
+  - n = 6 + 6, mecanismo;
+  - sin medición de antes del paquete con este diseño: el humo previo es de una sola alineación y n = 2;
+  - la diferencia de velocidad entre brazos queda anotada como posible contaminación hasta explicarla.
+- Diagnóstico (Opus, en los registros):
+  - **la brecha de nivel viene sobre todo de las kills y asistencias:** OHA suma 6,6-8,5 por héroe fuera del mid, y el propio unas 0,3. Por correlación, son 3-4 niveles;
+  - el tiempo muerto es igual que el de OHA, salvo Lion;
+  - **defecto del paquete:** la retención marcaba `lowHp`, y una retirada para recuperar vida, con `stepBack` heredado de un intercambio perdido, cruzaba el mapa a pie en pasos de 350 (Luna, `p1-prueba-a-1`, t=276-300). Por eso el tiempo cerca del frente bajó de 481 a 299 s en Luna y Lich;
+  - `recuperando_ante_dos` no salió nunca (código muerto);
+  - la velocidad real distinta no cambia las decisiones por segundo de juego (30 en los dos brazos).
+- Decisión:
+  - ronda 2 del paquete 1, la última, con el defecto corregido (`fa02542`);
+  - se mide en la misma tanda que el paquete 2 (`4acdfa9`, encima del 1), porque las kills son la causa principal.
+
+### 2026-11-13 · Paquetes 1 (ronda 2) y 2 (ronda 1) en una tanda de tres brazos: predicción antes de lanzar
+- Pregunta:
+  - ¿el paquete 1 corregido baja las muertes sin perder tiempo de línea?
+  - ¿el paquete 2 («matar en pareja», revisado por Opus con 5 hallazgos aplicados) da kills en las líneas de dos?
+- Diseño:
+  - tres brazos: referencia (OHA con los mismos héroes, `base_sniper,base`), `p1r2` (rama `claude/paquete1`) y `p2` (rama `claude/paquete2`);
+  - 2 partidas por brazo y alineación, 18 partidas al min 12, unas 2 h;
+  - orden en cuadrado latino: a: R, 1, 2; b: 1, 2, R; c: 2, R, 1;
+  - entre invocaciones se cambia de rama en este clon, con el árbol limpio.
+  
+  Análisis: `equipo.mjs` con `p1r2-.*` y `p2-.*` frente a `p12ref-.*`, y `p2-.*` frente a `p1r2-.*`.
+- Predicción (prueba menos referencia, min 12):
+  - `p1r2`: muertes de las líneas de dos ≤ +1 en cada una; nivel de Luna y Lich mejor que en `p1-prueba` (−5,3 y −4,7);
+  - `p2`: kills de los héroes de las líneas de dos ≥ 3 en cada línea (hoy 0,2-0,3); diferencia de kills del equipo mejor que −10; nivel de los cuatro a −2 o mejor.
+- Máquina y código: 18 de 18 válidas, 0 avisos. Código: `40c44fc` (referencia y `p1r2`) y `da058f9` (`p2`). Velocidad real: ×2,53-2,55 los propios y ×2,40 OHA (anotada: no cambia las decisiones por segundo de juego).
+- Resultado en el min 12 (prueba menos referencia; IC 95 %):
+
+  | | `p1r2` − ref | `p2` − ref | `p2` − `p1r2` |
+  |---|---|---|---|
+  | Nivel: Luna / DK / Lion / Lich | −4,0 / −2,8 / −3,0 / −3,0 | −3,2 / −4,3 / −3,5 / −3,0 | +0,8 / −1,5 / −0,5 / 0 |
+  | Muertes, línea segura / difícil | +1,7 / +3,3 (IC cubre 0) | +2,7 / +3,5 (IC cubre 0) | +1,0 / +0,2 |
+  | Kills, línea segura / difícil | −3,0 / −6,0 | −3,0 / −6,7 | 0 / −0,7 |
+  | Diferencia de kills del equipo | −17,7 | −21,2 | −3,5 (−9,2 a 2,2) |
+  | Patrimonio, línea segura / difícil | −7,6k / −7,3k | −6,1k / −8,6k | +1,5k / −1,4k |
+
+- Frente a la predicción:
+  - `p1r2`: muertes ≤ +1, **no cumple**. El nivel de Luna mejora de −5,3 a −4,0 frente a `p1-prueba`.
+  - `p2`: kills ≥ 3 por línea, **no cumple** (0,7 y 1,0). Diferencia de kills mejor que −10, **no cumple**.
+- Lectura:
+  - **El mecanismo del paquete 2 se dispara pero no convierte:**
+    - 152 anuncios;
+    - `kill_eval` con aliados en 4.344 evaluaciones (462 sin el paquete);
+    - Dragon Tail 28 y Hex 22 (8 y 6 sin el paquete);
+    - `presiono_2c2` 210 veces.
+    
+    Las persecuciones terminan en `retirada` 54 veces, `objetivo_muerto` 49 y `kill` 9.
+  - **El paquete 1 queda agotado (2 rondas) sin cumplir.** Su arreglo (`fa02542`) se queda porque quita un defecto.
+- Decisión: diagnóstico en los registros de por qué las kills no se cierran, antes de la ronda 2 del paquete 2, que es la última.
+
+### 2026-11-13 · Paquete 2 «matar en pareja», ronda 2, la última (`p2r2-*` frente a `p2r2ref-*`): predicción antes de lanzar
+- Qué cambió desde `p2`, por el diagnóstico de 129 persecuciones (Opus); revisado por Opus, con sus 4 hallazgos aplicados:
+  - mientras dura una kill en pareja que la estimación sigue dando, y el compañero persigue al mismo objetivo, las retiradas blandas solo saltan si moriríamos antes (la peor lectura de la ráfaga y del daño sostenido). Antes cortaban 51 de 129;
+  - `objetivo_muerto` solo cuando de verdad muere: 41 de 48 eran falsos;
+  - el veto de 12 s, solo si el objetivo escapa o tras `otros_enemigos`;
+  - las habilidades de acoso con el compañero cerca se anuncian como apertura;
+  - las ilusiones, fuera.
+- Diseño: prueba `control_equipo,base` (rama `claude/paquete2`) frente a la referencia `base_sniper,base`. 2 partidas por brazo y alineación en orden ABBA (a: P y R; b: R y P; c: P y R), 12 partidas al min 12.
+- Predicción (prueba menos referencia, min 12; con `p2`, frente a OHA, en −3,0 y −6,7):
+  - kills de los héroes de las líneas de dos: la segura ≥ −1,5 y la difícil ≥ −4;
+  - `persecucion motivo=retirada` < 20 por cada 6 partidas;
+  - las muertes no suben más de +1 sobre `p2`.
+- Máquina y código: `3789c11`, 12 de 12 válidas, 0 avisos. Velocidad real ×2,55 la prueba y ×2,41 la referencia.
+- Resultado (min 12, prueba menos referencia, IC 95 %):
+  - **Kills de los héroes de las líneas de dos:** segura −4,5 (0,2 frente a 4,7), difícil −5,3. Predicción ≥ −1,5 y ≥ −4: **no cumple**.
+  - **Muertes:** segura **+4,8 (2,1 a 7,5)**, difícil +1,5. Sube más de +1 sobre `p2`: **no cumple**.
+  - **Nivel:** Luna −5,3, Dragon Knight −4,5, Lion −3,5, Lich −4,2. Diferencia de kills del equipo −19,3.
+  - **Persecuciones:** `retirada` 37 (antes 51), `kill` 14 (antes 5), `objetivo_muerto` 7 (antes 48), `sigo_en_la_kill` 12, `me_uno` 0.
+- Lectura:
+  - los arreglos hacen lo que dicen en el registro: menos retiradas que cortan, más kills cerradas por la persecución y sin falsos `objetivo_muerto`;
+  - pero el resultado de las líneas no se mueve, y la línea segura muere más. Quedarse en la kill expone a la pareja, y en la segura el rival (Bristleback y Vengeful, Axe y Jakiro, Tidehunter y Skywrath) gana esos intercambios.
+- Decisión: **los paquetes 1 y 2 agotaron sus rondas sin cumplir.** Las reglas de línea heredadas del 1 contra 1 del Sniper, parcheadas, no cierran una brecha de unos 19 kills y 4-5 niveles. Se plantea a Pedro cómo seguir antes de abrir otro paquete.

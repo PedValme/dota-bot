@@ -99,3 +99,11 @@ o tu palabra para correrlas con la carga anotada.
 - El sistema de medición: cara a cara intercalado, 3 alineaciones, A contra A y análisis fijo con IC.
 - El criterio final: 18 o más de 24.
 - Que juegues tras los paquetes 2 o 3 y al final, no tras cada uno.
+
+## Avance
+- 2026-11-13, A contra A: 24 partidas. El banco y el análisis aguantan, y queda la tabla de ruido (MEDICIONES).
+- 2026-11-13, paquete 1: 2 rondas, no cumple. Su arreglo de la retirada que cruzaba el mapa a pie se queda.
+- 2026-11-13, paquete 2: 2 rondas, no cumple. En el registro los mecanismos funcionan (menos retiradas que cortan, sin falsos `objetivo_muerto`, más kills cerradas en la persecución), pero las líneas de dos siguen unos 5 kills y 4-5 niveles por detrás, y la línea segura muere más.
+- **Cambio de orden (Pedro, DECISIONES 2026-11-13):** antes del paquete 3, estudiar lo que hace OHA en las líneas de dos y reescribir de cero la capa de línea y rol para 2 contra 2:
+  - se registran sus modos y decisiones como datos, no como base;
+  - dónde se coloca cada rol, cuándo entra, cómo encadenan habilidades y cuándo se van.

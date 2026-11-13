@@ -160,7 +160,10 @@ function H.Harass(bot, s, p)
 		end
 	end
 	if best == nil then return nil end
-	return { intent = ON_UNIT, ability = a, target = best, castPoint = a:GetCastPoint(),
+	-- opens (no lock, lockSec 0): the Blast goes on the pair's board, announced only with the partner near the target (67 harass Blasts
+	-- against 10 in kills, never announced: p2 logs, package 2 round 2). Luna joins only when her own pair estimate gives the kill
+	-- (combate.lua, Join).
+	return { intent = ON_UNIT, ability = a, target = best, castPoint = a:GetCastPoint(), opens = best, lockSec = 0,
 		reason = string.format('frost blast a %s a %d (alcance %d), maná %.0f%%', Short(best), D2(p.loc, best:GetLocation()), range,
 			100 * bot:GetMana() / math.max(bot:GetMaxMana(), 1)) }
 end
@@ -172,7 +175,10 @@ function H.KillCast(bot, s, p, e)
 	local d = D2(p.loc, e:GetLocation())
 	local a = Ready(bot, 'lich_frost_nova')
 	if a ~= nil and d <= a:GetCastRange() then
-		return { intent = ON_UNIT, ability = a, target = e, castPoint = a:GetCastPoint(), reason = string.format('en la kill sobre %s', Short(e)) }
+		-- opens: on the pair's board with no lock (lockSec 0), so Luna, if she did not open, joins the Frost Blast with her Beam and hits
+		-- (combate.lua, package 2), when her own pair estimate gives the kill.
+		return { intent = ON_UNIT, ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = 0,
+			reason = string.format('en la kill sobre %s', Short(e)) }
 	end
 	local u = Ready(bot, 'lich_chain_frost')
 	if u ~= nil and d <= u:GetCastRange() then
@@ -186,6 +192,17 @@ end
 function H.Aim(bot, s, p, e)
 	return Shield(bot, s, p)
 end
+
+-- What may still be cast when outnumbered in the lane, where linea.lua does not call Harass (package 1): Frost Shield on an ally
+-- being hit, which is when it matters most. A hero without Protect casts nothing then.
+function H.Protect(bot, s, p)
+	return Shield(bot, s, p)
+end
+
+-- The seconds of lock Lich can cast now: none. Frost Blast slows and does not lock, and Sinister Gaze, which does, has no rule yet
+-- (package 3). For the pair's kill estimate (combate.lua, package 2); Lich's part in the safe lane's opening is its Frost Blast, cast by
+-- KillCast when it joins Luna's Beam.
+function H.Disable(bot, p, e) return 0, 0 end
 
 -- What the abilities add to a kill on this enemy within the window, read live, counting only what would really be cast: Frost
 -- Blast, then Chain Frost if the mana left pays for it and its projectile arrives within the window. Returns the damage and the

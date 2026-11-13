@@ -27,7 +27,9 @@ local NO_COMBAT = Variant.sin_combate == true
 -- Thresholds of the rules (one place, so the log and the rules agree).
 local K = {
 	retreatHp = 0.30,     -- retreat below this health fraction
-	coreNear = 1500,      -- a support leaves the last hits to a core ally this close
+	coreNear = 1500,
+	holdOutMax = 8,       -- seconds a hero may wait out of reach of two enemies before going back (an assumption, not measured)
+	holdStep = 80,        -- the step when already out of their reach      -- a support leaves the last hits to a core ally this close
 	exposedHp = 0.45,     -- ...or below this one with an enemy hero able to reach us
 	learnFade = 0.9954,   -- per second, what is learned of an enemy's damage fades by this: half in 150 s
 	returnHp = 0.65,      -- come back to the lane above it
@@ -47,7 +49,7 @@ local K = {
 	tradeHp = 0.35,       -- no trade below this health
 	tradeEvery = 0.2,     -- seconds between two right-clicks on a hero: the attack's own cooldown sets the pace. With 1 s, the
 	                      -- gap sent it walking between shots: 2,1 attacks per fighting window against OHA's 4,4 (presion6)
-	answerReach = 200,    -- a hit is answered also from this much beyond our range: one step, not letting nukes go free
+	-- How far beyond our range a hit is answered is by reach now (heroes.lua, R.ALCANCE: 200 for a ranged hero, as it was).
 	pressEdge = 1.2,      -- step forward and hit, with nothing else to do, if the trade (intercambio.lua: his time to kill
 	                      -- us over ours) reaches this
 	pressReach = 300,     -- how far beyond our range we walk to press him
@@ -70,6 +72,12 @@ local K = {
 	tpRisk = 2,           -- no teleport to a tower with this risk (medio.lua)
 	lateHomeHp = 0.45,    -- once the lane is over and with no salve, home below this health
 	recoverWait = 15,     -- seconds of regeneration worth waiting for at a tower, without going home
+	-- Package 1, surviving the lane of two (trabajo/plan-mejora-equipo.md). Role and reach parameters are in heroes.lua (R.ROL, R.ALCANCE).
+	allyNear = 1200,      -- allied heroes this close count in the trade, as the enemy's partner does (intercambio.lua's othersNear)
+	aloneEnemy = 1200,    -- outnumbered: more enemy heroes this close than our heroes, ourselves included, within aloneAlly
+	aloneAlly = 800,
+	clarityMana = 0.4,    -- a clarity under this share of mana, safe and away from the fountain: OHA's numbers
+	clarityFountain = 2000, -- (ability_item_usage_generic, item_clarity)
 }
 
 local S = {} -- pid -> state of this bot
@@ -194,23 +202,64 @@ local function Perceive(bot)
 	-- only for those that can reach us: within their attack range or the cast range of a ready ability, plus a margin
 	-- and half a second walking. The smoke of 2026-11-03 retreated from an enemy far out of reach (MEDICIONES).
 	p.enemyBurst, p.enemyBurstAll = 0, 0
+	-- reachNeed: how far we still are inside the reach of the visible enemy heroes (attack, and abilities ready now or within
+	-- burstHold, when we would be back), the worst of them; 0 or less when out of all of them. A step back of 350 left Lion inside
+	-- Cask and Maledict, losing 0,81 to 0,49 of health with no enemy reading as in reach (fase2-humo-equipo 1, t=280-286).
+	p.reachNeed = -1e9
 	for _, e in ipairs(p.enemyHeroes) do
 		if Valid(e) then
 			-- At least what this enemy has really done to us per second, learned below.
 			local learned = (State(bot).enemyDps or {})[e:GetUnitName()] or 0
 			local dmg = math.max(Intercambio.Threat(e, bot, 3.0), learned * 3)
 			p.enemyBurstAll = p.enemyBurstAll + dmg
-			local reach = e:GetAttackRange()
+			local reach, reachSoon = e:GetAttackRange(), e:GetAttackRange()
 			for slot = 0, 5 do
 				local ab = e:GetAbilityInSlot(slot)
-				if ab ~= nil and not ab:IsPassive() and ab:IsFullyCastable() then
-					reach = math.max(reach, math.min(ab:GetCastRange(), K.reachCap))
+				if ab ~= nil and not ab:IsPassive() then
+					-- Guarded: a nil from an enemy's ability would stop Think, and the hero with it.
+					local range = math.min(ab:GetCastRange() or 0, K.reachCap)
+					if ab:IsFullyCastable() then reach = math.max(reach, range) end
+					if ab:IsFullyCastable() or ((ab:GetLevel() or 0) > 0 and (ab:GetCooldownTimeRemaining() or 1e9) <= K.burstHold) then
+						reachSoon = math.max(reachSoon, range)
+					end
 				end
 			end
-			reach = reach + K.reachMargin + 0.5 * e:GetCurrentMovementSpeed()
-			if D2(p.loc, e:GetLocation()) <= reach then p.enemyBurst = p.enemyBurst + dmg end
+			local walk = K.reachMargin + 0.5 * e:GetCurrentMovementSpeed()
+			local d = D2(p.loc, e:GetLocation())
+			if d <= reach + walk then p.enemyBurst = p.enemyBurst + dmg end
+			p.reachNeed = math.max(p.reachNeed, reachSoon + walk - d)
 		end
 	end
+	-- Two enemy heroes in sight: the new holds of the retreat apply only then, so the Sniper's 1 against 1 in mid is unchanged.
+	p.pair = #p.enemyHeroes >= 2
+	-- The allied heroes near, one per hero (no illusions), and none retreating: one leaving is no company (its state is in S,
+	-- shared by our bots in the team's VM). For the trade (intercambio.lua) and for being outnumbered.
+	-- allyActive: the same at any distance, for the pair's kill (combate.lua, package 2), which looks for them near the target.
+	p.allyHeroes, p.allyActive = {}, {}
+	local nAlly = 1
+	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if a ~= bot and Valid(a) and not a:IsIllusion() then
+			local st = S[a:GetPlayerID()]
+			if st == nil or not st.retreating then
+				table.insert(p.allyActive, a)
+				if D2(p0, a:GetLocation()) < K.allyNear then
+					table.insert(p.allyHeroes, a)
+					if D2(p0, a:GetLocation()) < K.aloneAlly then nAlly = nAlly + 1 end
+				end
+			end
+		end
+	end
+	-- The lane's rules or the middle game's (medio.lua, Late), as last decided: combate.lua counts the pair only in the lane.
+	p.late = State(bot).late == true
+	-- Outnumbered in the lane: more enemy heroes near than ours, ourselves included. Then no attack or harass spell on a hero and no
+	-- kill starts, only a sure kill (Finish): 8 of 16 deaths in the safe lane came some 2 s after an attack of our own, alone, with
+	-- the second enemy near (plan, package 1). Once the lane is over, medio.lua has its own count (Outnumbered, Allies).
+	local nEnemy = 0
+	for _, e in ipairs(p.enemyHeroes) do
+		if Valid(e) and D2(p0, e:GetLocation()) < K.aloneEnemy then nEnemy = nEnemy + 1 end
+	end
+	p.nEnemyNear, p.nAllyNear = nEnemy, nAlly
+	p.alone = not State(bot).late and nEnemy > nAlly
 	-- Health lost per second over the last 2 s (samples every 0.5 s), and the enemy creeps hitting us now.
 	local s = State(bot)
 	s.hpHist = s.hpHist or {}
@@ -257,18 +306,32 @@ end
 
 local function RuleRetreat(bot, s, p)
 	local reason = nil
+	local danger = false -- the reason is the enemy heroes' damage: with two of them in sight, the holds below start
+	-- A pair's kill under way that the numbers still give (combate.lua, C.Committed): the soft reasons below (marked Soft) yield to it
+	-- unless we would die first (C.DiesFirst). They ended 51 of 129 lane chases whose score was a kill (package 2 round 2). The hard
+	-- ones (tower, health under retreatHp, the sustained damage measured on us, a retreat already held) are untouched: the sustained
+	-- damage is health really being lost, creeps and damage over time included, which no reading of the enemies sees (review of round
+	-- 2). What was yielded is logged once a second.
+	local committed = not NO_COMBAT and not Combate.DiesFirst(p) and Combate.Committed(bot, s, p)
+	local held = nil
+	local function Soft(name)
+		if committed then held = held or name return false end
+		return true
+	end
 	if p.towerOnMe then reason = 'torre_me_ataca'
 	elseif p.hp < K.retreatHp then
 		reason = string.format('vida %.2f < %.2f', p.hp, K.retreatHp)
 		s.lowHp = true
 	-- The burst alone was a false alarm (fase1d: 108 s fleeing with over 60 % health, every 4 s). It counts only if a hero
 	-- is really on us: it hit us in the last 2 s, or stands within 600.
-	elseif p.enemyBurst > K.enemyBurst * p.hpAbs and p.heroOnMe then
+	elseif p.enemyBurst > K.enemyBurst * p.hpAbs and p.heroOnMe and Soft('daño_enemigo_3s') then
 		reason = string.format('daño_enemigo_3s %d > %.0f%% de %d', p.enemyBurst, K.enemyBurst * 100, p.hpAbs)
 		s.burstUntil = p.now + K.burstHold
+		danger = true
 	elseif p.dps > 0 and p.hpAbs / p.dps < K.ttdRetreat then
 		reason = string.format('daño_sostenido %.0f/s, muerto en %.1fs', p.dps, p.hpAbs / p.dps)
 		s.burstUntil = p.now + K.burstHold
+		danger = bot:WasRecentlyDamagedByAnyHero(2.0)
 	elseif p.now < (s.burstUntil or -1000) then
 		reason = string.format('peligro_reciente %.1fs', s.burstUntil - p.now)
 	-- Only a retreat for low health waits to recover up to returnHp; one for danger ends when the danger does.
@@ -279,9 +342,10 @@ local function RuleRetreat(bot, s, p)
 		s.lowHp = true
 	-- Touched, and an enemy that can reach us: out now, before its next spell decides it (presion4: three deaths in lane to Lina,
 	-- from 0,3-0,5 of health; Pedro, 2026-11-05: «asume mas daño [d]el necesario antes de escapar»).
-	elseif p.hp < K.exposedHp and p.enemyBurst > 0 then
+	elseif p.hp < K.exposedHp and p.enemyBurst > 0 and Soft('expuesto') then
 		reason = string.format('expuesto %.2f < %.2f', p.hp, K.exposedHp)
 		s.burstUntil = p.now + K.burstHold
+		danger = true
 	-- Once the lane is over, more enemies than friends on us is reason enough, before any damage.
 	elseif s.late and Medio.Outnumbered(bot, p) ~= nil then
 		reason = Medio.Outnumbered(bot, p)
@@ -295,25 +359,79 @@ local function RuleRetreat(bot, s, p)
 		for _, e in ipairs(p.enemyHeroes) do
 			if Valid(e) and D2(p.loc, e:GetLocation()) <= e:GetAttackRange() + 200 then
 				local trade = Intercambio.Eval(bot, p, e)
-				if trade.ratio < edge then
+				-- Against the target itself a lost trade still counts: the kill is not going our way. Against the other enemy it is the
+				-- price of the kill (17 of the 51 cut chases, all of them against the enemy that was not the target).
+				local onTarget = s.chase ~= nil and Valid(s.chase.target) and s.chase.target:GetUnitName() == e:GetUnitName()
+				if trade.ratio < edge and (onTarget or Soft('intercambio_perdido')) then
 					reason = string.format('intercambio_perdido %.2f < %.2f frente a %s', trade.ratio, edge,
 						(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')))
 					s.burstUntil, s.stepBack = p.now + K.burstHold, true
+					danger = true
 					break
 				end
 			end
 		end
 	end
+	if held ~= nil and reason == nil and p.now - (s.heldLogAt or -1000) >= 1 then
+		s.heldLogAt = p.now
+		Log(s, bot, 'pareja', string.format('sigo_en_la_kill objetivo=%s ignoro=%s daño3s=%d vida=%d vida_frac=%.2f', s.chase.name, held,
+			p.enemyBurst, p.hpAbs, p.hp))
+	end
+	-- Holds of a retreat from two enemy heroes (package 1). It went back to the lane as soon as burstHold ran out, at 0,38-0,42 of
+	-- health, and died: Luna and Lich, t=479-496 of fase2-humo-equipo 1, four 'expuesto' and 'linea' in a row each. With only one
+	-- enemy in sight they do not start, so the lone mid keeps its rules; once the lane is over neither (medio.lua retreats by its
+	-- own count, and the middle game is package 4).
+	if danger and p.pair and not s.late then
+		if not s.holdOut then s.holdOutAt = p.now end
+		s.holdOut = true
+		-- Not lowHp: that kept 'recuperando' firing and, with stepBack left from a lost trade, walked it across the map in steps of 350
+		-- (Luna, p1-prueba-a-1, t=276-300); 0 'recuperando_ante_dos' in 6 matches. waitLong below reads holdHp instead.
+		if p.hp < K.returnHp then s.holdHp = true end
+	end
+	-- The health hold lasts while both are in sight; with them gone it is a normal lane again.
+	if not p.pair then s.holdHp = false end
+	-- The holds are the lane's: in the middle game Medio.Fight must not be blocked by one left from the lane (review of 2026-11-13).
+	if s.late then s.holdOut, s.holdHp = false, false end
+	-- A salve at work ends the health hold: it heals the rest on the way (the plan: «no vuelve hasta 0,65 de vida o tras usar salvia»).
+	if p.hp >= K.returnHp or bot:HasModifier('modifier_flask_healing') then s.holdHp = false end
+	if reason == nil and s.holdHp then
+		reason = string.format('recuperando_ante_dos %.2f < %.2f', p.hp, K.returnHp)
+	end
+	local outOnly = false -- held only to stay out of their reach: a step out, not the walk to the tower
+	if reason == nil and s.holdOut then
+		outOnly = true
+		-- Hero damage still landing with no visible enemy able to reach us: a damage over time (Maledict, poison) or one in the fog.
+		-- Lion went back with Maledict on and lost 0,81 to 0,49 with 'daño3s=0' (fase2-humo-equipo 1, t=280-286).
+		if p.enemyBurst == 0 and bot:WasRecentlyDamagedByAnyHero(1.0) then
+			reason = 'daño_en_el_tiempo'
+		-- Walking back in, all of them could still take this share of our health in 3 s: wait out of reach.
+		-- Capped in time: the burst of all visible enemies counts them at any distance, and with two nukers in lane it exceeded the
+		-- share even at full health, which held the hero out for as long as they stayed (review of 2026-11-13).
+		elseif p.enemyBurstAll > K.enemyBurst * p.hpAbs and p.now - (s.holdOutAt or p.now) < K.holdOutMax then
+			reason = string.format('rafaga_si_vuelvo %d > %.0f%% de %d', p.enemyBurstAll, K.enemyBurst * 100, p.hpAbs)
+		else
+			s.holdOut = false
+		end
+	end
 	if p.hp >= K.returnHp then s.lowHp = false end
 	s.retreating = reason ~= nil
 	if reason == nil then s.toFountain, s.stepBack, s.retreatTower = false, false, nil return nil end
-	if s.stepBack and not p.towerOnMe and p.hp >= K.retreatHp then
+	-- A retreat to recover health is not a step out of reach: it goes by the tower, the fountain or the teleport below (p1-prueba).
+	if reason ~= nil and string.find(reason, '^recuperando') then s.stepBack = false end
+	if (s.stepBack or outOnly) and not p.towerOnMe and p.hp >= K.retreatHp then
+		-- With two enemies in sight, the step goes out of all of their reach (reachNeed), not 350: else Cask and Maledict still
+		-- reached it. Already out, it stays where it is (no order). With one, the 350 as before.
+		if p.pair or outOnly then
+			-- Already out of reach, a short step: with no order the previous one went on, or the engine auto-attacked.
+			local to = Toward(p.loc, Home(p.team), p.reachNeed > 0 and math.max(K.aggroStep, p.reachNeed) or K.holdStep)
+			return { intent = 'alejarse', reason = reason .. string.format(', fuera de alcance %d', math.min(-p.reachNeed, 9999)), to = to }
+		end
 		return { intent = 'alejarse', reason = reason, to = Toward(p.loc, Home(p.team), K.aggroStep) }
 	end
 	-- Once heading for the fountain it keeps going until healed (returnHp), not back and forth with the tower.
 	-- Waiting long for its regeneration, with no salve and a teleport to come back, it goes home instead of standing there
 	-- (lobby 2026-11-05: 20 s still at a tower with 0,27 of health).
-	local waitLong = s.lowHp and HasItem(bot, 'item_flask') == nil and bot:FindItemSlot('item_tpscroll') == 15
+	local waitLong = (s.lowHp or s.holdHp) and HasItem(bot, 'item_flask') == nil and bot:FindItemSlot('item_tpscroll') == 15
 		and bot:GetItemInSlot(15):IsFullyCastable()
 		and (K.returnHp - p.hp) * bot:GetMaxHealth() / math.max(bot:GetHealthRegen(), 0.1) > K.recoverWait
 	-- Once the lane is over nothing heals it at a tower (2.000 of health at 5 a second): any retreat for health ends at home.
@@ -334,12 +452,20 @@ local function RuleRetreat(bot, s, p)
 end
 
 local function RuleHeal(bot, s, p)
-	if bot:HasModifier('modifier_flask_healing') or bot:HasModifier('modifier_tango_heal') then return nil end
 	local heroNear = false
 	for _, e in ipairs(p.enemyHeroes) do
 		if Valid(e) and D2(p.loc, e:GetLocation()) < math.max(K.healNear, e:GetAttackRange() + K.healMargin) then heroNear = true end
 	end
 	local safe = not heroNear and not bot:WasRecentlyDamagedByAnyHero(2.0) and not bot:WasRecentlyDamagedByTower(2.0)
+	-- A clarity (a support's, heroes.lua R.ROL) under the salve's safety, which hero damage also breaks: Lich spent 17-22 % of the lane
+	-- under 0,3 of mana (fase2-humo-equipo 1 and 2). Also while a salve or tango heals: they do not stack on the same thing.
+	local clarity = HasItem(bot, 'item_clarity')
+	if clarity ~= nil and clarity:IsFullyCastable() and safe and not bot:HasModifier('modifier_clarity_potion')
+		and bot:GetMana() < K.clarityMana * bot:GetMaxMana() and bot:DistanceFromFountain() > K.clarityFountain then
+		return { intent = 'clarity', reason = string.format('maná %.2f, sin enemigos cerca', bot:GetMana() / math.max(bot:GetMaxMana(), 1)),
+			item = clarity }
+	end
+	if bot:HasModifier('modifier_flask_healing') or bot:HasModifier('modifier_tango_heal') then return nil end
 	local salve = HasItem(bot, 'item_flask')
 	if salve ~= nil and salve:IsFullyCastable() and p.hp < 0.55 and safe then
 		return { intent = 'curar_salvia', reason = string.format('vida %.2f, sin enemigos cerca', p.hp), item = salve }
@@ -469,6 +595,11 @@ local function RuleTrade(bot, s, p, ready, soon)
 	end
 	local hit = bot:WasRecentlyDamagedByAnyHero(2.0)
 	local alone = #p.enemyHeroes == 1 -- one enemy hero in sight
+	-- Two against two in the lane (package 2): a partner near, not retreating (Perceive's p.allyHeroes), and no more enemy heroes in
+	-- sight than the two of us. The trade already counts the partner's hits as it counts his partner's (intercambio.lua), so pressing
+	-- asks the same edge. Pressing needed one enemy in sight, and the lanes of two never pressed: a rival with its partner in sight
+	-- was never pushed off its farm (trabajo/plan-mejora-equipo.md, «Presionar en 2 contra 2 cuando la suma de las parejas lo da»).
+	local pair = not s.late and #p.allyHeroes >= 1 and #p.enemyHeroes <= #p.allyHeroes + 1
 	for _, e in ipairs(p.enemyHeroes) do
 		if Valid(e) and not e:IsIllusion() and not e:IsAttackImmune() then
 			local d = D2(p.loc, e:GetLocation())
@@ -478,18 +609,32 @@ local function RuleTrade(bot, s, p, ready, soon)
 				local kind = nil
 				-- Once the lane is over, alone: no pressing, and hitting back only from out of its reach.
 				local company = not s.late or Medio.Allies(bot) > 0
-				if d <= p.range + K.answerReach and hit and (v.ratio >= (p.hp < K.loseHp and K.loseEdge or K.loseEdgeFull) or (v.outranged and alone))
-					and (company or (v.outranged and alone)) then kind = 'contesto'
-				-- Against two, neither: pressing with a second enemy in sight gave 3 deaths in 15 cases, and answering 7 in 32 (equipo1-2).
-				elseif company and alone and ready == nil and v.ratio >= K.pressEdge then kind = 'presiono'
+				-- How far beyond our range we answer, by reach (heroes.lua, R.ALCANCE): a melee hero only from its own.
+				local answerFrom = select(2, Heroes.Rol(bot)).contestaDesde
+				local answer = d <= p.range + answerFrom and hit and (v.ratio >= (p.hp < K.loseHp and K.loseEdge or K.loseEdgeFull) or (v.outranged and alone))
+					and (company or (v.outranged and alone))
+				-- Outnumbered in the lane (Perceive, p.alone), no answer and no press: the rival's partner kills us in the next 2 s
+				-- (plan, package 1: 8 of 16 deaths in the safe lane). Said once a second, so the log shows what was given up.
+				local press = company and (alone or pair) and ready == nil and v.ratio >= K.pressEdge
+				if (answer or press) and p.alone then
+					if p.now - (s.aloneLogAt or -1000) >= 1 then
+						s.aloneLogAt = p.now
+						Log(s, bot, 'superado', string.format('%s a %s descartado: %d enemigos a %d, %d de los nuestros a %d, ratio %.2f',
+							answer and 'contesto' or 'presiono', (string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')), p.nEnemyNear, K.aloneEnemy,
+							p.nAllyNear, K.aloneAlly, v.ratio))
+					end
+				elseif answer then kind = 'contesto'
+				-- Against two without a partner, neither: pressing with a second enemy in sight gave 3 deaths in 15 cases, and answering 7
+				-- in 32 (equipo1-2). With the partner near (pair), the press is the pair's, named apart so the log tells them.
+				elseif press then kind = alone and 'presiono' or 'presiono_2c2'
 				-- Alone, a free shot: in our range and well out of its reach, nobody else near, winning the trade. It is what the
 				-- range is for, and it stood there instead (presion3: 66 of 74 such seconds without firing).
 				elseif not company and ready == nil and d <= p.range and d >= e:GetAttackRange() + K.freeShotGap
 					and #p.enemyHeroes == 1 and v.ratio >= K.pressEdge and p.hp >= K.freeShotHp then kind = 'disparo' end
 				if kind ~= nil then
 					return { intent = 'acosar', target = e, walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1),
-						reason = string.format('%s a %s: ratio %.2f, mi_dps %d, su_dps %d, altura %d, a %d', kind,
-							(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')), v.ratio, v.mine, v.against, v.height, d) }
+						reason = string.format('%s a %s: ratio %.2f, mi_dps %d, su_dps %d, altura %d, a %d, aliados %d', kind,
+							(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')), v.ratio, v.mine, v.against, v.height, d, v.allies) }
 				end
 			end
 		end
@@ -533,6 +678,7 @@ end
 local function Decide(bot, s, p)
 	if p.t < -5 and not s.bought then return { intent = 'comprar', reason = 'objetos iniciales' } end
 	local late = not NO_COMBAT and Medio.Late(bot, s, p)
+	p.late = late == true
 	if late then
 		if not s.lateLogged then
 			s.lateLogged = true
@@ -572,6 +718,9 @@ local function Decide(bot, s, p)
 		r, ended = Combate.Continue(bot, s, p)
 		if ended then Log(s, bot, 'persecucion', ended) end
 		if r == nil then r = Combate.Start(bot, s, p) end
+		-- The partner opened on an enemy (a kill or a lock on the board, pareja.lua): join it now, so KillCast lands in the same second
+		-- (package 2). Lane only; it logs its own lines ("prop pareja").
+		if r == nil then r = Combate.Join(bot, s, p) end
 		if r then
 			local cast = hero ~= nil and r.intent == 'matar' and hero.KillCast(bot, s, p, r.target) or nil
 			return cast or WithAim(bot, s, p, hero, r)
@@ -619,8 +768,15 @@ local function Decide(bot, s, p)
 	end
 	-- Shrapnel right after a last hit that is ready, before trading, the aggro or runes: behind them it barely got its turn, with 90 % of
 	-- the mana idle, 8,7 casts by minute 10 against OHA's 13,1 (MEDICIONES, `build1`).
+	-- Outnumbered in the lane (Perceive, p.alone), no harass spell on a hero: only what protects an ally (Lich's Frost Shield, the
+	-- hero's Protect). Lion's lone Earth Spike was the start of each of its deaths: the answer came, then the back and forth
+	-- (trabajo/plan-mejora-equipo.md, package 1). Harass is not called at all, since some set their timers when they choose.
 	if not NO_COMBAT and hero ~= nil and not hidden then
-		r = hero.Harass(bot, s, p)
+		if p.alone then
+			r = hero.Protect ~= nil and hero.Protect(bot, s, p) or nil
+		else
+			r = hero.Harass(bot, s, p)
+		end
 		if r then return r end
 	end
 	if not NO_COMBAT then
@@ -629,8 +785,9 @@ local function Decide(bot, s, p)
 	end
 	-- Enemy creeps hitting us: a step back drops the aggro, after the last hit that is ready and only with two or more:
 	-- one creep's hits are the price of farming (fase1d: 18 s lost to it; fase1f-reg: 18 of 22 decisions with one).
-	if s.chase == nil and p.creepsOnMe >= 2 then
-		return { intent = 'soltar_aggro', reason = string.format('%d creeps me pegan', p.creepsOnMe),
+	-- A melee hero only with low health (heroes.lua, R.ALCANCE): it stands among the creeps to last-hit.
+	if s.chase == nil and p.creepsOnMe >= 2 and p.hp <= select(2, Heroes.Rol(bot)).soltarAggroHp then
+		return { intent = 'soltar_aggro', reason = string.format('%d creeps me pegan, vida %.2f', p.creepsOnMe, p.hp),
 			to = Toward(p.loc, Home(p.team), K.aggroStep) }
 	end
 	r = Combate.Rune(bot, s, p)
@@ -676,6 +833,13 @@ local function Buy(bot, s)
 	for _, item in ipairs(Heroes.Datos(bot:GetUnitName()).salida or {}) do
 		local code = bot:ActionImmediate_PurchaseItem(item)
 		Log(s, bot, 'compra', string.format('%s codigo=%s oro=%d', item, tostring(code), bot:GetGold()))
+	end
+	-- The role's extra (heroes.lua, R.ROL: a support's clarity), when the gold left pays for it; else Consumables buys it later.
+	for _, item in ipairs((Heroes.Rol(bot)).salidaExtra or {}) do
+		if bot:GetGold() >= GetItemCost(item) then
+			local code = bot:ActionImmediate_PurchaseItem(item)
+			Log(s, bot, 'compra', string.format('%s (rol) codigo=%s oro=%d', item, tostring(code), bot:GetGold()))
+		end
 	end
 	s.bought = true
 end
@@ -737,16 +901,25 @@ local function Act(bot, s, p, d)
 	if d.intent ~= 'runa' then s.runeTry = nil end
 	if d.intent == 'comprar' then Buy(bot, s) return end
 	-- An item order is not repeated each frame while the healing buff has not appeared yet.
-	if d.intent == 'curar_salvia' then bot:Action_UseAbilityOnEntity(d.item, bot) s.busyUntil = p.now + 0.6 return end
+	if d.intent == 'curar_salvia' or d.intent == 'clarity' then bot:Action_UseAbilityOnEntity(d.item, bot) s.busyUntil = p.now + 0.6 return end
 	if d.intent == 'curar_tango' then bot:Action_UseAbilityOnTree(d.item, d.tree) s.busyUntil = p.now + 1.0 return end
 	-- Abilities: protected for their cast point, so the cast is not cut by the next decision.
 	if d.intent == 'rematar' then
 		bot:Action_UseAbilityOnEntity(d.ability, d.target)
-		s.busyUntil = p.now + d.castPoint + 0.3
-		s.castCheck = { at = p.now + 0.3, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''), ability = d.ability:GetName() }
+		-- A target a few steps out of the cast range (Dragon Tail's reach is a melee one) is walked to first: the check that the cast
+		-- started waits that walk. Without it both of the smoke's Dragon Tails read 'no arranca' 0,3 s after the order, and the next
+		-- decision cut them (fase2-humo-equipo 1 t=58.6, 2 t=541.5); that the walk is the cause is an assumption to check in the log.
+		-- At most a second (an assumption: the rules cast from their range or a few steps more), and a target whose place reads nil
+		-- (OHA's GetLocation for an unseen unit, D2 = 1e9) must not freeze the hero.
+		local walk = math.min(1.0, math.max(0, D2(p.loc, d.target:GetLocation()) - d.ability:GetCastRange()) / math.max(p.moveSpeed, 1))
+		s.busyUntil = p.now + d.castPoint + 0.3 + walk
+		s.castCheck = { at = p.now + 0.3 + walk, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''), ability = d.ability:GetName() }
 		-- Every hero's unit-target cast goes here (phase 2); the kill check after it is the Assassinate's.
 		local name = d.ability:GetName()
 		Log(s, bot, 'habilidad', (name == 'sniper_assassinate' and 'assassinate' or name) .. ': ' .. d.reason)
+		-- An opening on an enemy hero (the hero module marks it: Hex, Dragon Tail, Lucent Beam, Lich's Frost Blast in a kill) goes on the
+		-- pair's board (package 2).
+		if d.opens ~= nil then Combate.AnnounceOpening(bot, s, p, d) end
 		if name == 'sniper_assassinate' then
 			s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
 				hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
@@ -778,6 +951,8 @@ local function Act(bot, s, p, d)
 		bot:Action_UseAbilityOnLocation(d.ability, d.at)
 		s.busyUntil, s.shrapnelAt = p.now + d.castPoint + 0.2, p.now
 		Log(s, bot, 'habilidad', (d.ability:GetName() == 'sniper_shrapnel' and 'shrapnel' or d.ability:GetName()) .. ': ' .. d.reason)
+		-- Earth Spike's lock is cast on the ground: the module names the enemy it aims at (package 2).
+		if d.opens ~= nil then Combate.AnnounceOpening(bot, s, p, d) end
 		return
 	end
 	if d.intent == 'acosar' then
@@ -910,6 +1085,7 @@ function L.Think()
 		if backLine then Log(s, bot, 'compra', backLine) end
 		-- Dead time counts too, so the calls per second compare with the other bots' (the smoke read 25 against 30).
 		s.pending, s.retreating, s.toFountain, s.lowHp, s.burstUntil = nil, false, false, false, nil
+		s.holdOut, s.holdHp = false, false
 		Cost(bot, s, DotaTime(), (RealTime() - started) * 1000)
 		return
 	end

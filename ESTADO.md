@@ -2,18 +2,19 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Qué se estaba haciendo:** fase 2, los cinco héroes propios (Luna, Sniper, Dragon Knight, Lion y Lich; DECISIONES 2026-11-13). Pedro juega cuando haya un equipo completo que juegue bien; el Sniper quedó en `paquete1` sin su partida. Plan y avance en `trabajo/fase2.md`.
-- **Dónde quedó:** pasos 1 a 3 hechos (#97):
-  - la variante `control_equipo` del banco controla a los cinco (exige `--heroes` con los cinco);
-  - registro de héroes (`propio/heroes.lua`) y línea por posición;
-  - módulos de habilidades y builds de los cuatro nuevos, y la regla de apoyo.
+- **Qué se estaba haciendo:** el plan de mejora del equipo propio, firmado por Pedro (`trabajo/plan-mejora-equipo.md`, DECISIONES 2026-11-13). Meta: ganar con sobra al equipo de OHA, con cada cambio medido cara a cara, intercalado, en 3 alineaciones y con `tools/bench/equipo.mjs`.
+- **Dónde quedó:**
+  - A contra A hecho, con la tabla de ruido en MEDICIONES;
+  - paquetes 1 («sobrevivir») y 2 («matar en pareja») agotados sin cumplir. Su código está en `main`: no mejora el resultado, pero quita defectos (retirada que cruzaba el mapa, falsos `objetivo_muerto`, ilusiones) y deja el tablero de pareja.
   
-  Primer humo del equipo (MEDICIONES 2026-11-13): 0 errores y todos compran, suben de nivel y lanzan, pero pierden las líneas de dos (kills 3-13 y 6-14 al min 12; Luna en nivel 7; Lion y Lich con 3-6 muertes).
-- **Qué se probó:** el Sniper solo tras la reorganización juega igual (35-39 últimos golpes al min 10 contra Viper, dentro del rango de 27-59 del mismo enfrentamiento).
-- **Siguiente acción:**
-  - la referencia `fase2-ref-oha` ya está medida: OHA con los mismos cinco gana las líneas (kills 19-15 y 17-8, Luna en nivel 11, Lion con 4,5 kills), y el propio las pierde (MEDICIONES 2026-11-13);
-  - diagnosticar en los registros por qué pierden las líneas de dos: las reglas de retirada e intercambio son del 1 contra 1 del Sniper en mid;
-  - un paquete de mejoras y como mucho 2 rondas. Juega Pedro cuando el equipo aguante las líneas.
+  Al min 12, frente a OHA con los mismos héroes: diferencia de kills del equipo −19, líneas de dos con 4-5 niveles menos, y la línea segura con +4,8 muertes.
+- **Qué se probó:** parchear las reglas de línea del 1 contra 1 del Sniper (retiradas, intercambio, kill en pareja). Los mecanismos funcionan en el registro y el resultado no se mueve.
+- **Siguiente acción** (Pedro: «Estudiar a OHA y reescribir la línea de dos»):
+  1. registrar lo que hace OHA en las líneas de dos: sus modos y decisiones como datos, con posición por rol, entradas, encadenado de habilidades y salidas, con un registro más fino que las líneas `hero` cada 30 s;
+  2. escribir de cero la capa de línea y rol para 2 contra 2;
+  3. medir con el mismo diseño.
+  
+  Unas 2 sesiones antes de la próxima medición que decida.
 - Lo que espera a Pedro vive en OmniBrain (P-177): `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
 ## Madurez
@@ -34,10 +35,10 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-04 · Vuelta de la fase 1: banco con `--corte` y `--heroes` (#56), registro (#57), defectos y build (#58, #59),
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
-- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97).
+- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100).
 
 ## Siguientes pasos
-1. Fase 2, los cinco héroes propios: `trabajo/fase2.md` (ver «Próxima sesión»).
+1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): estudio de OHA en las líneas de dos y reescritura de la capa de línea y rol (ver «Próxima sesión»).
 2. Medio juego del Sniper: farm frente a presencia y las rotaciones, con lo que Pedro vea al jugar contra el equipo.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
