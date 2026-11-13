@@ -169,6 +169,9 @@ export const VARIANTS = {
   // (FunLib/propio/), against the same Sniper played by OHA. Both log its lane numbers once a minute ("[bench] linea").
   control_sniper: { control_completo: "sniper", linea_heroe: "sniper", empuje: false, thinkless: 1 },
   base_sniper: { linea_heroe: "sniper", empuje: false, thinkless: 1 },
+  // Phase 2 (trabajo/fase2.md): the five own heroes, with --heroes luna,sniper,dragon_knight,lion,lich/...; the ones the
+  // draw does not give dota-bot play as OHA.
+  control_equipo: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", empuje: false, thinkless: 1 },
   // The own Sniper with its fighting off (no kills, abilities on heroes or trades), to measure what fighting costs in
   // farm (trabajo/fase1-plan.md, step 5).
   control_sniper_sincombate: { control_completo: "sniper", linea_heroe: "sniper", sin_combate: true, empuje: false, thinkless: 1 },

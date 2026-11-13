@@ -6,18 +6,7 @@ local P = {}
 
 local Build = require(GetScriptDirectory()..'/FunLib/propio/build')
 
-local LOADOUTS = {
-	-- Stealth and jump are Pedro's choice (2026-11-05): Shadow Blade then Silver Edge, Force Staff within Hurricane Pike. An
-	-- item made of an earlier one (Pike of the Lance, Silver Edge of the Blade) only buys what it still lacks.
-	-- Maelstrom keeps its place before the Blade: it comes around minute 10, in the lane already measured.
-	npc_dota_hero_sniper = { 'item_wraith_band', 'item_power_treads', 'item_dragon_lance', 'item_maelstrom', 'item_invis_sword',
-		'item_hurricane_pike', 'item_black_king_bar', 'item_silver_edge', 'item_mjollnir', 'item_greater_crit', 'item_satanic' },
-}
-
--- Items whose engine's first recipe is not the one wanted: Treads for agility, not strength.
-local FIXED_PARTS = { item_power_treads = { 'item_boots', 'item_gloves', 'item_boots_of_elves' } }
--- Parts already bought as starting items (linea.lua): not bought again.
-local HAVE_AT_START = { item_slippers = true, item_circlet = true }
+local Heroes = require(GetScriptDirectory()..'/FunLib/propio/heroes')
 
 -- The basic parts of an item, from the engine's first recipe, leaving out what is already in the build (have).
 local function Parts(item, out, have, depth)
@@ -43,11 +32,16 @@ end
 
 -- The parts of these items, in order, at the end of the queue. `have` holds the items already in it: a Pike only buys what the Lance
 -- lacks.
-local function Append(s, items, have)
+-- The Treads by the hero's stat (heroes.lua), not the engine's first recipe; the first item does not buy again what the starting items
+-- already hold (the Sniper's slippers and circlet are its Wraith Band).
+local function Append(s, items, have, datos)
+	local treads = Heroes.BOTAS[datos.botas or 'agilidad']
+	local atStart = {}
+	for _, it in ipairs(datos.salida or {}) do atStart[it] = true end
 	for _, item in ipairs(items) do
-		local parts = FIXED_PARTS[item] or BuyingOrder(Parts(item, {}, have))
+		local parts = (item == 'item_power_treads' and treads.partes) or BuyingOrder(Parts(item, {}, have))
 		for _, part in ipairs(parts) do
-			if item ~= 'item_wraith_band' or not HAVE_AT_START[part] then table.insert(s.buyQueue, { part = part, of = item }) end
+			if item ~= datos.primero or not atStart[part] then table.insert(s.buyQueue, { part = part, of = item }) end
 		end
 		have[item] = true
 	end
@@ -57,7 +51,8 @@ end
 function P.Queue(bot, s)
 	if s.buyQueue ~= nil then return s.buyQueue end
 	s.buyQueue = {}
-	Append(s, Build.Plan(bot, s) or LOADOUTS[bot:GetUnitName()] or {}, {})
+	local datos = Heroes.Datos(bot:GetUnitName())
+	Append(s, Build.Plan(bot, s) or datos.compras or {}, {}, datos)
 	s.buyIndex = 1
 	return s.buyQueue
 end
@@ -139,14 +134,13 @@ function P.Consumables(bot, s, now)
 	return nil
 end
 
--- The Treads when they must change to agility and no enemy is near. The API reads intellect for real agility and the
--- other way round (read in OHA, ability_item_usage_generic; the log line of each change checks it).
+-- The Treads when they must change to the hero's stat (heroes.lua: the API reads intellect for real agility and the other way round).
 function P.TreadsToAgility(bot, s, now)
 	if now - (s.treadsAt or -1000) < 1 then return nil end
 	local slot = bot:FindItemSlot('item_power_treads')
 	if slot < 0 or slot > 5 then return nil end
 	local item = bot:GetItemInSlot(slot)
-	if item == nil or item:GetPowerTreadsStat() == ATTRIBUTE_INTELLECT then return nil end
+	if item == nil or item:GetPowerTreadsStat() == Heroes.BOTAS[Heroes.Datos(bot:GetUnitName()).botas or 'agilidad'].api then return nil end
 	-- At most 6 changes a match: if the reading never moved, it would click once a second for ever.
 	if (s.treadsClicks or 0) >= 6 then return nil end
 	s.treadsAt, s.treadsClicks = now, (s.treadsClicks or 0) + 1

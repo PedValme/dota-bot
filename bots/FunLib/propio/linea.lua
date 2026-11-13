@@ -17,24 +17,12 @@ local Compras = require(GetScriptDirectory()..'/FunLib/propio/compras')
 local Combate = require(GetScriptDirectory()..'/FunLib/propio/combate')
 local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
 local Medio = require(GetScriptDirectory()..'/FunLib/propio/medio')
--- Per-hero ability rules (Finish, Harass); a hero without a module plays the lane without abilities.
-local HEROES = { npc_dota_hero_sniper = require(GetScriptDirectory()..'/FunLib/propio/sniper') }
+-- Per-hero ability rules (Finish, Harass...) and data (heroes.lua); a hero without a module plays the lane without abilities.
+local Heroes = require(GetScriptDirectory()..'/FunLib/propio/heroes')
+local HEROES = Heroes.MODULES
 -- Benchmark variant "sin_combate": no kills, abilities on heroes or trades, to measure what the fighting costs in farm.
 local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
 local NO_COMBAT = Variant.sin_combate == true
-
--- Level-up order (DECISIONES 2026-11-04: Take Aim early, departing from Valve's; talents as in bot_builds.txt, 7.41f).
-local BUILDS = {
-	npc_dota_hero_sniper = { 'sniper_headshot', 'sniper_take_aim', 'sniper_headshot', 'sniper_take_aim',
-		'sniper_shrapnel', 'sniper_assassinate', 'sniper_shrapnel', 'sniper_shrapnel', 'sniper_shrapnel',
-		-- Assassinate's second level as soon as the game allows: its damage in fights is what was missing.
-		'special_bonus_unique_sniper_headshot_damage', 'sniper_headshot', 'sniper_assassinate', 'sniper_take_aim',
-		'sniper_headshot', 'sniper_take_aim', 'special_bonus_unique_sniper_6', 'sniper_assassinate',
-		'special_bonus_unique_sniper_4', 'special_bonus_unique_sniper_3', 'special_bonus_unique_sniper_5',
-		'special_bonus_unique_sniper_1', 'special_bonus_unique_sniper_shrapnel_damage', 'special_bonus_unique_sniper_2' },
-}
--- All the starting gold: 300 stayed idle at t=0. Slippers and circlet are the Wraith Band (compras.lua).
-local STARTING_ITEMS = { 'item_tango', 'item_flask', 'item_branches', 'item_branches', 'item_slippers', 'item_circlet' }
 
 -- Thresholds of the rules (one place, so the log and the rules agree).
 local K = {
@@ -104,12 +92,21 @@ local function Log(s, bot, kind, text)
 	out(string.format('[bench] prop %s t=%.1f pid=%d %s', kind, DotaTime(), bot:GetPlayerID(), text))
 end
 
+-- The lane of each position (trabajo/fase2.md): 1 and 5 the safe one, 2 mid, 3 and 4 the hard one. Radiant's safe lane is bottom.
+local function StartLane(bot)
+	local pos = Heroes.Datos(bot:GetUnitName()).pos or 2
+	if pos == 2 then return LANE_MID end
+	local safe = GetTeam() == TEAM_RADIANT and LANE_BOT or LANE_TOP
+	local hard = GetTeam() == TEAM_RADIANT and LANE_TOP or LANE_BOT
+	return (pos == 1 or pos == 5) and safe or hard
+end
+
 local function State(bot)
 	local pid = bot:GetPlayerID()
 	if S[pid] == nil then
 		S[pid] = { intent = 'ninguna', reason = '', nextSkill = 1, bought = false, busyUntil = -1, lastMoveAt = -1,
 			moveTo = nil, pending = nil, lastStatus = -1000, thinkN = 0, thinkCost = 0, thinkMax = 0, thinkSince = nil,
-			retreating = false }
+			retreating = false, lane = StartLane(bot) }
 	end
 	return S[pid]
 end
@@ -666,7 +663,7 @@ local function MoveTo(bot, s, p, to)
 end
 
 local function Buy(bot, s)
-	for _, item in ipairs(STARTING_ITEMS) do
+	for _, item in ipairs(Heroes.Datos(bot:GetUnitName()).salida or {}) do
 		local code = bot:ActionImmediate_PurchaseItem(item)
 		Log(s, bot, 'compra', string.format('%s codigo=%s oro=%d', item, tostring(code), bot:GetGold()))
 	end
@@ -674,7 +671,7 @@ local function Buy(bot, s)
 end
 
 local function LevelUp(bot, s)
-	local build = BUILDS[bot:GetUnitName()]
+	local build = Heroes.Datos(bot:GetUnitName()).niveles
 	if build == nil or bot:GetAbilityPoints() <= 0 or s.nextSkill > #build then return end
 	local name = build[s.nextSkill]
 	bot:ActionImmediate_LevelAbility(name)
