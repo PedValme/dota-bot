@@ -1572,3 +1572,21 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Mucho `retirada_fuente` y `alejarse` en las líneas de dos.
 - Validez: n=2, solo mecanismo. Sin referencia de OHA con los mismos héroes.
 - Decisión: la base funciona. Antes de tocar reglas, medir la referencia de OHA con los mismos cinco héroes, y diagnosticar en los registros por qué pierden las líneas de dos. Las reglas del Sniper se hicieron para un 1 contra 1 en mid.
+
+### 2026-11-13 · Fase 2: referencia de OHA con los mismos cinco héroes (`fase2-ref-oha`, 2 partidas, min 12)
+- Pregunta: ¿cuánto hace OHA con Luna, Sniper, Dragon Knight, Lion y Lich frente a los mismos rivales, para comparar con `fase2-humo-equipo`?
+- Configuración: `--variantes base_sniper,base`, mismos `--heroes`, código `a8a9d06` (rama de la fase 2; OHA no cambia con ella). 2 de 2 válidas. CPU media 42-45 %, memoria libre 42-43 %.
+- Resultado al min 10 (propio → OHA; media de las 2 partidas):
+
+  | | Propio | OHA |
+  |---|---|---|
+  | Kills del equipo al min 12 (a favor y en contra) | 3-13 y 6-14 | 19-15 y 17-8 |
+  | Luna: nivel / últimos golpes | 7 / 20 | 11 / 34 |
+  | Dragon Knight: nivel / últimos golpes | 8 / 24 | 12 / 25 |
+  | Lion: muertes / kills | 4 / 0,5 | 2 / 4,5 |
+  | Lich: muertes / kills | 5 / 0 | 2 / 1,5 |
+  | Sniper: últimos golpes / muertes | 50 / 0,5 | 40 / 2 |
+
+- Lectura: **OHA gana las líneas de dos y el propio las pierde.** Solo el Sniper, en su 1 contra 1, va por delante. Los apoyos de OHA matan (Lion, 3 y 6 kills) y los propios mueren. La Luna propia va 4 niveles por detrás.
+- Validez: n=2 por lado, corridas separadas; descriptivo.
+- Decisión: diagnosticar en los registros de `fase2-humo-equipo` por qué pierden las líneas de dos. Después, un paquete con como mucho 2 rondas, y que juegue Pedro cuando el equipo aguante.

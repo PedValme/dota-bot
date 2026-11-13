@@ -11,7 +11,7 @@
   Primer humo del equipo (MEDICIONES 2026-11-13): 0 errores y todos compran, suben de nivel y lanzan, pero pierden las líneas de dos (kills 3-13 y 6-14 al min 12; Luna en nivel 7; Lion y Lich con 3-6 muertes).
 - **Qué se probó:** el Sniper solo tras la reorganización juega igual (35-39 últimos golpes al min 10 contra Viper, dentro del rango de 27-59 del mismo enfrentamiento).
 - **Siguiente acción:**
-  - leer la referencia `fase2-ref-oha` (OHA con los mismos cinco héroes y rivales, min 12; lanzada al cerrar esta sesión);
+  - la referencia `fase2-ref-oha` ya está medida: OHA con los mismos cinco gana las líneas (kills 19-15 y 17-8, Luna en nivel 11, Lion con 4,5 kills), y el propio las pierde (MEDICIONES 2026-11-13);
   - diagnosticar en los registros por qué pierden las líneas de dos: las reglas de retirada e intercambio son del 1 contra 1 del Sniper en mid;
   - un paquete de mejoras y como mucho 2 rondas. Juega Pedro cuando el equipo aguante las líneas.
 - Lo que espera a Pedro vive en OmniBrain (P-177): `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
