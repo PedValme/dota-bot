@@ -1633,3 +1633,24 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Los paquetes alternan el orden de los brazos (ABBA por alineación), para que la deriva de orden no se confunda con el efecto.
   - Ronda de mecanismo: 6 + 6 partidas (1 por estrato), suficiente para las brechas actuales.
   - Series de confirmación: 12 + 12 o más.
+
+### 2026-11-13 · Paquete 1 «sobrevivir en la línea de dos», ronda 1 (`p1-prueba-*` frente a `p1-ref-*`): predicción antes de lanzar
+- Pregunta (plan firmado el 2026-11-13, paquete 1): ¿mueren menos los héroes propios de las líneas de dos?
+- Qué cambió desde `fase2-humo-equipo` (`3f25ac0`; revisado por Opus, con sus 4 hallazgos aplicados):
+  - retirada con histéresis ante dos rivales: hasta 0,65 de vida o salvia, como mucho 8 s fuera de su alcance;
+  - el paso atrás sale del alcance de los rivales;
+  - sin acoso, intercambio ni inicio de kill en inferioridad numérica;
+  - el intercambio cuenta a nuestros aliados;
+  - clarity para los apoyos;
+  - en el cuerpo a cuerpo, soltar el aggro solo con poca vida.
+- Diseño:
+  - brazos: prueba `--variantes control_equipo,base` y referencia `--variantes base_sniper,base`;
+  - 2 partidas por brazo y alineación (a, b y c), en orden ABBA (a: prueba y referencia; b: referencia y prueba; c: prueba y referencia);
+  - 12 partidas al min 12, unas 1,4 h. Análisis: `node tools/bench/equipo.mjs "p1-prueba-.*" "p1-ref-.*"`.
+- Métrica principal: `linea.segura.muertes_heroes` y `linea.dificil.muertes_heroes` en el min 12, prueba menos referencia. Hoy, frente a OHA y en el min 10, es +3,5 y +2 (n=2, alineación a).
+- Predicción, en el min 12:
+  - las dos diferencias ≤ +1;
+  - `equipo.kills_dif` de prueba menos referencia mejor que −10 (hoy −17,5).
+  
+  Con 6 estratos y 1 partida por estrato, la DMD es de unas 3,5-7 muertes: es mecanismo, no una serie.
+- Lo que no debe empeorar: el mid (`linea.mid.*`) y el nivel de cada héroe.
