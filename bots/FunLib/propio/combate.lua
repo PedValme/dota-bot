@@ -517,4 +517,8 @@ function C.Rune(bot, s, p)
 	return nil
 end
 
+-- For the lane of two (dos.lua): the same kill numbers and safety the pair decides on.
+function C.Evaluate(bot, p, e, d) return Evaluate(bot, p, e, d) end
+C.Unsafe = Unsafe
+
 return C

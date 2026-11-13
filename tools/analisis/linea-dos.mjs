@@ -12,14 +12,16 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = fileURLToPath(new URL("../..", import.meta.url));
+// DOTABOT_ROOT: read the bench data of another clone (a worktree has none).
+const root = process.env.DOTABOT_ROOT ?? fileURLToPath(new URL("../..", import.meta.url));
 const args = process.argv.slice(2);
-const opt = { lado: "nuestro", hasta: 720, detalle: false };
+const opt = { lado: "nuestro", hasta: 720, detalle: false, sombra: false };
 const rest = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--lado") opt.lado = args[++i];
   else if (args[i] === "--hasta") opt.hasta = Number(args[++i]);
   else if (args[i] === "--detalle") opt.detalle = true;
+  else if (args[i] === "--sombra") opt.sombra = true;
   else rest.push(args[i]);
 }
 if (rest.length !== 1 || !["nuestro", "rival", "ambos"].includes(opt.lado)) {
@@ -62,6 +64,7 @@ function parse(file) {
   const hits = [];
   const kills = [];
   const modes = [];
+  const sombra = []; // dos.lua shadow lines: {t, team pid, linea, amenaza, vida, targets: [{name, ours, theirs, dist, hp}]}
   for (const line of readFileSync(join(obsDir, file), "utf8").split(/\r?\n/)) {
     let m = line.match(/obs t=(-?\d+) (\w+) (.*)$/);
     if (m) {
@@ -92,9 +95,14 @@ function parse(file) {
       continue;
     }
     m = line.match(/\[bench\] mode t=(-?\d+) pid=\d+ (\S+) (\S+) ([\d.]+)/);
-    if (m) modes.push({ t: +m[1], hero: m[2], mode: m[3], desire: +m[4] });
+    if (m) { modes.push({ t: +m[1], hero: m[2], mode: m[3], desire: +m[4] }); continue; }
+    m = line.match(/\[bench\] prop dos_sombra t=(-?[\d.]+) pid=(\d+) linea=(\w+) pareja=(-?\d+) debil=(\S+) amenaza3s=([\d.]+) vida=(-?\d+)\/(-?\d+) (.*)$/);
+    if (m) {
+      const targets = m[9].split(",").map((x) => x.split(":")).map(([name, o, t, dd, hp]) => ({ name, ours: +o, theirs: +t, dist: +dd, hp: +hp }));
+      sombra.push({ t: Math.floor(+m[1]), pid: +m[2], linea: m[3], pareja: +m[4], amenaza: +m[6], vida: [+m[7], +m[8]], targets });
+    }
   }
-  return { fino, front, casts, hits, kills, modes };
+  return { fino, front, casts, hits, kills, modes, sombra };
 }
 
 const stateAt = (d, t, hero) => {
@@ -157,6 +165,9 @@ function studyLane(d, ourTeam, ours, theirs, laneName) {
     const firstCast = Object.fromEntries(ours.map((h) => [h, f.casts.find((c) => c.hero === h)]));
     f.cadena = ours.every((h) => firstCast[h]) ? Math.abs(firstCast[ours[0]].t - firstCast[ours[1]].t) : null;
     f.dur = f.end - f.start + 1;
+    // The shadow's reading just before the fight (dos.lua, Sombra), for this lane: the target with our best share.
+    const sh = d.sombra.filter((x) => x.linea === laneName && x.t <= f.start && x.t >= f.start - 2 && x.targets.some((tg) => theirs.includes(tg.name))).pop();
+    f.sombra = sh ? { amenaza: sh.amenaza, pareja: sh.pareja, best: [...sh.targets].sort((a, b) => b.ours - a.ours)[0] } : null;
     f.tipo = f.killsNos.length && !f.muertesNos.length ? "kill" : !f.killsNos.length && f.muertesNos.length ? "muerte"
       : f.killsNos.length && f.muertesNos.length ? "cambio" : "nada";
   }
@@ -235,7 +246,9 @@ function studyLane(d, ourTeam, ours, theirs, laneName) {
     castsBy[k][kind]++;
     if (c.rivales === 0) castsBy[k].sinRival++;
   }
-  return { fights, deaths, kills: killsOf, pos, trips, castsBy };
+  // Every shadow second of this lane, for how often each reading happens.
+  const sombraLane = d.sombra.filter((x) => x.linea === laneName && x.t >= 0 && x.t <= T && x.targets.some((tg) => theirs.includes(tg.name)));
+  return { fights, deaths, kills: killsOf, pos, trips, castsBy, sombraLane };
 }
 
 // ---- run over the matches ----
@@ -319,6 +332,25 @@ for (const [name, list] of Object.entries(lanes)) {
   console.log("Lanzamientos por línea (a héroe / a creep / otro / sin rival a 1200):");
   for (const [k, v] of Object.entries(cb).sort((a, b) => b[1].n - a[1].n).slice(0, 14)) {
     console.log(`  ${k.padEnd(48)} ${f1(v.n / n)}  (${v.heroe}/${v.creep}/${v.otro}/${v.sinRival})`);
+  }
+  if (opt.sombra) {
+    const withS = real.filter((f) => f.sombra);
+    console.log(`Sombra de dos.lua al empezar cada pelea (${withS.length} de ${real.length} con lectura): nuestro / suyo del mejor objetivo, amenaza3s, pareja — mediana [p25-p75]`);
+    const show = (g, label) => {
+      if (!g.length) return;
+      const o = g.map((f) => f.sombra.best.ours), t = g.map((f) => f.sombra.best.theirs), a = g.map((f) => f.sombra.amenaza), pr = g.map((f) => f.sombra.pareja).filter((x) => x >= 0);
+      console.log(`  ${label.padEnd(26)} n=${String(g.length).padStart(3)} nuestro ${f1(median(o))} [${f1(q(o, 0.25))}-${f1(q(o, 0.75))}] · suyo ${f1(median(t))} [${f1(q(t, 0.25))}-${f1(q(t, 0.75))}] · amenaza3s ${f1(median(a))} [${f1(q(a, 0.25))}-${f1(q(a, 0.75))}] · pareja ${f0(median(pr))}`);
+    };
+    show(withS.filter((f) => f.abre === "nos" && f.tipo === "kill"), "abre nos, kill");
+    show(withS.filter((f) => f.abre === "nos" && f.tipo === "muerte"), "abre nos, muerte");
+    show(withS.filter((f) => f.abre === "nos" && f.tipo === "nada"), "abre nos, nada");
+    show(withS.filter((f) => f.abre !== "nos" && f.tipo === "kill"), "abren ellos/ambos, kill");
+    show(withS.filter((f) => f.abre !== "nos" && f.tipo === "muerte"), "abren ellos/ambos, muerte");
+    const all = list.flatMap((l) => l.sombraLane);
+    if (all.length) {
+      const a = all.map((x) => x.amenaza), o = all.map((x) => Math.max(...x.targets.map((tg) => tg.ours)));
+      console.log(`  todos los segundos con rival (${all.length}): amenaza3s ${f1(median(a))} [${f1(q(a, 0.25))}-${f1(q(a, 0.75))}], ≥0,6 en ${pct(a.filter((x) => x >= 0.6).length, a.length)}; nuestro máx ${f1(median(o))} [${f1(q(o, 0.25))}-${f1(q(o, 0.75))}], ≥1 en ${pct(o.filter((x) => x >= 1).length, o.length)}`);
+    }
   }
   if (opt.detalle) {
     console.log("Detalle de peleas:");

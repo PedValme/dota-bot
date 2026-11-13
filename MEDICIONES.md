@@ -1762,3 +1762,62 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **Vuelta a la base:** con TP, con el 20-45 % de vida.
 - Validez: descriptivo, n = 6 por par y 3 alineaciones. Las peleas son tramos de daño entre héroes con huecos de 5 s o menos; «quién abre» se resuelve al segundo («ambos» cuando los dos pegan en el primero). Nada de esto mide un cambio.
 - Decisión: la capa de línea y rol para 2 contra 2 se reescribe con estos datos como especificación de lo que se le gana a OHA (`trabajo/plan-mejora-equipo.md`, «Estudio de OHA»).
+
+### 2026-11-13 · Capa de la línea de dos (`dos.lua`), ronda de mecanismo 1 (`dos1-*`): predicción antes de lanzar
+- Pregunta: ¿la pareja que entra, sale y se coloca junta (`dos.lua`, especificación del «Estudio de OHA») mata más y muere menos en las líneas de dos que el bot propio de antes?
+- Qué cambió desde `propio-dos-*` (`c90c2f2`), en la rama `claude/linea-dos` (revisada por Opus antes del primer humo, con sus hallazgos aplicados):
+  - tablero de la pareja con un solo decisor;
+  - entrada por la carrera de 10 s;
+  - salida conjunta;
+  - el apoyo junto a su núcleo;
+  - sin presionar por iniciativa propia;
+  - TP a la fuente;
+  - sombra en modo observador.
+- Humos previos (alineación a, 2 + 2): `dos-humo` mostró al apoyo oscilando cada tick y a Luna presionando sola (corregidos). `dos-humo2` dio 9 entradas, unas 66 salidas y 7-9 muertes por línea. La sombra sobre OHA (`oha-sombra-*`) confirma la regla de entrada: OHA mata con nuestro ≥ 1,2, suyo ≤ 0,6 y la pareja a 530-710.
+- Diseño: `--rival dotabot --variantes control_equipo,base --corte 12 --observar`, alineaciones a, b y c, 2 partidas cada una con cambio de lado. Se compara con `propio-dos-*` (antes) y `oha-dos-*` / `oha-sombra-*` (OHA) con `linea-dos.mjs --sombra` y `equipo.mjs`.
+- Predicción (min 12, por línea):
+  - kills sobre sus rivales ≥ 2 en la segura (antes 0,8) y ≥ 4 en la difícil (antes 2,5);
+  - muertes ≤ 8 en la segura (antes 8,8) y ≤ 6 en la difícil (antes 7,0);
+  - al menos la mitad de los viajes a la base con TP (antes 0 de 39).
+- Es la ronda 1 de 2 del paquete (DECISIONES 2026-11-06).
+- Máquina y código: código `8ea6181` (el árbol de `bots/` es el de la rama), 6 de 6 válidas, CPU media 34-38 %, máxima 37-48 %.
+- Resultado (min 12, por línea; antes `propio-dos-*`):
+
+  | Línea | Kills (antes) | Muertes (antes) |
+  |---|---|---|
+  | Segura | 0,8 (0,8) | 9,0 (8,8) |
+  | Difícil | 0,8 (2,5) | 8,5 (7,0) |
+
+  - Viajes a la base con TP: 41 de 54 (antes 0 de 39).
+  - Tablero: 20 entradas, 218 de línea y 210 salidas.
+  - **No cumple.**
+- Lectura:
+  - las muertes llegan con el 87-95 % de vida 10 s antes, ante 2 rivales y sin aliado a 1200;
+  - casi todas en peleas que abre el rival, con nuestra pareja a 2900-4800;
+  - la amenaza de 3 s no las anticipa (0,0-0,5), porque cierran con aturdimientos y saltos;
+  - la sombra da «suyo» cerca de 1,0, frente a 0,5-0,7 en OHA: nuestros héroes van por detrás en nivel y daño.
+- Decisión: ronda 2, la última del paquete. Nunca solo ante dos: el núcleo vuelve con su apoyo si está a más de 800 con rivales a la vista, y un héroe sin compañero a 1500 se queda junto a su torre ante dos rivales. Misma predicción que la ronda 1.
+
+### 2026-11-13 · Capa de la línea de dos, ronda de mecanismo 2 (`dos2-*`), la última del paquete
+- Pregunta, diseño y predicción: los de la ronda 1, con «nunca solo ante dos» añadido (código `97f19a3`, 6 de 6 válidas, CPU media 35-40 %, máxima 40-60 %).
+- Resultado (min 12, por línea; antes `propio-dos-*`, ronda 1 `dos1-*`):
+
+  | Línea | Kills | Muertes |
+  |---|---|---|
+  | Segura | 0,7 (antes 0,8; ronda 1 0,8) | 5,8 (antes 8,8; ronda 1 9,0) |
+  | Difícil | 0,5 (antes 2,5; ronda 1 0,8) | 6,3 (antes 7,0; ronda 1 8,5) |
+
+  - Viajes con TP: 31 de 35.
+  - `equipo.mjs` frente a `propio-dos-*`, 6 estratos:
+    - segura −3,0 muertes (−6,6 a 0,6) y +1,6 niveles de diferencia;
+    - difícil −27,7 últimos golpes (−48,7 a −6,7) y −1,8 kills;
+    - diferencia de kills del equipo igual (−11,0 frente a −11,7).
+- Lectura:
+  - **sobrevive mejor en la segura, pero no mata, y la difícil pierde farm** por esperar junto a la torre y replegarse (545 y 940 decisiones);
+  - la sombra mantiene «suyo» cerca de 1,0-1,6 frente a 0,5-0,7 en OHA: con estos niveles y este daño la pareja casi nunca gana la carrera, la juegue como la juegue.
+- Decisión: **el paquete de la línea de dos agotó sus 2 rondas sin cumplir.** Se quedan en `main`, tras la variante del bot propio:
+  - la capa (tablero, salida conjunta, el apoyo junto a su núcleo, nunca solo ante dos);
+  - el TP a la fuente;
+  - la sombra.
+
+  El siguiente paso lo decide Pedro.

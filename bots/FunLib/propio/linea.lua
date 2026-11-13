@@ -17,11 +17,15 @@ local Compras = require(GetScriptDirectory()..'/FunLib/propio/compras')
 local Combate = require(GetScriptDirectory()..'/FunLib/propio/combate')
 local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
 local Medio = require(GetScriptDirectory()..'/FunLib/propio/medio')
+-- The lane of two as one unit (positions 1+5 and 3+4 while the lane lasts): entries, leaving together and the support's spot.
+local Dos = require(GetScriptDirectory()..'/FunLib/propio/dos')
 -- Per-hero ability rules (Finish, Harass...) and data (heroes.lua); a hero without a module plays the lane without abilities.
 local Heroes = require(GetScriptDirectory()..'/FunLib/propio/heroes')
 local HEROES = Heroes.MODULES
 -- Benchmark variant "sin_combate": no kills, abilities on heroes or trades, to measure what the fighting costs in farm.
 local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
+-- Observer mode: the lane of two's shadow line (dos.lua, Sombra), the same one OHA's bots log, to read both with one vara.
+local OBSERVE = dofile(GetScriptDirectory()..'/FunLib/bench_observe')
 local NO_COMBAT = Variant.sin_combate == true
 
 -- Thresholds of the rules (one place, so the log and the rules agree).
@@ -315,6 +319,8 @@ local function RuleRetreat(bot, s, p)
 	local committed = not NO_COMBAT and not Combate.DiesFirst(p) and Combate.Committed(bot, s, p)
 	local held = nil
 	local function Soft(name)
+		-- In a lane of two (dos.lua) the pair leaves together, before the hits: one hero's soft retreat would split it.
+		if p.dos then return false end
 		if committed then held = held or name return false end
 		return true
 	end
@@ -354,7 +360,7 @@ local function RuleRetreat(bot, s, p)
 	-- (Pedro, 2026-11-05: «asume mas daño [d]el necesario antes de escapar»).
 	-- At full health too, if it is lost by far: on top of it with ratio 0,22-0,48 and a full bar it went on hitting back, and died in some
 	-- 8 s (lobby 2026-11-05, t=1451, 1981, 2094).
-	elseif bot:WasRecentlyDamagedByAnyHero(2.0) then
+	elseif not p.dos and bot:WasRecentlyDamagedByAnyHero(2.0) then
 		local edge = p.hp < K.loseHp and K.loseEdge or K.loseEdgeFull
 		for _, e in ipairs(p.enemyHeroes) do
 			if Valid(e) and D2(p.loc, e:GetLocation()) <= e:GetAttackRange() + 200 then
@@ -381,7 +387,8 @@ local function RuleRetreat(bot, s, p)
 	-- health, and died: Luna and Lich, t=479-496 of fase2-humo-equipo 1, four 'expuesto' and 'linea' in a row each. With only one
 	-- enemy in sight they do not start, so the lone mid keeps its rules; once the lane is over neither (medio.lua retreats by its
 	-- own count, and the middle game is package 4).
-	if danger and p.pair and not s.late then
+	if p.dos then s.holdOut, s.holdHp = false, false end
+	if danger and p.pair and not s.late and not p.dos then
 		if not s.holdOut then s.holdOutAt = p.now end
 		s.holdOut = true
 		-- Not lowHp: that kept 'recuperando' firing and, with stepBack left from a lost trade, walked it across the map in steps of 350
@@ -437,6 +444,17 @@ local function RuleRetreat(bot, s, p)
 	-- Once the lane is over nothing heals it at a tower (2.000 of health at 5 a second): any retreat for health ends at home.
 	if s.toFountain or waitLong or ((p.hp < K.fountainHp or (s.late and s.lowHp)) and HasItem(bot, 'item_flask') == nil) then
 		s.toFountain = true
+		-- Home by teleport during the lane, as OHA does (all 19 of its trips home in oha-dos-*, against 0 of 39 for ours, walking):
+		-- far from the fountain, the scroll ready, and no enemy hero near or hitting us, since the channel is cut.
+		if not s.late and D2(p.loc, Fountain(p.team)) > 4000 and p.now - (s.tpAt or -1000) >= 5 and #p.enemyHeroes == 0
+			and not bot:WasRecentlyDamagedByAnyHero(2.0) then
+			local slot = bot:FindItemSlot('item_tpscroll')
+			local item = (slot >= 0 and (slot <= 5 or slot == 15)) and bot:GetItemInSlot(slot) or nil
+			if item ~= nil and item:IsFullyCastable() then
+				s.tpAt = p.now
+				return { intent = 'teleporte', item = item, at = Fountain(p.team), reason = reason .. ', a la fuente' }
+			end
+		end
 		return { intent = 'retirada_fuente', reason = reason .. ', sin salvia', to = Fountain(p.team) }
 	end
 	if p.towerOnMe then
@@ -615,7 +633,9 @@ local function RuleTrade(bot, s, p, ready, soon)
 					and (company or (v.outranged and alone))
 				-- Outnumbered in the lane (Perceive, p.alone), no answer and no press: the rival's partner kills us in the next 2 s
 				-- (plan, package 1: 8 of 16 deaths in the safe lane). Said once a second, so the log shows what was given up.
-				local press = company and (alone or pair) and ready == nil and v.ratio >= K.pressEdge
+				-- In a lane of two (dos.lua) the pair alone takes the initiative: Luna pressed Bristleback by its own trade (ratio 1,79),
+				-- got both enemies' answer and the pair left too late (dos-humo 2, t=453-461).
+				local press = not p.dos and company and (alone or pair) and ready == nil and v.ratio >= K.pressEdge
 				if (answer or press) and p.alone then
 					if p.now - (s.aloneLogAt or -1000) >= 1 then
 						s.aloneLogAt = p.now
@@ -689,6 +709,7 @@ local function Decide(bot, s, p)
 		local bkb = Medio.Bkb(bot, s, p)
 		if bkb then return bkb end
 	end
+	p.dos = (not late and not NO_COMBAT) and Dos.Applies(bot, s, p, function(pid) return S[pid] end) or nil
 	local r = RuleRetreat(bot, s, p)
 	-- Retreating for health alone (no tower on us, no enemy burst), healing comes first: RuleHeal itself requires
 	-- no enemy hero near and no recent hero or tower damage.
@@ -696,11 +717,14 @@ local function Decide(bot, s, p)
 		local h = RuleHeal(bot, s, p)
 		if h then
 			if s.chase ~= nil then Log(s, bot, 'persecucion', Combate.Stop(bot, s, p, 'curarse')) end
+			if p.dos then Dos.End(bot, s, p, 'retirada curarse') end
 			return h
 		end
 	end
 	if r then
 		if s.chase ~= nil then Log(s, bot, 'persecucion', Combate.Stop(bot, s, p, 'retirada')) end
+		-- One of the pair retreating ends the pair's entry for both (dos.lua): the partner must not stay on it alone.
+		if p.dos then Dos.End(bot, s, p, 'retirada ' .. (r.reason or '')) end
 		return (late and Medio.Escape(bot, s, p, Home(p.team))) or r
 	end
 	r = RuleHeal(bot, s, p)
@@ -712,8 +736,16 @@ local function Decide(bot, s, p)
 		r = hero.Finish(bot, s, p)
 		if r then return r end
 	end
+	-- The lane of two: the pair's entry (its hero opens with KillCast in the same second as the partner) or its leaving together.
+	if p.dos then
+		r = Dos.Act(bot, s, p, Home(p.team), (SafeSpot(p.team, s.lane)))
+		if r then
+			local cast = hero ~= nil and r.intent == 'matar' and hero.KillCast(bot, s, p, r.target) or nil
+			return cast or WithAim(bot, s, p, hero, r)
+		end
+	end
 	-- Kills: a chase under way goes on (or ends with its reason), else a new kill may start.
-	if not NO_COMBAT then
+	if not NO_COMBAT and not p.dos then
 		local ended
 		r, ended = Combate.Continue(bot, s, p)
 		if ended then Log(s, bot, 'persecucion', ended) end
@@ -772,14 +804,15 @@ local function Decide(bot, s, p)
 	-- hero's Protect). Lion's lone Earth Spike was the start of each of its deaths: the answer came, then the back and forth
 	-- (trabajo/plan-mejora-equipo.md, package 1). Harass is not called at all, since some set their timers when they choose.
 	if not NO_COMBAT and hero ~= nil and not hidden then
-		if p.alone then
+		-- In a lane of two, no harass without the partner near: OHA's safe lane died after hitting a hero alone (dos.lua).
+		if p.alone or (p.dos and (not p.dos.partnerNear or p.dos.board.mode == 'salir')) then
 			r = hero.Protect ~= nil and hero.Protect(bot, s, p) or nil
 		else
 			r = hero.Harass(bot, s, p)
 		end
 		if r then return r end
 	end
-	if not NO_COMBAT then
+	if not NO_COMBAT and not (p.dos and (not p.dos.partnerNear or p.dos.board.mode == 'salir')) then
 		r = WithAim(bot, s, p, hero, RuleTrade(bot, s, p, ready, soon))
 		if r then return r end
 	end
@@ -797,6 +830,12 @@ local function Decide(bot, s, p)
 		if r then return r end
 	end
 	local holdAt = late and Medio.HoldSpot(bot, s, p, LanePoint(p)) or nil
+	-- The support with its core (dos.lua, Spot): OHA's pairs stand 520-740 apart.
+	if p.dos then
+		local spot = Dos.Spot(bot, s, p, LanePoint(p))
+		-- Once there it holds the spot (no order within 60): leaving it to the lane point flipped every tick (dos-humo 2, t=380).
+		if spot then return { intent = 'con_pareja', reason = 'junto a mi nucleo', to = spot } end
+	end
 	if ready ~= nil then
 		local spot = Toward(ready:GetLocation(), p.loc, p.range * 0.9)
 		-- Holding back, it takes the creeps that come within its range, and does not walk out for them.
@@ -1090,6 +1129,7 @@ function L.Think()
 		return
 	end
 	local p = Perceive(bot)
+	if OBSERVE then pcall(Dos.Sombra, bot) end
 	CheckPending(bot, s, p)
 	CheckAssassinate(bot, s, p)
 	local evalOk, evalLines = pcall(Combate.KillEval, bot, s, p) -- a logging failure must not stop the bot
