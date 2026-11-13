@@ -1654,3 +1654,17 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   
   Con 6 estratos y 1 partida por estrato, la DMD es de unas 3,5-7 muertes: es mecanismo, no una serie.
 - Lo que no debe empeorar: el mid (`linea.mid.*`) y el nivel de cada héroe.
+- Máquina y código: código `9898ce6`, 12 de 12 válidas, 0 avisos.
+- Velocidad real: prueba ×2,53 y referencia ×2,39. **Es una asimetría nueva entre los brazos, sin explicar todavía.**
+- Resultado en el min 12 (prueba menos referencia, IC 95 %):
+  - **Muertes de los héroes de las líneas de dos:** segura +1,8 (−2,2 a 5,9), difícil +3,2 (0,2 a 6,1). La predicción era ≤ +1: **no cumple**.
+  - **Nivel:**
+    - Luna −5,3, Dragon Knight −5,7, Lion −4,8 y Lich −4,7, todos con el IC fuera del 0;
+    - Sniper −2,8.
+  - **Kills de los héroes de las líneas de dos:** segura 0,2 frente a 6,5; difícil 0,3 frente a 8.
+  - **Equipo:** diferencia de kills −23 (−29,6 a −16,4) y de patrimonio −23k. La predicción era mejor que −10: **no cumple**.
+- Lectura: el paquete 1 no reduce las muertes. Los héroes de las líneas de dos van unos 5 niveles por detrás de los de OHA. Diagnóstico en curso en los registros: tiempo fuera del alcance de experiencia, coste de las retenciones y cómo mueren ahora.
+- Validez:
+  - n = 6 + 6, mecanismo;
+  - sin medición de antes del paquete con este diseño: el humo previo es de una sola alineación y n = 2;
+  - la diferencia de velocidad entre brazos queda anotada como posible contaminación hasta explicarla.

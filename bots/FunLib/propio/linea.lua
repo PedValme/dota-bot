@@ -359,9 +359,12 @@ local function RuleRetreat(bot, s, p)
 	if danger and p.pair and not s.late then
 		if not s.holdOut then s.holdOutAt = p.now end
 		s.holdOut = true
-		-- lowHp too, so a long wait for regeneration goes home by waitLong below instead of 60 s at the tower (review of 2026-11-13).
-		if p.hp < K.returnHp then s.holdHp, s.lowHp = true, true end
+		-- Not lowHp: that kept 'recuperando' firing and, with stepBack left from a lost trade, walked it across the map in steps of 350
+		-- (Luna, p1-prueba-a-1, t=276-300); 0 'recuperando_ante_dos' in 6 matches. waitLong below reads holdHp instead.
+		if p.hp < K.returnHp then s.holdHp = true end
 	end
+	-- The health hold lasts while both are in sight; with them gone it is a normal lane again.
+	if not p.pair then s.holdHp = false end
 	-- The holds are the lane's: in the middle game Medio.Fight must not be blocked by one left from the lane (review of 2026-11-13).
 	if s.late then s.holdOut, s.holdHp = false, false end
 	-- A salve at work ends the health hold: it heals the rest on the way (the plan: «no vuelve hasta 0,65 de vida o tras usar salvia»).
@@ -388,6 +391,8 @@ local function RuleRetreat(bot, s, p)
 	if p.hp >= K.returnHp then s.lowHp = false end
 	s.retreating = reason ~= nil
 	if reason == nil then s.toFountain, s.stepBack, s.retreatTower = false, false, nil return nil end
+	-- A retreat to recover health is not a step out of reach: it goes by the tower, the fountain or the teleport below (p1-prueba).
+	if reason ~= nil and string.find(reason, '^recuperando') then s.stepBack = false end
 	if (s.stepBack or outOnly) and not p.towerOnMe and p.hp >= K.retreatHp then
 		-- With two enemies in sight, the step goes out of all of their reach (reachNeed), not 350: else Cask and Maledict still
 		-- reached it. Already out, it stays where it is (no order). With one, the 350 as before.
@@ -401,7 +406,7 @@ local function RuleRetreat(bot, s, p)
 	-- Once heading for the fountain it keeps going until healed (returnHp), not back and forth with the tower.
 	-- Waiting long for its regeneration, with no salve and a teleport to come back, it goes home instead of standing there
 	-- (lobby 2026-11-05: 20 s still at a tower with 0,27 of health).
-	local waitLong = s.lowHp and HasItem(bot, 'item_flask') == nil and bot:FindItemSlot('item_tpscroll') == 15
+	local waitLong = (s.lowHp or s.holdHp) and HasItem(bot, 'item_flask') == nil and bot:FindItemSlot('item_tpscroll') == 15
 		and bot:GetItemInSlot(15):IsFullyCastable()
 		and (K.returnHp - p.hp) * bot:GetMaxHealth() / math.max(bot:GetHealthRegen(), 0.1) > K.recoverWait
 	-- Once the lane is over nothing heals it at a tower (2.000 of health at 5 a second): any retreat for health ends at home.
