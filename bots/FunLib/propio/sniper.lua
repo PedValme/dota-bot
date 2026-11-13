@@ -3,6 +3,28 @@
 -- GetSpecialValueInt), never from a table, so a patch that changes them changes the bot.
 local H = {}
 
+-- What the shared code reads of each hero (heroes.lua): position, role, level-up order, starting items, fixed item list (when
+-- the build profile gives none), Treads' stat and parts, and the starting parts not bought again for the first item.
+H.DATOS = {
+	pos = 2,
+	rol = 'nucleo',
+	-- Take Aim early, departing from Valve's (DECISIONES 2026-11-04); talents as in bot_builds.txt, 7.41f. Assassinate's second level
+	-- as soon as the game allows: its damage in fights is what was missing.
+	niveles = { 'sniper_headshot', 'sniper_take_aim', 'sniper_headshot', 'sniper_take_aim',
+		'sniper_shrapnel', 'sniper_assassinate', 'sniper_shrapnel', 'sniper_shrapnel', 'sniper_shrapnel',
+		'special_bonus_unique_sniper_headshot_damage', 'sniper_headshot', 'sniper_assassinate', 'sniper_take_aim',
+		'sniper_headshot', 'sniper_take_aim', 'special_bonus_unique_sniper_6', 'sniper_assassinate',
+		'special_bonus_unique_sniper_4', 'special_bonus_unique_sniper_3', 'special_bonus_unique_sniper_5',
+		'special_bonus_unique_sniper_1', 'special_bonus_unique_sniper_shrapnel_damage', 'special_bonus_unique_sniper_2' },
+	-- All the starting gold: 300 stayed idle at t=0. Slippers and circlet are the Wraith Band.
+	salida = { 'item_tango', 'item_flask', 'item_branches', 'item_branches', 'item_slippers', 'item_circlet' },
+	primero = 'item_wraith_band', -- the starting parts above are not bought again for it
+	-- Stealth and jump are Pedro's choice (2026-11-05): Shadow Blade then Silver Edge, Force Staff within Hurricane Pike.
+	compras = { 'item_wraith_band', 'item_power_treads', 'item_dragon_lance', 'item_maelstrom', 'item_invis_sword',
+		'item_hurricane_pike', 'item_black_king_bar', 'item_silver_edge', 'item_mjollnir', 'item_greater_crit', 'item_satanic' },
+	botas = 'agilidad',
+}
+
 local function D2(a, b)
 	if a == nil or b == nil then return 1e9 end
 	local dx, dy = a.x - b.x, a.y - b.y

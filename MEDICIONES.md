@@ -1559,3 +1559,16 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **Las rotaciones no se arreglan contando a los aliados cerca:** los objetivos siguen muriendo en menos de 1 s, a 2.000-4.500. La estimación de golpes no ve los hechizos de los aliados. Cuestan poco tiempo, porque acaban enseguida, y dan 2 kills por ronda.
 - Validez: n=6, solo mecanismo.
 - Decisión: rondas agotadas (2 de 2). Se deshace la regla de farmear tras un aliado suelto y se queda la versión de `paquete1`, que es una mejora plausible frente a `build2` en lo que Pedro pidió: kills 5,2 → 7,3, remates 48 % → 59 %, muertes 1,0 → 0,7, daño 21.313 → 24.549. El coste son los últimos golpes (153 → 126). La cuenta de aliados de la rotación se queda (no cambia nada medible). Juega Pedro.
+
+### 2026-11-13 · Fase 2: primer humo del equipo propio (`fase2-humo-equipo`, 2 partidas, min 12, contra el equipo de OHA)
+- Pregunta: ¿juegan los cinco héroes propios (Luna, Sniper, Dragon Knight, Lion y Lich) sin errores ni quedarse quietos? Antes, `fase2-humo-sniper` (2 partidas, min 12): el Sniper solo, tras la reorganización, sin errores y dentro del rango del mismo enfrentamiento (35 y 39 últimos golpes al min 10; `build2-a` y `paquete1/2-a`, de 27 a 59).
+- Configuración: `--variantes control_equipo,base --heroes luna,sniper,dragon_knight,lion,lich/sven,viper,bristleback,vengefulspirit,witch_doctor --corte 12`, código `bc34369`, 2 de 2 válidas. CPU media 41-43 %, memoria libre 42 %.
+- Resultado:
+  - **Mecanismo:** 0 errores. Los cinco compran, suben de nivel, lanzan sus habilidades (13-40 lanzamientos cada uno) y van a su línea por posición.
+  - **Juego:** pierden las líneas. Kills del equipo propio al min 12: 3 frente a 13 y 6 frente a 14. Al min 10:
+    - Luna: nivel 7 y 20 últimos golpes, frente a Sven en 9-10;
+    - Lion y Lich: 3-6 muertes cada uno;
+    - el Sniper es como solo (50-51 últimos golpes, 0-1 muertes).
+  - Mucho `retirada_fuente` y `alejarse` en las líneas de dos.
+- Validez: n=2, solo mecanismo. Sin referencia de OHA con los mismos héroes.
+- Decisión: la base funciona. Antes de tocar reglas, medir la referencia de OHA con los mismos cinco héroes, y diagnosticar en los registros por qué pierden las líneas de dos. Las reglas del Sniper se hicieron para un 1 contra 1 en mid.

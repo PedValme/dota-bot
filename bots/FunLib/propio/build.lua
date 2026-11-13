@@ -5,7 +5,7 @@
 local B = {}
 
 local Amenazas = require(GetScriptDirectory()..'/FunLib/propio/amenazas')
-local PROFILES = { npc_dota_hero_sniper = require(GetScriptDirectory()..'/FunLib/propio/perfiles/sniper') }
+local PROFILES = require(GetScriptDirectory()..'/FunLib/propio/heroes').PROFILES
 
 -- The rules that use each kind of item (medio.lua and linea.lua). An active item with no rule here is never offered: it was bought and
 -- never pressed (Satanic and Mjollnir before this module).

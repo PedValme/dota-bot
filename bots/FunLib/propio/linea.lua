@@ -17,28 +17,17 @@ local Compras = require(GetScriptDirectory()..'/FunLib/propio/compras')
 local Combate = require(GetScriptDirectory()..'/FunLib/propio/combate')
 local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
 local Medio = require(GetScriptDirectory()..'/FunLib/propio/medio')
--- Per-hero ability rules (Finish, Harass); a hero without a module plays the lane without abilities.
-local HEROES = { npc_dota_hero_sniper = require(GetScriptDirectory()..'/FunLib/propio/sniper') }
+-- Per-hero ability rules (Finish, Harass...) and data (heroes.lua); a hero without a module plays the lane without abilities.
+local Heroes = require(GetScriptDirectory()..'/FunLib/propio/heroes')
+local HEROES = Heroes.MODULES
 -- Benchmark variant "sin_combate": no kills, abilities on heroes or trades, to measure what the fighting costs in farm.
 local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
 local NO_COMBAT = Variant.sin_combate == true
 
--- Level-up order (DECISIONES 2026-11-04: Take Aim early, departing from Valve's; talents as in bot_builds.txt, 7.41f).
-local BUILDS = {
-	npc_dota_hero_sniper = { 'sniper_headshot', 'sniper_take_aim', 'sniper_headshot', 'sniper_take_aim',
-		'sniper_shrapnel', 'sniper_assassinate', 'sniper_shrapnel', 'sniper_shrapnel', 'sniper_shrapnel',
-		-- Assassinate's second level as soon as the game allows: its damage in fights is what was missing.
-		'special_bonus_unique_sniper_headshot_damage', 'sniper_headshot', 'sniper_assassinate', 'sniper_take_aim',
-		'sniper_headshot', 'sniper_take_aim', 'special_bonus_unique_sniper_6', 'sniper_assassinate',
-		'special_bonus_unique_sniper_4', 'special_bonus_unique_sniper_3', 'special_bonus_unique_sniper_5',
-		'special_bonus_unique_sniper_1', 'special_bonus_unique_sniper_shrapnel_damage', 'special_bonus_unique_sniper_2' },
-}
--- All the starting gold: 300 stayed idle at t=0. Slippers and circlet are the Wraith Band (compras.lua).
-local STARTING_ITEMS = { 'item_tango', 'item_flask', 'item_branches', 'item_branches', 'item_slippers', 'item_circlet' }
-
 -- Thresholds of the rules (one place, so the log and the rules agree).
 local K = {
 	retreatHp = 0.30,     -- retreat below this health fraction
+	coreNear = 1500,      -- a support leaves the last hits to a core ally this close
 	exposedHp = 0.45,     -- ...or below this one with an enemy hero able to reach us
 	learnFade = 0.9954,   -- per second, what is learned of an enemy's damage fades by this: half in 150 s
 	returnHp = 0.65,      -- come back to the lane above it
@@ -104,12 +93,21 @@ local function Log(s, bot, kind, text)
 	out(string.format('[bench] prop %s t=%.1f pid=%d %s', kind, DotaTime(), bot:GetPlayerID(), text))
 end
 
+-- The lane of each position (trabajo/fase2.md): 1 and 5 the safe one, 2 mid, 3 and 4 the hard one. Radiant's safe lane is bottom.
+local function StartLane(bot)
+	local pos = Heroes.Datos(bot:GetUnitName()).pos or 2
+	if pos == 2 then return LANE_MID end
+	local safe = GetTeam() == TEAM_RADIANT and LANE_BOT or LANE_TOP
+	local hard = GetTeam() == TEAM_RADIANT and LANE_TOP or LANE_BOT
+	return (pos == 1 or pos == 5) and safe or hard
+end
+
 local function State(bot)
 	local pid = bot:GetPlayerID()
 	if S[pid] == nil then
 		S[pid] = { intent = 'ninguna', reason = '', nextSkill = 1, bought = false, busyUntil = -1, lastMoveAt = -1,
 			moveTo = nil, pending = nil, lastStatus = -1000, thinkN = 0, thinkCost = 0, thinkMax = 0, thinkSince = nil,
-			retreating = false }
+			retreating = false, lane = StartLane(bot) }
 	end
 	return S[pid]
 end
@@ -425,7 +423,16 @@ local function RuleLastHit(bot, s, p)
 	local allies = {}
 	for _, u in ipairs(p.allyCreeps) do table.insert(allies, u) end
 	for _, u in ipairs(p.allyTowers) do table.insert(allies, u) end
-	consider(p.enemyCreeps, allies, false)
+	-- A support leaves the last hits to a core ally beside it (trabajo/fase2.md, step 3), and still denies. A hero it does not know counts
+	-- as a core.
+	local leave = false
+	if Heroes.Datos(bot:GetUnitName()).rol == 'apoyo' then
+		for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+			if a ~= bot and Valid(a) and not a:IsIllusion() and Heroes.Datos(a:GetUnitName()).rol ~= 'apoyo'
+				and D2(p.loc, a:GetLocation()) < K.coreNear then leave = true break end
+		end
+	end
+	if not leave then consider(p.enemyCreeps, allies, false) end
 	if best == nil and not soon then consider(p.allyCreeps, enemies, true) end
 	if best ~= nil then
 		local c = best.creep
@@ -666,7 +673,7 @@ local function MoveTo(bot, s, p, to)
 end
 
 local function Buy(bot, s)
-	for _, item in ipairs(STARTING_ITEMS) do
+	for _, item in ipairs(Heroes.Datos(bot:GetUnitName()).salida or {}) do
 		local code = bot:ActionImmediate_PurchaseItem(item)
 		Log(s, bot, 'compra', string.format('%s codigo=%s oro=%d', item, tostring(code), bot:GetGold()))
 	end
@@ -674,7 +681,7 @@ local function Buy(bot, s)
 end
 
 local function LevelUp(bot, s)
-	local build = BUILDS[bot:GetUnitName()]
+	local build = Heroes.Datos(bot:GetUnitName()).niveles
 	if build == nil or bot:GetAbilityPoints() <= 0 or s.nextSkill > #build then return end
 	local name = build[s.nextSkill]
 	bot:ActionImmediate_LevelAbility(name)
@@ -736,11 +743,15 @@ local function Act(bot, s, p, d)
 	if d.intent == 'rematar' then
 		bot:Action_UseAbilityOnEntity(d.ability, d.target)
 		s.busyUntil = p.now + d.castPoint + 0.3
-		s.castCheck = { at = p.now + 0.3, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', '') }
-		Log(s, bot, 'habilidad', 'assassinate: ' .. d.reason)
-		s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
-			hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
-			illusion = d.target:IsIllusion() }
+		s.castCheck = { at = p.now + 0.3, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''), ability = d.ability:GetName() }
+		-- Every hero's unit-target cast goes here (phase 2); the kill check after it is the Assassinate's.
+		local name = d.ability:GetName()
+		Log(s, bot, 'habilidad', (name == 'sniper_assassinate' and 'assassinate' or name) .. ': ' .. d.reason)
+		if name == 'sniper_assassinate' then
+			s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
+				hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
+				illusion = d.target:IsIllusion() }
+		end
 		return
 	end
 	if d.intent == 'usar_objeto' then
@@ -754,7 +765,7 @@ local function Act(bot, s, p, d)
 	if d.intent == 'apuntar' then
 		bot:Action_UseAbility(d.ability)
 		s.busyUntil, s.moveTo = p.now + d.castPoint + 0.05, nil
-		Log(s, bot, 'habilidad', 'take_aim: ' .. d.reason)
+		Log(s, bot, 'habilidad', (d.ability:GetName() == 'sniper_take_aim' and 'take_aim' or d.ability:GetName()) .. ': ' .. d.reason)
 		return
 	end
 	if d.intent == 'teleporte' then
@@ -766,7 +777,7 @@ local function Act(bot, s, p, d)
 	if d.intent == 'shrapnel' then
 		bot:Action_UseAbilityOnLocation(d.ability, d.at)
 		s.busyUntil, s.shrapnelAt = p.now + d.castPoint + 0.2, p.now
-		Log(s, bot, 'habilidad', 'shrapnel: ' .. d.reason)
+		Log(s, bot, 'habilidad', (d.ability:GetName() == 'sniper_shrapnel' and 'shrapnel' or d.ability:GetName()) .. ': ' .. d.reason)
 		return
 	end
 	if d.intent == 'acosar' then
@@ -925,7 +936,7 @@ function L.Think()
 			s.busyUntil = p.now
 			s.castBan = s.castBan or {}
 			s.castBan[c.name] = p.now + 3
-			Log(s, bot, 'habilidad', 'assassinate no arranca sobre ' .. c.name .. ': libre')
+			Log(s, bot, 'habilidad', ((c.ability == nil or c.ability == 'sniper_assassinate') and 'assassinate' or c.ability) .. ' no arranca sobre ' .. c.name .. ': libre')
 		end
 	end
 	local treads = (p.now >= s.busyUntil and not bot:IsChanneling()) and Compras.TreadsToAgility(bot, s, p.now) or nil

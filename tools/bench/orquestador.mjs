@@ -169,6 +169,9 @@ export const VARIANTS = {
   // (FunLib/propio/), against the same Sniper played by OHA. Both log its lane numbers once a minute ("[bench] linea").
   control_sniper: { control_completo: "sniper", linea_heroe: "sniper", empuje: false, thinkless: 1 },
   base_sniper: { linea_heroe: "sniper", empuje: false, thinkless: 1 },
+  // Phase 2 (trabajo/fase2.md): the five own heroes, with --heroes luna,sniper,dragon_knight,lion,lich/...; the ones the
+  // draw does not give dota-bot play as OHA.
+  control_equipo: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", empuje: false, thinkless: 1 },
   // The own Sniper with its fighting off (no kills, abilities on heroes or trades), to measure what fighting costs in
   // farm (trabajo/fase1-plan.md, step 5).
   control_sniper_sincombate: { control_completo: "sniper", linea_heroe: "sniper", sin_combate: true, empuje: false, thinkless: 1 },
@@ -330,6 +333,12 @@ export function laneHeroProblem(variantes, mid, fijos) {
     const hero = VARIANTS[v]?.linea_heroe;
     if (hero && mid !== hero && !fijos?.[0].includes("npc_dota_hero_" + hero)) {
       return `--variantes ${v}: dota-bot debe llevar a ${hero} (--mid ${hero} o en el primer grupo de --heroes)`;
+    }
+    // A team under control (phase 2): every one of its heroes in dota-bot's fixed group, or each draw would put a different
+    // number of them under control and a series would mix lineups (review of 2026-11-13).
+    const team = String(VARIANTS[v]?.control_completo ?? "").split(",").filter(Boolean);
+    if (team.length > 1 && !team.every((h) => fijos?.[0].includes("npc_dota_hero_" + h))) {
+      return `--variantes ${v}: --heroes debe llevar en el primer grupo a ${team.join(", ")}`;
     }
   }
   return "";
