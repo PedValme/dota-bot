@@ -1542,3 +1542,20 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - últimos golpes ≥ 145;
   - rotaciones `objetivo_muerto` ≤ 1 de cada 3;
   - lo demás sin perder más de un 15 %: kills ≥ 6,2, remata ≥ 55 %, muertes ≤ 1,5, daño ≥ 21.313.
+- Máquina y código: CPU media 34-38 %, máxima 41-50 %, memoria libre 43-46 %. Código `ea135cc`, 6 de 6 válidas.
+- Resultado (`paquete1` → `paquete2`; OHA entre paréntesis):
+
+  | | `paquete1` | `paquete2` | OHA | Predicho |
+  |---|---|---|---|---|
+  | Últimos golpes | 126 | **154** | 154 | ≥ 145, cumple |
+  | Kills / muertes / asistencias | 7,3 / 0,7 / 9,0 | 5,0 / 2,0 / 5,3 | 9,5 / 3,1 / 5,2 | kills ≥ 6,2 y muertes ≤ 1,5, **no cumple** |
+  | Remata cuando pega | 59 % | 52 % | 67 % | ≥ 55 %, **no cumple** |
+  | Daño a héroes, min 0-25 | 24.549 | 17.724 | 25.285 | ≥ 21.313, **no cumple** |
+  | Golpes a héroes, min 10-20 / 20-25 | 31 / 49 | 39 / 18 | 56 / 26 | |
+  | Rotaciones: terminadas / con kill / `objetivo_muerto` | 15 / 2 / 11 | 22 / 2 / 17 | | `objetivo_muerto` ≤ 1 de 3, **no cumple** |
+
+- Lectura:
+  - **El farm vuelve y la presencia se va:** es el mismo intercambio de las versiones anteriores (`equipo2` frente a `retoque`). Con n=6 y el ruido medido (DECISIONES 2026-11-06), no se distingue cuánto es la regla y cuánto el azar.
+  - **Las rotaciones no se arreglan contando a los aliados cerca:** los objetivos siguen muriendo en menos de 1 s, a 2.000-4.500. La estimación de golpes no ve los hechizos de los aliados. Cuestan poco tiempo, porque acaban enseguida, y dan 2 kills por ronda.
+- Validez: n=6, solo mecanismo.
+- Decisión: rondas agotadas (2 de 2). Se deshace la regla de farmear tras un aliado suelto y se queda la versión de `paquete1`, que es una mejora plausible frente a `build2` en lo que Pedro pidió: kills 5,2 → 7,3, remates 48 % → 59 %, muertes 1,0 → 0,7, daño 21.313 → 24.549. El coste son los últimos golpes (153 → 126). La cuenta de aliados de la rotación se queda (no cambia nada medible). Juega Pedro.
