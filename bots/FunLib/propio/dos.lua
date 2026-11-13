@@ -30,7 +30,6 @@ local K = {
 	pairNear = 800,     -- the partner this close (alive, seen) makes hitting a hero allowed: OHA's pairs fight 573-673 apart
 	follow = 600,       -- the support stays this close to its core (OHA: 520-740)
 	enterHp = 0.5,      -- each of ours at or above this to go in (OHA's kill fights start at 94-100 %)
-	keepShare = 0.75,   -- an entry holds while the pair's score stays at this share of the margin or more
 	entryMax = 8,       -- seconds an entry may last: combate.lua's chaseMax, so the chases and the entry end together
 	sightLost = 1.5,    -- an entry ends after this long without seeing its target (combate.lua's chaseLost)
 	banAfter = 12,      -- seconds a target is not entered again after an entry that ended without a kill (combate.lua's banAfter)
@@ -44,6 +43,13 @@ local K = {
 	enemyAround = 1600, -- enemy heroes this close to one of ours are the lane's
 	evalEvery = 0.25,   -- the pair's board is decided at most this often
 	joinMax = 1400,     -- one of ours this far from the target does not join the entry
+	-- The race (dos-humo: combate.lua's 4 s kill estimate stayed under half its margin in 80 % of the readings with an enemy within
+	-- 900, so the pair entered 10 times in two matches, while OHA goes in on rivals at 91-95 % of health and wins by chasing 15-21 s).
+	raceWindow = 10,    -- seconds of the race: our damage on the target against the enemies' on the weaker of ours
+	raceKill = 1.0,     -- enter when our damage in the window takes the target's health...
+	raceEdge = 1.3,     -- ...and our share of its health is this many times their share of our weaker one's
+	raceKeep = 0.8,     -- an entry holds while our share stays at this or more
+	lockCap = 4,        -- our lock seconds on the target, at most this, take its own damage out of the race
 }
 
 -- team -> lane -> board: { mode = 'linea'|'entrar'|'salir', target, name, pid, id, since, untilT, why, decidedAt, seenAt, ban, ... }
@@ -120,6 +126,43 @@ local function LaneEnemies(ours)
 	return Intercambio.OnePerHero(ours[1]:GetLocation(), list)
 end
 
+local function HitsIn(a, e, seconds)
+	if seconds <= 0 then return 0 end
+	return (1 + math.floor(seconds / math.max(a:GetSecondsPerAttack(), 0.1))) * e:GetActualIncomingDamage(a:GetAttackDamage(), DAMAGE_TYPE_PHYSICAL)
+end
+local function HeroCall(a, name, view, e, window)
+	local m = Heroes.MODULES[a:GetUnitName()]
+	if m == nil or m[name] == nil then return 0, 0 end
+	local ok, x, y = pcall(m[name], a, view, e, window)
+	if not ok then return 0, 0 end
+	return x or 0, y or 0
+end
+
+-- The race on target e over raceWindow: our share (our damage, each of ours within joinMax of it: its hero's abilities and its hits
+-- after casting and walking, over e's health and regeneration) and theirs (all enemies near the weaker of ours, their hits and ready
+-- abilities, e's own shortened by our locks, over its health). Each hero module's KillBurst and Disable give the abilities.
+local function Race(bot, p, mate, e, enemies, weakest, weakHp)
+	local W = K.raceWindow
+	local us, lock = 0, 0
+	for _, h in ipairs({ bot, mate or false }) do
+		if h and D2(h:GetLocation(), e:GetLocation()) <= K.joinMax then
+			local view = h == bot and p or { loc = h:GetLocation(), range = h:GetAttackRange(), now = p.now, enemyHeroes = p.enemyHeroes }
+			lock = lock + HeroCall(h, 'Disable', view, e)
+			local burst, casting = HeroCall(h, 'KillBurst', view, e, W)
+			local walk = math.max(0, D2(h:GetLocation(), e:GetLocation()) - h:GetAttackRange()) / math.max(h:GetCurrentMovementSpeed(), 1)
+			us = us + burst + HitsIn(h, e, W - casting - walk)
+		end
+	end
+	lock = math.min(lock, K.lockCap)
+	local them = 0
+	for _, o in ipairs(enemies) do
+		if D2(o:GetLocation(), weakest:GetLocation()) <= Reach(o) + 600 then
+			them = them + Intercambio.Threat(o, weakest, o == e and math.max(0, W - lock) or W)
+		end
+	end
+	return us / math.max(e:GetHealth() + e:GetHealthRegen() * W, 1), them / math.max(weakHp, 1)
+end
+
 -- An ally's own safety on the target, as combate.lua's Unsafe reads it from where the ally stands.
 local function MateUnsafe(mate, e)
 	local hp = mate:GetHealth()
@@ -180,8 +223,9 @@ local function Decide(bot, s, p, mate, b)
 		elseif p.now > b.untilT then why = 'demasiado_larga'
 		elseif threat >= weakHp then why = string.format('moririamos %s daño3s %d vida %d', Short(weakest), threat, weakHp)
 		elseif Seen(e) then
-			local v = Combate.Evaluate(bot, p, e, D2(p.loc, e:GetLocation()))
-			if v.score < K.keepShare * v.margin then why = string.format('ya_no_da x%.2f < %.2f', v.score, K.keepShare * v.margin) end
+			local ours, theirs = Race(bot, p, mate, e, enemies, weakest, weakHp)
+			if ours < K.raceKeep then why = string.format('ya_no_da nuestro %.2f < %.2f', ours, K.raceKeep)
+			elseif theirs >= 1 then why = string.format('moririamos carrera suyo %.2f', theirs) end
 		end
 		if why ~= nil then EndEntry(bot, b, why, p.now) end
 		return
@@ -196,33 +240,34 @@ local function Decide(bot, s, p, mate, b)
 		leaving = false
 	end
 
-	-- Going in, never while leaving: the best enemy the pair kills by its numbers (Combate.Evaluate: our damage and our partner's,
-	-- abilities and locks in the window), with each of ours near the target healthy and safe by its own reading, not more of them around
+	-- Going in, never while leaving: the enemy on which the pair wins the race (Race: our damage and our partner's,
+	-- abilities and locks, against the enemies' on the weaker of ours), with each of ours near the target healthy and safe by its own reading, not more of them around
 	-- the target than of us, and the enemies' reach on the weaker of ours under the leaving share. Alone (the partner dead, away or in
 	-- the middle game), only an enemy with no other enemy near it.
 	if not leaving then
-		local best, bestScore = nil, 0
+		local best, bestScore, bestWhy = nil, 0, ''
 		for _, e in ipairs(enemies) do
 			local name = Short(e)
 			if (b.ban[name] or -1000) <= p.now then
 				local around = 0
 				for _, o in ipairs(enemies) do if D2(o:GetLocation(), e:GetLocation()) <= 1200 then around = around + 1 end end
-				local v = Combate.Evaluate(bot, p, e, D2(p.loc, e:GetLocation()))
-				local ok = v.kind == 'matar' and not v.withoutMe and v.score >= v.margin and p.hp >= K.enterHp
-					and Combate.Unsafe(bot, p, e) == nil and threat < K.leaveShare * weakHp
+				local ours, theirs = Race(bot, p, mate, e, enemies, weakest, weakHp)
+				local score = ours / math.max(theirs, 0.1)
+				local ok = D2(p.loc, e:GetLocation()) <= K.joinMax and ours >= K.raceKill and theirs < 1 and score >= K.raceEdge
+					and p.hp >= K.enterHp and Combate.Unsafe(bot, p, e) == nil and threat < K.leaveShare * weakHp
 				if ok and mate ~= nil and D2(mate:GetLocation(), e:GetLocation()) <= K.joinMax then
 					ok = mate:GetHealth() >= K.enterHp * mate:GetMaxHealth() and MateUnsafe(mate, e) == nil
 				end
 				if ok and together then
 					ok = around <= #ours
 				elseif ok then
-					ok = around <= 1 and v.score >= 1.2 * v.margin
+					ok = around <= 1
 				end
-				if ok and v.score > bestScore then best, bestScore = e, v.score end
+				if ok and score > bestScore then best, bestScore, bestWhy = e, score, string.format('nuestro %.2f suyo %.2f', ours, theirs) end
 			end
 		end
 		if best ~= nil then
-			Set(bot, b, 'entrar', string.format('x%.2f %s vida %d', bestScore, together and 'juntos' or 'solo', best:GetHealth()), p.now,
+			Set(bot, b, 'entrar', string.format('%s %s vida %d', bestWhy, together and 'juntos' or 'solo', best:GetHealth()), p.now,
 				best, p.now + K.entryMax)
 			return
 		end
