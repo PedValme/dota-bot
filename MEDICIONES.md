@@ -1590,3 +1590,46 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Lectura: **OHA gana las líneas de dos y el propio las pierde.** Solo el Sniper, en su 1 contra 1, va por delante. Los apoyos de OHA matan (Lion, 3 y 6 kills) y los propios mueren. La Luna propia va 4 niveles por detrás.
 - Validez: n=2 por lado, corridas separadas; descriptivo.
 - Decisión: diagnosticar en los registros de `fase2-humo-equipo` por qué pierden las líneas de dos. Después, un paquete con como mucho 2 rondas, y que juegue Pedro cuando el equipo aguante.
+
+### 2026-11-13 · Ruido del diseño de medición del equipo: A contra A (`equipo-aa1-*` y `equipo-aa2-*`), predicción antes de lanzar
+- Pregunta (plan firmado el 2026-11-13): ¿cuánto se mueve cada métrica por línea y por héroe entre dos brazos iguales, con el mismo diseño que usarán los paquetes? Responderla da el n de cada paquete y comprueba el banco y el análisis.
+- Diseño:
+  - los dos brazos son OHA con nuestros cinco (`--variantes base_sniper,base`), en invocaciones de 2 partidas con cambio de lado;
+  - se alternan aa1 y aa2 rotando 3 alineaciones rivales (a: sven, viper, bristleback, vengefulspirit, witch_doctor; b: juggernaut, lina, axe, jakiro, crystal_maiden; c: phantom_assassin, razor, tidehunter, skywrath_mage, oracle);
+  - dos vueltas: 24 partidas al min 12, unas 2,7 h;
+  - análisis: `node tools/bench/equipo.mjs "equipo-aa1-.*" "equipo-aa2-.*"` en los min 5, 10 y 12.
+- Ajustes del agente sobre el plan firmado («`base_sniper` contra `base_sniper`, 16 partidas»):
+  - el orquestador no deja repetir la variante, así que los dos brazos son etiquetas distintas de la misma variante;
+  - 24 partidas en vez de 16, para tener 6 estratos (alineación y lado) con 2 partidas por brazo.
+  
+  Lo propuso el revisor adversarial de la medición: una DE agregada de una sola corrida no mide la deriva entre tandas, que es el ruido que verán los paquetes.
+- Revisión de la medición (Opus, adversarial), aplicada antes de lanzar en `tools/bench/equipo.mjs`:
+  - diferencia mínima detectable con cuantiles t, y sin intervalo con menos de 3 estratos;
+  - comprobación de líneas por posición entre t=60 y 180;
+  - las muertes y kills «de la línea» pasan a ser de sus héroes en todo el mapa (OHA rota antes del min 10);
+  - descartes con su motivo, aviso de mezcla de código y velocidad real por brazo.
+- Predicción: el IC de cada diferencia cubre el 0. Ninguna métrica sale distinta entre brazos iguales salvo por azar: con unas 50 métricas, 2 o 3 pueden quedar fuera.
+- Máquina y código: código `66720ba`, 24 de 24 válidas. CPU y memoria en `bench/series.csv`. Velocidad real ×2,40 en los dos brazos (de 2,34 a 2,44).
+- Resultado (`equipo.mjs`, 6 estratos; diferencia aa1 − aa2 y su IC, junto con la diferencia mínima detectable, DMD):
+  - **Comprobaciones:** 0 avisos (líneas emparejadas como se supone, sin mezcla de código, sin descartes).
+  - **Métricas cuyo IC no cubre el 0:**
+    - min 5: 3 de 47;
+    - min 10: 5 de 47 (`1.luna.lvl` +1,4, `3.dragon_knight.lh`, `4.lion.d`, `5.lich.k`, `linea.dificil.muertes_heroes` +2,5);
+    - min 12: 2 de 47.
+    
+    Por azar se esperan unas 2,4 por minuto.
+  - **DMD en el min 10, la tabla para dimensionar los paquetes:**
+    - kills a favor menos en contra del equipo: 4,9;
+    - patrimonio del equipo: 5,0k;
+    - muertes de los héroes de las líneas de dos: segura 4,9, difícil 2,4; mid 0,9;
+    - patrimonio de la línea: segura 5,6k, mid 2,3k, difícil 4,1k;
+    - nivel por héroe: Luna 1,05, Sniper 3,2;
+    - últimos golpes de Luna: 11,6.
+- Lectura:
+  - **El banco y el análisis aguantan:** con dos brazos iguales salen pocas diferencias, cerca de lo que da el azar.
+  - **Una posible deriva de orden:** aa1 corrió siempre antes que aa2 en cada alineación, y `1.luna.lvl` queda fuera del 0 en los min 5 y 10 (+1,4 niveles).
+  - **El ruido es grande:** en las líneas de dos, con 12 partidas por brazo, solo se distinguen efectos de unas 2,5 a 5 muertes y de 4 a 6k de patrimonio. Las brechas actuales con OHA (17,5 kills de diferencia de equipo, 7k en la línea segura) caben de sobra. Cerca de la paridad harán falta series más largas.
+- Decisión:
+  - Los paquetes alternan el orden de los brazos (ABBA por alineación), para que la deriva de orden no se confunda con el efecto.
+  - Ronda de mecanismo: 6 + 6 partidas (1 por estrato), suficiente para las brechas actuales.
+  - Series de confirmación: 12 + 12 o más.
