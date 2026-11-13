@@ -442,6 +442,17 @@ local function RuleRetreat(bot, s, p)
 	-- Once the lane is over nothing heals it at a tower (2.000 of health at 5 a second): any retreat for health ends at home.
 	if s.toFountain or waitLong or ((p.hp < K.fountainHp or (s.late and s.lowHp)) and HasItem(bot, 'item_flask') == nil) then
 		s.toFountain = true
+		-- Home by teleport during the lane, as OHA does (all 19 of its trips home in oha-dos-*, against 0 of 39 for ours, walking):
+		-- far from the fountain, the scroll ready, and no enemy hero near or hitting us, since the channel is cut.
+		if not s.late and D2(p.loc, Fountain(p.team)) > 4000 and p.now - (s.tpAt or -1000) >= 5 and #p.enemyHeroes == 0
+			and not bot:WasRecentlyDamagedByAnyHero(2.0) then
+			local slot = bot:FindItemSlot('item_tpscroll')
+			local item = (slot >= 0 and (slot <= 5 or slot == 15)) and bot:GetItemInSlot(slot) or nil
+			if item ~= nil and item:IsFullyCastable() then
+				s.tpAt = p.now
+				return { intent = 'teleporte', item = item, at = Fountain(p.team), reason = reason .. ', a la fuente' }
+			end
+		end
 		return { intent = 'retirada_fuente', reason = reason .. ', sin salvia', to = Fountain(p.team) }
 	end
 	if p.towerOnMe then
