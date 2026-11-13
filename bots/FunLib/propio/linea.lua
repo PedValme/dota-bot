@@ -24,6 +24,8 @@ local Heroes = require(GetScriptDirectory()..'/FunLib/propio/heroes')
 local HEROES = Heroes.MODULES
 -- Benchmark variant "sin_combate": no kills, abilities on heroes or trades, to measure what the fighting costs in farm.
 local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
+-- Observer mode: the lane of two's shadow line (dos.lua, Sombra), the same one OHA's bots log, to read both with one vara.
+local OBSERVE = dofile(GetScriptDirectory()..'/FunLib/bench_observe')
 local NO_COMBAT = Variant.sin_combate == true
 
 -- Thresholds of the rules (one place, so the log and the rules agree).
@@ -1127,6 +1129,7 @@ function L.Think()
 		return
 	end
 	local p = Perceive(bot)
+	if OBSERVE then pcall(Dos.Sombra, bot) end
 	CheckPending(bot, s, p)
 	CheckAssassinate(bot, s, p)
 	local evalOk, evalLines = pcall(Combate.KillEval, bot, s, p) -- a logging failure must not stop the bot
