@@ -1729,3 +1729,13 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - kills de los héroes de las líneas de dos: la segura ≥ −1,5 y la difícil ≥ −4;
   - `persecucion motivo=retirada` < 20 por cada 6 partidas;
   - las muertes no suben más de +1 sobre `p2`.
+- Máquina y código: `3789c11`, 12 de 12 válidas, 0 avisos. Velocidad real ×2,55 la prueba y ×2,41 la referencia.
+- Resultado (min 12, prueba menos referencia, IC 95 %):
+  - **Kills de los héroes de las líneas de dos:** segura −4,5 (0,2 frente a 4,7), difícil −5,3. Predicción ≥ −1,5 y ≥ −4: **no cumple**.
+  - **Muertes:** segura **+4,8 (2,1 a 7,5)**, difícil +1,5. Sube más de +1 sobre `p2`: **no cumple**.
+  - **Nivel:** Luna −5,3, Dragon Knight −4,5, Lion −3,5, Lich −4,2. Diferencia de kills del equipo −19,3.
+  - **Persecuciones:** `retirada` 37 (antes 51), `kill` 14 (antes 5), `objetivo_muerto` 7 (antes 48), `sigo_en_la_kill` 12, `me_uno` 0.
+- Lectura:
+  - los arreglos hacen lo que dicen en el registro: menos retiradas que cortan, más kills cerradas por la persecución y sin falsos `objetivo_muerto`;
+  - pero el resultado de las líneas no se mueve, y la línea segura muere más. Quedarse en la kill expone a la pareja, y en la segura el rival (Bristleback y Vengeful, Axe y Jakiro, Tidehunter y Skywrath) gana esos intercambios.
+- Decisión: **los paquetes 1 y 2 agotaron sus rondas sin cumplir.** Las reglas de línea heredadas del 1 contra 1 del Sniper, parcheadas, no cierran una brecha de unos 19 kills y 4-5 niveles. Se plantea a Pedro cómo seguir antes de abrir otro paquete.
