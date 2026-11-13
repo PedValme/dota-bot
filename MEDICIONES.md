@@ -1692,3 +1692,27 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Predicción (prueba menos referencia, min 12):
   - `p1r2`: muertes de las líneas de dos ≤ +1 en cada una; nivel de Luna y Lich mejor que en `p1-prueba` (−5,3 y −4,7);
   - `p2`: kills de los héroes de las líneas de dos ≥ 3 en cada línea (hoy 0,2-0,3); diferencia de kills del equipo mejor que −10; nivel de los cuatro a −2 o mejor.
+- Máquina y código: 18 de 18 válidas, 0 avisos. Código: `40c44fc` (referencia y `p1r2`) y `da058f9` (`p2`). Velocidad real: ×2,53-2,55 los propios y ×2,40 OHA (anotada: no cambia las decisiones por segundo de juego).
+- Resultado en el min 12 (prueba menos referencia; IC 95 %):
+
+  | | `p1r2` − ref | `p2` − ref | `p2` − `p1r2` |
+  |---|---|---|---|
+  | Nivel: Luna / DK / Lion / Lich | −4,0 / −2,8 / −3,0 / −3,0 | −3,2 / −4,3 / −3,5 / −3,0 | +0,8 / −1,5 / −0,5 / 0 |
+  | Muertes, línea segura / difícil | +1,7 / +3,3 (IC cubre 0) | +2,7 / +3,5 (IC cubre 0) | +1,0 / +0,2 |
+  | Kills, línea segura / difícil | −3,0 / −6,0 | −3,0 / −6,7 | 0 / −0,7 |
+  | Diferencia de kills del equipo | −17,7 | −21,2 | −3,5 (−9,2 a 2,2) |
+  | Patrimonio, línea segura / difícil | −7,6k / −7,3k | −6,1k / −8,6k | +1,5k / −1,4k |
+
+- Frente a la predicción:
+  - `p1r2`: muertes ≤ +1, **no cumple**. El nivel de Luna mejora de −5,3 a −4,0 frente a `p1-prueba`.
+  - `p2`: kills ≥ 3 por línea, **no cumple** (0,7 y 1,0). Diferencia de kills mejor que −10, **no cumple**.
+- Lectura:
+  - **El mecanismo del paquete 2 se dispara pero no convierte:**
+    - 152 anuncios;
+    - `kill_eval` con aliados en 4.344 evaluaciones (462 sin el paquete);
+    - Dragon Tail 28 y Hex 22 (8 y 6 sin el paquete);
+    - `presiono_2c2` 210 veces.
+    
+    Las persecuciones terminan en `retirada` 54 veces, `objetivo_muerto` 49 y `kill` 9.
+  - **El paquete 1 queda agotado (2 rondas) sin cumplir.** Su arreglo (`fa02542`) se queda porque quita un defecto.
+- Decisión: diagnóstico en los registros de por qué las kills no se cierran, antes de la ronda 2 del paquete 2, que es la última.
