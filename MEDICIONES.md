@@ -1590,3 +1590,22 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Lectura: **OHA gana las líneas de dos y el propio las pierde.** Solo el Sniper, en su 1 contra 1, va por delante. Los apoyos de OHA matan (Lion, 3 y 6 kills) y los propios mueren. La Luna propia va 4 niveles por detrás.
 - Validez: n=2 por lado, corridas separadas; descriptivo.
 - Decisión: diagnosticar en los registros de `fase2-humo-equipo` por qué pierden las líneas de dos. Después, un paquete con como mucho 2 rondas, y que juegue Pedro cuando el equipo aguante.
+
+### 2026-11-13 · Ruido del diseño de medición del equipo: A contra A (`equipo-aa1-*` y `equipo-aa2-*`), predicción antes de lanzar
+- Pregunta (plan firmado el 2026-11-13): ¿cuánto se mueve cada métrica por línea y por héroe entre dos brazos iguales, con el mismo diseño que usarán los paquetes? Responderla da el n de cada paquete y comprueba el banco y el análisis.
+- Diseño:
+  - los dos brazos son OHA con nuestros cinco (`--variantes base_sniper,base`), en invocaciones de 2 partidas con cambio de lado;
+  - se alternan aa1 y aa2 rotando 3 alineaciones rivales (a: sven, viper, bristleback, vengefulspirit, witch_doctor; b: juggernaut, lina, axe, jakiro, crystal_maiden; c: phantom_assassin, razor, tidehunter, skywrath_mage, oracle);
+  - dos vueltas: 24 partidas al min 12, unas 2,7 h;
+  - análisis: `node tools/bench/equipo.mjs "equipo-aa1-.*" "equipo-aa2-.*"` en los min 5, 10 y 12.
+- Ajustes del agente sobre el plan firmado («`base_sniper` contra `base_sniper`, 16 partidas»):
+  - el orquestador no deja repetir la variante, así que los dos brazos son etiquetas distintas de la misma variante;
+  - 24 partidas en vez de 16, para tener 6 estratos (alineación y lado) con 2 partidas por brazo.
+  
+  Lo propuso el revisor adversarial de la medición: una DE agregada de una sola corrida no mide la deriva entre tandas, que es el ruido que verán los paquetes.
+- Revisión de la medición (Opus, adversarial), aplicada antes de lanzar en `tools/bench/equipo.mjs`:
+  - diferencia mínima detectable con cuantiles t, y sin intervalo con menos de 3 estratos;
+  - comprobación de líneas por posición entre t=60 y 180;
+  - las muertes y kills «de la línea» pasan a ser de sus héroes en todo el mapa (OHA rota antes del min 10);
+  - descartes con su motivo, aviso de mezcla de código y velocidad real por brazo.
+- Predicción: el IC de cada diferencia cubre el 0. Ninguna métrica sale distinta entre brazos iguales salvo por azar: con unas 50 métricas, 2 o 3 pueden quedar fuera.
