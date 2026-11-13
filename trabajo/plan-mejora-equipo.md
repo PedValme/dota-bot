@@ -107,3 +107,33 @@ o tu palabra para correrlas con la carga anotada.
 - **Cambio de orden (Pedro, DECISIONES 2026-11-13):** antes del paquete 3, estudiar lo que hace OHA en las líneas de dos y reescribir de cero la capa de línea y rol para 2 contra 2:
   - se registran sus modos y decisiones como datos, no como base;
   - dónde se coloca cada rol, cuándo entra, cómo encadenan habilidades y cuándo se van.
+
+## Estudio de OHA en las líneas de dos (2026-11-13, MEDICIONES `oha-dos-*`)
+Datos de 12 líneas de dos de OHA (6 partidas al min 12, los dos equipos), con el registro fino y `tools/analisis/linea-dos.mjs`.
+Son la especificación de la reescritura, no su base: se copia lo que gana y se corrige lo que pierde.
+
+**Lo que gana (la pareja de la difícil, en las 12 líneas):**
+- juntos, a unos 600-700 uno del otro, y de 100 a 400 por delante de su ola;
+- entran los dos con la vida llena: los dos pegan en el 78-95 % de las peleas que acaban en kill;
+- la primera habilidad de cada uno sale con 1 s de diferencia;
+- abren con un control o una ráfaga: DK y Lion encadenan Breathe Fire con Earth Spike, y después Tail, Hex y Finger;
+- persiguen: una pelea con kill dura unos 15-21 s.
+
+**Lo que pierde (la segura de OHA, 9,2 muertes por línea):**
+- muere con la vida alta (90 % 10 s antes), frente a 2 rivales y sin aliado a 1200;
+- en el 60 % de los casos había pegado a un héroe justo antes, y casi siempre muere ya en RETREAT;
+- Luna y Lich se separan (unos 900 en la línea, 5000 al empezar sus peleas con kill).
+
+**Lo que pide la capa nueva, en orden:**
+1. La pareja como unidad:
+   - el apoyo sigue al núcleo a unos 600;
+   - no se pega a un héroe si el compañero no está a 800 o menos y con vida.
+2. Entrar juntos y no a medias:
+   - una entrada la decide la pareja (daño y bloqueos de los dos frente a la vida de un rival);
+   - los dos lanzan en el mismo segundo y siguen la persecución.
+3. Salir antes, no durante:
+   - si el rival entra con los dos y la suma no da, la pareja se va a la vez, antes del primer golpe recibido, y no a 0,3 de vida;
+   - el registro de OHA muestra que la retirada en mitad de la ráfaga ya no salva.
+4. Volver con TP con poca vida, como OHA.
+
+**Herramienta:** el mismo análisis lee los brazos del bot propio, y cada versión se compara con `oha-dos-*` en estas métricas. La medición que decide sigue siendo `equipo.mjs`.

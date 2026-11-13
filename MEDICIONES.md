@@ -1739,3 +1739,26 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - los arreglos hacen lo que dicen en el registro: menos retiradas que cortan, más kills cerradas por la persecución y sin falsos `objetivo_muerto`;
   - pero el resultado de las líneas no se mueve, y la línea segura muere más. Quedarse en la kill expone a la pareja, y en la segura el rival (Bristleback y Vengeful, Axe y Jakiro, Tidehunter y Skywrath) gana esos intercambios.
 - Decisión: **los paquetes 1 y 2 agotaron sus rondas sin cumplir.** Las reglas de línea heredadas del 1 contra 1 del Sniper, parcheadas, no cierran una brecha de unos 19 kills y 4-5 niveles. Se plantea a Pedro cómo seguir antes de abrir otro paquete.
+
+### 2026-11-13 · Estudio de las líneas de dos de OHA con el registro fino (`oha-dos-a/b/c`): datos, no medición de un paquete
+- Pregunta (Pedro: «Estudiar a OHA y reescribir la línea de dos»): ¿cómo juega OHA una línea de dos? Dónde se coloca cada rol, quién abre y con qué, cómo encadena la pareja, cómo mata y cómo muere, y cuándo se va.
+- Qué cambió: registro fino del observador (`fino` por segundo, `frente`, `lanza`, `golpe`; los primeros 900 s), revisado por Opus con sus hallazgos aplicados, y el análisis descriptivo `tools/analisis/linea-dos.mjs`.
+- Diseño: `--rival dotabot --variantes base_sniper,base --corte 12 --observar`, alineaciones a, b y c, 2 partidas cada una con cambio de lado. Los dos equipos son OHA: se leen las 12 líneas de dos (`--lado nuestro` y `--lado rival`).
+- Máquina y código: código `8662f2b`, 6 de 6 válidas. CPU media 31-32 %, máxima 33-35 %, 39 % de memoria libre (humo cortado con la carga anotada).
+- Puerta del registro: 10 líneas `fino` por segundo de t=0 a 720 sin huecos, 0 `obs error`. En los hechizos con objetivo unidad, `lanza` cuadra con el `golpe` a ese héroe en los 3 s siguientes en 352 de 358 casos (los 6 restantes son Arcane Bolt, un proyectil lento), y ningún caso apunta a otro héroe.
+- Resultado (min 0-12, n = 6 por par de héroes, descriptivo):
+
+  | Par (OHA) | kills de sus rivales | muertes | pegan los dos en las peleas con kill | segundos entre la 1.ª habilidad de cada uno | distancia de la pareja al empezar |
+  |---|---|---|---|---|---|
+  | Difícil, DK + Lion | 8,0 | 4,8 | 78 % | 1,0 | 673 |
+  | Difícil del rival (3+4) | 9,2 | 4,2 | 81 % | 1,0 | 620 |
+  | Segura, Luna + Lich | 4,2 | 9,2 | 42 % | 2,5 | 5037 |
+  | Segura del rival (1+5) | 4,8 | 8,0 | 95 % | 3,0 | 573 |
+
+  - **En las 12 líneas gana la pareja de la difícil (3+4):** entra junta y en modo ATTACK de OHA (38 de 76 héroe-pelea al empezar las peleas con kill de DK y Lion).
+  - Abre con habilidad en el 80-96 % de los casos; DK y Lion encadenan Breathe Fire con Earth Spike, y después Tail, Hex y Finger.
+  - **Las muertes llegan con la vida alta:** 73-90 % 10 s antes, con 2 rivales a 1200 y 0-1 aliados. En el 58-76 % de los casos el muerto había pegado a un héroe justo antes, y la mayoría muere ya en RETREAT: la retirada llega tarde.
+  - **Posición en la línea** (mediana): 100-400 por delante de su ola, a 900-1400 del rival más cercano y a 520-740 de la pareja. Luna y Lich van separadas (945 y 889).
+  - **Vuelta a la base:** con TP, con el 20-45 % de vida.
+- Validez: descriptivo, n = 6 por par y 3 alineaciones. Las peleas son tramos de daño entre héroes con huecos de 5 s o menos; «quién abre» se resuelve al segundo («ambos» cuando los dos pegan en el primero). Nada de esto mide un cambio.
+- Decisión: la capa de línea y rol para 2 contra 2 se reescribe con estos datos como especificación de lo que se le gana a OHA (`trabajo/plan-mejora-equipo.md`, «Estudio de OHA»).

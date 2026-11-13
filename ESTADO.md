@@ -10,8 +10,8 @@
   Al min 12, frente a OHA con los mismos héroes: diferencia de kills del equipo −19, líneas de dos con 4-5 niveles menos, y la línea segura con +4,8 muertes.
 - **Qué se probó:** parchear las reglas de línea del 1 contra 1 del Sniper (retiradas, intercambio, kill en pareja). Los mecanismos funcionan en el registro y el resultado no se mueve.
 - **Siguiente acción** (Pedro: «Estudiar a OHA y reescribir la línea de dos»):
-  1. registrar lo que hace OHA en las líneas de dos: sus modos y decisiones como datos, con posición por rol, entradas, encadenado de habilidades y salidas, con un registro más fino que las líneas `hero` cada 30 s;
-  2. escribir de cero la capa de línea y rol para 2 contra 2;
+  1. ~~registrar lo que hace OHA en las líneas de dos~~ hecho (#101): registro fino del observador, `tools/analisis/linea-dos.mjs` y 6 partidas `oha-dos-*`. Lo aprendido y lo que pide la capa nueva está en `trabajo/plan-mejora-equipo.md`, «Estudio de OHA» (MEDICIONES 2026-11-13). En OHA gana la pareja de la difícil: va junta, abre con las dos habilidades en 1 s y persigue. La segura de OHA muere 9 veces por línea;
+  2. **siguiente:** escribir de cero la capa de línea y rol para 2 contra 2, con esa especificación;
   3. medir con el mismo diseño.
   
   Unas 2 sesiones antes de la próxima medición que decida.
@@ -35,7 +35,7 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-04 · Vuelta de la fase 1: banco con `--corte` y `--heroes` (#56), registro (#57), defectos y build (#58, #59),
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
-- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100).
+- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100); registro fino y estudio de OHA en las líneas de dos (#101).
 
 ## Siguientes pasos
 1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): estudio de OHA en las líneas de dos y reescritura de la capa de línea y rol (ver «Próxima sesión»).

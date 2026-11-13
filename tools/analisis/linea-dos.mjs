@@ -35,7 +35,7 @@ const obsDir = join(root, "bench", "observaciones");
 const obsFiles = new Set(readdirSync(obsDir));
 
 // Items and actions that are not part of a fight's chain.
-const NOT_COMBAT = /^(item_tpscroll|item_travel|ability_lamp_use|item_flask|item_clarity|item_enchanted_mango|item_faerie_fire|item_tango|item_ward|item_bottle|item_magic_stick|item_magic_wand|ability_capture|item_branches)/;
+const NOT_COMBAT = /^(item_power_treads|courier_|item_quelling_blade|item_madstone|item_tpscroll|item_travel|ability_lamp_use|item_flask|item_clarity|item_enchanted_mango|item_faerie_fire|item_tango|item_ward|item_bottle|item_magic_stick|item_magic_wand|ability_capture|item_branches)/;
 // A hero's name without the illusion (~) or summon (*) mark; creeps and towers are not heroes.
 const bare = (n) => n.replace(/[~*]$/, "");
 const byHero = (h) => h.att !== "creep" && h.att !== "torre";
