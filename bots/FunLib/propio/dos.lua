@@ -361,6 +361,44 @@ function D.Act(bot, s, p, home)
 	return nil
 end
 
+-- Shadow (observer mode, OHA's bots with our heroes, tools/analisis/linea-dos.mjs --sombra): once a second per lane of two, what this
+-- module would read, with no action. Crossed with the fine record, it says what the race and the threat read when OHA goes in and
+-- wins, or dies, so the rules come from data and not from rounds of thresholds (DECISIONES 2026-11-06). One line per lane: the lower
+-- player id of the pair alive logs it.
+local shadowAt = {}
+function D.Sombra(bot)
+	if not bot:IsAlive() or bot:IsIllusion() then return end
+	local now = GameTime()
+	local pos = Heroes.Datos(bot:GetUnitName()).pos
+	if pos == nil or PARTNER_POS[pos] == nil or DotaTime() < 0 or DotaTime() > 900 then return end
+	local partner = Partner(bot)
+	local mate = partner ~= nil and Seen(partner) and partner or nil
+	if mate ~= nil and mate:GetPlayerID() < bot:GetPlayerID() then return end
+	local key = GetTeam() * 10 + ((pos == 1 or pos == 5) and 1 or 3)
+	if now - (shadowAt[key] or -1000) < 1 then return end
+	shadowAt[key] = now
+	local hp = bot:GetHealth()
+	local p = { now = now, loc = bot:GetLocation(), hp = hp / math.max(bot:GetMaxHealth(), 1), hpAbs = hp, range = bot:GetAttackRange(),
+		late = false, enemyHeroes = Intercambio.OnePerHero(bot:GetLocation(), bot:GetNearbyHeroes(1500, true, BOT_MODE_NONE) or {}) }
+	local ours = { bot }
+	if mate then table.insert(ours, mate) end
+	local enemies = LaneEnemies(ours)
+	if #enemies == 0 then return end
+	local weakest, weakHp = bot, hp
+	if mate and mate:GetHealth() < weakHp then weakest, weakHp = mate, mate:GetHealth() end
+	local threat = ThreatOn(weakest, enemies)
+	local parts = {}
+	for _, e in ipairs(enemies) do
+		local o, t = Race(bot, p, mate, e, enemies, weakest, weakHp)
+		table.insert(parts, string.format('%s:%.2f:%.2f:%d:%d', Short(e), o, t, D2(p.loc, e:GetLocation()),
+			math.floor(100 * e:GetHealth() / math.max(e:GetMaxHealth(), 1))))
+	end
+	out(string.format('[bench] prop dos_sombra t=%.1f pid=%d linea=%s pareja=%d debil=%s amenaza3s=%.2f vida=%d/%d %s', DotaTime(),
+		bot:GetPlayerID(), (pos == 1 or pos == 5) and 'segura' or 'dificil', mate and math.floor(D2(p.loc, mate:GetLocation())) or -1,
+		Short(weakest), threat / math.max(weakHp, 1), math.floor(100 * p.hp),
+		mate and math.floor(100 * mate:GetHealth() / math.max(mate:GetMaxHealth(), 1)) or -1, table.concat(parts, ',')))
+end
+
 -- Where the support stands in the lane: its own lane point (laneAt), kept within `follow` of its core. nil for the core, or when the
 -- core is not in the lane. Also once there: returning nil handed it to the lane point, beyond `follow`, and it flipped every tick.
 function D.Spot(bot, s, p, laneAt)

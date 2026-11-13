@@ -14,6 +14,8 @@ local Utils = require( GetScriptDirectory()..'/FunLib/utils' )
 -- the variant). Registro: the per-minute lane line of the test, the same for both arms.
 local Control = require( GetScriptDirectory()..'/FunLib/propio/control' )
 local Registro = require( GetScriptDirectory()..'/FunLib/propio/registro_linea' )
+-- Observer mode only: what the own bot's lane of two would read, logged for OHA's bots with our heroes (dos.lua, Sombra).
+local Dos = require( GetScriptDirectory()..'/FunLib/propio/dos' )
 local BotBuild = dofile( GetScriptDirectory().."/BotLib/"..string.gsub( botName, "npc_dota_", "" ) )
 local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
 local Customize = require(GetScriptDirectory()..'/Customize/general')
@@ -8439,6 +8441,7 @@ function BuybackUsageThink()
 	if Control.Intercept('BuybackUsageThink') then return end
 	if RefreshBotHandle() then return end
 	pcall(Registro.Tick, bot)
+	if benchObserve then pcall(Dos.Sombra, bot) end
 	-- How often the engine lets this bot think, per minute of game time (observer only): at x4 a heavier variant could
 	-- think less per game second than the other arm, a bias against it (MEDICIONES n3-v3, review 2026-11-02). The
 	-- engine calls BuybackUsageThink once per bot frame, before any throttle.
