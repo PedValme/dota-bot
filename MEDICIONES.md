@@ -1762,3 +1762,21 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **Vuelta a la base:** con TP, con el 20-45 % de vida.
 - Validez: descriptivo, n = 6 por par y 3 alineaciones. Las peleas son tramos de daño entre héroes con huecos de 5 s o menos; «quién abre» se resuelve al segundo («ambos» cuando los dos pegan en el primero). Nada de esto mide un cambio.
 - Decisión: la capa de línea y rol para 2 contra 2 se reescribe con estos datos como especificación de lo que se le gana a OHA (`trabajo/plan-mejora-equipo.md`, «Estudio de OHA»).
+
+### 2026-11-13 · Capa de la línea de dos (`dos.lua`), ronda de mecanismo 1 (`dos1-*`): predicción antes de lanzar
+- Pregunta: ¿la pareja que entra, sale y se coloca junta (`dos.lua`, especificación del «Estudio de OHA») mata más y muere menos en las líneas de dos que el bot propio de antes?
+- Qué cambió desde `propio-dos-*` (`c90c2f2`), en la rama `claude/linea-dos` (revisada por Opus antes del primer humo, con sus hallazgos aplicados):
+  - tablero de la pareja con un solo decisor;
+  - entrada por la carrera de 10 s;
+  - salida conjunta;
+  - el apoyo junto a su núcleo;
+  - sin presionar por iniciativa propia;
+  - TP a la fuente;
+  - sombra en modo observador.
+- Humos previos (alineación a, 2 + 2): `dos-humo` mostró al apoyo oscilando cada tick y a Luna presionando sola (corregidos). `dos-humo2` dio 9 entradas, unas 66 salidas y 7-9 muertes por línea. La sombra sobre OHA (`oha-sombra-*`) confirma la regla de entrada: OHA mata con nuestro ≥ 1,2, suyo ≤ 0,6 y la pareja a 530-710.
+- Diseño: `--rival dotabot --variantes control_equipo,base --corte 12 --observar`, alineaciones a, b y c, 2 partidas cada una con cambio de lado. Se compara con `propio-dos-*` (antes) y `oha-dos-*` / `oha-sombra-*` (OHA) con `linea-dos.mjs --sombra` y `equipo.mjs`.
+- Predicción (min 12, por línea):
+  - kills sobre sus rivales ≥ 2 en la segura (antes 0,8) y ≥ 4 en la difícil (antes 2,5);
+  - muertes ≤ 8 en la segura (antes 8,8) y ≤ 6 en la difícil (antes 7,0);
+  - al menos la mitad de los viajes a la base con TP (antes 0 de 39).
+- Es la ronda 1 de 2 del paquete (DECISIONES 2026-11-06).
