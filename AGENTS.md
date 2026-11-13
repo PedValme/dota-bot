@@ -59,6 +59,10 @@ once it exists.
   - La partida de Pedro va solo tras una mejora plausible por brechas encontradas y corregidas, y cada versión se compara con el
     marcador de fin de partida (`tools/analisis/evaluacion-2026-11-06/a11.py`, `a12.py`). Por qué: su tiempo es lo más caro, y la media
     de una métrica no dice dónde está la brecha (DECISIONES.md, 2026-11-08).
+  - Equipo propio (fase 2 en adelante): el comportamiento va en capas, la de línea y rol en código común y la de héroe en su módulo.
+    Cada paquete se mide cara a cara contra el equipo de OHA, intercalado, con 3 alineaciones fijas y el análisis fijo con IC; Pedro
+    juega tras el paquete 2 o 3 y al final, y la meta es ganar 18 o más de 24 partidas completas. Por qué: se pide saber con precisión
+    qué corrige cada cambio (DECISIONES.md, 2026-11-13; `trabajo/plan-mejora-equipo.md`).
   - Una rama y un PR por tarea; mientras corre una serie, el trabajo paralelo va en otro worktree (DECISIONES.md,
     2026-10-31).
 - Operation: no hay despliegue; se juega copiando `bots/` a la carpeta de Dota (ver «Este repositorio»).
