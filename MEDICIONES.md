@@ -1797,3 +1797,27 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - la amenaza de 3 s no las anticipa (0,0-0,5), porque cierran con aturdimientos y saltos;
   - la sombra da «suyo» cerca de 1,0, frente a 0,5-0,7 en OHA: nuestros héroes van por detrás en nivel y daño.
 - Decisión: ronda 2, la última del paquete. Nunca solo ante dos: el núcleo vuelve con su apoyo si está a más de 800 con rivales a la vista, y un héroe sin compañero a 1500 se queda junto a su torre ante dos rivales. Misma predicción que la ronda 1.
+
+### 2026-11-13 · Capa de la línea de dos, ronda de mecanismo 2 (`dos2-*`), la última del paquete
+- Pregunta, diseño y predicción: los de la ronda 1, con «nunca solo ante dos» añadido (código `97f19a3`, 6 de 6 válidas, CPU media 35-40 %, máxima 40-60 %).
+- Resultado (min 12, por línea; antes `propio-dos-*`, ronda 1 `dos1-*`):
+
+  | Línea | Kills | Muertes |
+  |---|---|---|
+  | Segura | 0,7 (antes 0,8; ronda 1 0,8) | 5,8 (antes 8,8; ronda 1 9,0) |
+  | Difícil | 0,5 (antes 2,5; ronda 1 0,8) | 6,3 (antes 7,0; ronda 1 8,5) |
+
+  - Viajes con TP: 31 de 35.
+  - `equipo.mjs` frente a `propio-dos-*`, 6 estratos:
+    - segura −3,0 muertes (−6,6 a 0,6) y +1,6 niveles de diferencia;
+    - difícil −27,7 últimos golpes (−48,7 a −6,7) y −1,8 kills;
+    - diferencia de kills del equipo igual (−11,0 frente a −11,7).
+- Lectura:
+  - **sobrevive mejor en la segura, pero no mata, y la difícil pierde farm** por esperar junto a la torre y replegarse (545 y 940 decisiones);
+  - la sombra mantiene «suyo» cerca de 1,0-1,6 frente a 0,5-0,7 en OHA: con estos niveles y este daño la pareja casi nunca gana la carrera, la juegue como la juegue.
+- Decisión: **el paquete de la línea de dos agotó sus 2 rondas sin cumplir.** Se quedan en `main`, tras la variante del bot propio:
+  - la capa (tablero, salida conjunta, el apoyo junto a su núcleo, nunca solo ante dos);
+  - el TP a la fuente;
+  - la sombra.
+
+  El siguiente paso lo decide Pedro.
