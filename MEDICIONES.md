@@ -1716,3 +1716,16 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
     Las persecuciones terminan en `retirada` 54 veces, `objetivo_muerto` 49 y `kill` 9.
   - **El paquete 1 queda agotado (2 rondas) sin cumplir.** Su arreglo (`fa02542`) se queda porque quita un defecto.
 - Decisión: diagnóstico en los registros de por qué las kills no se cierran, antes de la ronda 2 del paquete 2, que es la última.
+
+### 2026-11-13 · Paquete 2 «matar en pareja», ronda 2, la última (`p2r2-*` frente a `p2r2ref-*`): predicción antes de lanzar
+- Qué cambió desde `p2`, por el diagnóstico de 129 persecuciones (Opus); revisado por Opus, con sus 4 hallazgos aplicados:
+  - mientras dura una kill en pareja que la estimación sigue dando, y el compañero persigue al mismo objetivo, las retiradas blandas solo saltan si moriríamos antes (la peor lectura de la ráfaga y del daño sostenido). Antes cortaban 51 de 129;
+  - `objetivo_muerto` solo cuando de verdad muere: 41 de 48 eran falsos;
+  - el veto de 12 s, solo si el objetivo escapa o tras `otros_enemigos`;
+  - las habilidades de acoso con el compañero cerca se anuncian como apertura;
+  - las ilusiones, fuera.
+- Diseño: prueba `control_equipo,base` (rama `claude/paquete2`) frente a la referencia `base_sniper,base`. 2 partidas por brazo y alineación en orden ABBA (a: P y R; b: R y P; c: P y R), 12 partidas al min 12.
+- Predicción (prueba menos referencia, min 12; con `p2`, frente a OHA, en −3,0 y −6,7):
+  - kills de los héroes de las líneas de dos: la segura ≥ −1,5 y la difícil ≥ −4;
+  - `persecucion motivo=retirada` < 20 por cada 6 partidas;
+  - las muertes no suben más de +1 sobre `p2`.
