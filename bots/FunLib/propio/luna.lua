@@ -112,9 +112,10 @@ function H.Harass(bot, s, p)
 	for _, e in ipairs(p.enemyHeroes) do
 		if Beamable(s, p, a, e) and D2(p.loc, e:GetLocation()) <= reach then
 			s.beamAt = p.now
-			-- A harass beam does not go on the pair's board (no `opens`): it would drag Lich into a fight no kill estimate gave (review
-			-- of package 2). The Beam opens for the pair from KillCast, inside a kill.
-			return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(),
+			-- opens: a harass beam goes on the pair's board too (linea.lua's Act announces it only with the partner near the target):
+			-- 59 harass beams against 16 in kills, and the partner never knew of them (p2 logs, package 2 round 2). It drags no one in:
+			-- Lich joins only when its own pair estimate gives the kill (combate.lua, Join).
+			return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = BeamLock(a),
 				reason = string.format('acoso a %s a %d (alcance %d), maná %.0f%%', Short(e), D2(p.loc, e:GetLocation()), reach,
 					100 * bot:GetMana() / math.max(bot:GetMaxMana(), 1)) }
 		end

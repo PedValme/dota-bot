@@ -221,9 +221,10 @@ function H.Harass(bot, s, p)
 		if Seen(e) and not e:IsMagicImmune() and not e:IsIllusion() and not Locked(e, 0.3)
 			and D2(p.loc, e:GetLocation()) <= a:GetCastRange() then
 			local d = SpikeOn(bot, s, p, e, string.format('acoso, maná %.0f%%', 100 * bot:GetMana() / math.max(bot:GetMaxMana(), 1)))
-			-- A harass spike does not go on the pair's board: it would drag the partner into a fight no kill estimate gave (review of
-			-- package 2). The spike opens for the pair from KillCast, inside a kill.
-			if d ~= nil then s.spikeHarassAt, d.opens, d.lockSec = p.now, nil, nil end
+			-- The spike keeps its `opens` (SpikeOn): a harass spike goes on the pair's board too, announced only with the partner near
+			-- the target (54 harass spikes against 13 in kills, never announced: p2 logs, package 2 round 2). It drags no one in: the
+			-- partner joins only when its own pair estimate gives the kill (combate.lua, Join).
+			if d ~= nil then s.spikeHarassAt = p.now end
 			return d
 		end
 	end

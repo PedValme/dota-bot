@@ -178,16 +178,23 @@ local function Ends(bot, s, p, why)
 	local kills = GetHeroKills(bot:GetPlayerID()) - c.kills0
 	s.lastChaseEnd = p.now
 	s.chase = nil
-	-- The attack order goes on by itself: the next action must cancel it (linea.lua, Act). A chase without a kill
-	-- bans its target for a while, or it would restart two seconds later.
+	-- The attack order goes on by itself: the next action must cancel it (linea.lua, Act). A chase without a kill in which the target
+	-- escaped (out of sight, too far, to its tower, too long) bans it for a while, or it would restart two seconds later; joined chases
+	-- too (Join keeps Start's gates). Not after our own retreat, a death or a kill that stopped holding: the ban fell just when the rival
+	-- was low, 'veto_reciente' in 33 % of the seconds with a rival at 40 % of health or less within 900 of our laner (p2 logs, package 2
+	-- round 2); Start's own estimate and the 2 s wait keep those from looping. 'otros_enemigos' bans too: the other enemies' burst does
+	-- not pass in 2 s, and without the ban Start restarted the same target every 2 s, each time with a new announcement (review of round
+	-- 2). An illusion's chase never bans: it shares the hero's name, and the real hero would be left alone 12 s (review of round 2).
 	s.stopAttack = true
-	-- A joined chase too: Join keeps Start's gates, the ban among them (review of package 2).
-	if kills == 0 then
+	local escaped = why == 'perdido_de_vista' or why == 'demasiado_larga' or why == 'me_meteria_bajo_torre'
+		or string.find(why, '^lejos') ~= nil or string.find(why, 'bajo su torre') ~= nil or string.find(why, '^otros_enemigos') ~= nil
+	if kills == 0 and escaped and not c.illusion then
 		s.chaseBan = s.chaseBan or {}
 		s.chaseBan[c.name] = p.now + K.banAfter
 	end
-	-- Our kill's announcement ends with it, so the partner does not stay on a fight we left.
+	-- Our kill's announcement ends with it, so the partner does not stay on a fight we left; and the board no longer shows us on it.
 	if c.join == nil then Pareja.Clear(bot, 'kill', why) end
+	Pareja.SetChase(bot, nil)
 	return string.format('%s %s duró %.1fs kills+%d motivo=%s%s', c.kind, c.name, p.now - c.since, kills, why,
 		c.join ~= nil and string.format(' pareja=%d', c.join.pid) or '')
 end
@@ -201,15 +208,18 @@ function C.Continue(bot, s, p)
 	if c == nil then return nil, nil end
 	local e = c.target
 	if GetHeroKills(bot:GetPlayerID()) > c.kills0 then return nil, Ends(bot, s, p, 'kill') end
-	if e == nil or e:IsNull() then return nil, Ends(bot, s, p, 'objetivo_muerto') end
-	-- IsAlive() alone read 6 of 18 'objetivo_muerto' on heroes still alive in the fog (fase1c-f): the player slot says it.
-	if not e:IsAlive() and not IsHeroAlive(e:GetPlayerID()) then return nil, Ends(bot, s, p, 'objetivo_muerto') end
-	if Seen(e) then c.seenAt = p.now end
+	-- Dead only by the player slot read when the chase started (c.pid): IsAlive() alone read 6 of 18 'objetivo_muerto' on heroes alive
+	-- in the fog (fase1c-f), and the slot read from the handle then still gave 41 of 48 'objetivo_muerto' with no kill in the custom
+	-- game's log, 15 of those targets seen alive within 3 s (p2 logs, package 2 round 2): a fogged handle does not say whose it is. A
+	-- handle gone or not visible is not a death: the lost-sight rules below decide.
+	if c.pid ~= nil and c.pid >= 0 and not IsHeroAlive(c.pid) then return nil, Ends(bot, s, p, 'objetivo_muerto') end
+	local gone = e == nil or e:IsNull()
+	if not gone and Seen(e) then c.seenAt = p.now end
 	if p.now - c.seenAt > K.chaseLost then return nil, Ends(bot, s, p, 'perdido_de_vista') end
 	local limit = c.kind == 'rotar' and (K.rotateTravel + K.chaseMax) or K.chaseMax
 	if p.now - c.since > limit then return nil, Ends(bot, s, p, 'demasiado_larga') end
-	if not Seen(e) then
-		return { intent = c.kind, target = e, to = c.lastLoc, reason = 'sigo a ' .. c.name .. ' (sin verlo)' }, nil
+	if gone or not Seen(e) then
+		return { intent = c.kind, target = (not gone) and e or nil, to = c.lastLoc, reason = 'sigo a ' .. c.name .. ' (sin verlo)' }, nil
 	end
 	local d = D2(p.loc, e:GetLocation())
 	if c.kind == 'matar' and d > K.chaseFar then return nil, Ends(bot, s, p, string.format('lejos %d', d)) end
@@ -231,7 +241,10 @@ function C.Continue(bot, s, p)
 		return nil, Ends(bot, s, p, 'me_meteria_bajo_torre')
 	end
 	c.lastLoc = e:GetLocation()
-	if c.kind == 'rotar' and d < K.rotateMin then c.kind = 'matar' c.since = p.now end
+	if c.kind == 'rotar' and d < K.rotateMin then
+		c.kind, c.since = 'matar', p.now
+		Pareja.SetChase(bot, c.name) -- now a lane kill: the partner's C.Committed reads it
+	end
 	return { intent = c.kind, target = e, reason = string.format('%s vida %d a %d', c.name, e:GetHealth(), d) }, nil
 end
 
@@ -300,6 +313,40 @@ function C.KillEval(bot, s, p)
 	return lines
 end
 
+-- Whether we would die first: the visible enemies that reach us (linea.lua's Perceive, p.enemyBurst) take our whole health in 3 s. The
+-- one danger that still ends a pair's kill under way (C.Committed, linea.lua's RuleRetreat), and so the one that keeps it from starting
+-- (Start, Join): a kill must not start where the retreat would cut it at once (package 2 round 2).
+-- The heroes' readings miss what p.dps measures (the health really lost over the last 2 s): creeps, and damage over time already on us.
+-- The worse of the two counts (review of round 2).
+local function DiesFirst(p)
+	return math.max(p.enemyBurst or 0, 3 * (p.dps or 0)) >= p.hpAbs
+end
+C.DiesFirst = DiesFirst
+
+-- Whether a pair's lane kill is under way and still given by the numbers: our chase is a kill ('matar'), its target in sight, a partner
+-- near it chasing the same target (its chase on the board, pareja.lua: one merely near may be farming; review of round 2), and Evaluate
+-- still over the margin. Then the soft retreats (a trade lost to the other enemy, 'expuesto', the 3 s burst over 80 %) yield to it
+-- unless we would die first: they ended 51 of 129 lane chases whose score was a kill, 17 of them a trade lost to the enemy that was not
+-- the target (p2 logs, e.g. p2-c t=75.9: the target at 14 of health, Lion out by the burst and Dragon Knight by the trade with the
+-- other). Only with that partner, so the lone mid's kills keep their rules. Read at most four times a second per chase (Evaluate is the
+-- costly part).
+function C.Committed(bot, s, p)
+	local c = s.chase
+	if p.late or c == nil or c.kind ~= 'matar' or not Seen(c.target) then return false end
+	if s.commitFor == c and p.now - (s.commitAt or -1000) < 0.25 then return s.commitOk end
+	local e = c.target
+	local ok = false
+	for _, a in ipairs(Partners(p, e, K.joinRadius)) do
+		if Pareja.Chasing(a:GetPlayerID()) == c.name then ok = true break end
+	end
+	if ok then
+		local v = Evaluate(bot, p, e, D2(p.loc, e:GetLocation()))
+		ok = v.score >= v.margin
+	end
+	s.commitFor, s.commitAt, s.commitOk = c, p.now, ok
+	return ok
+end
+
 -- Starts a kill (in reach) or a rotation (farther), when our side's damage kills it and it is safe.
 function C.Start(bot, s, p)
 	if p.now - (s.lastChaseEnd or -1000) < 2 then return nil end
@@ -314,19 +361,26 @@ function C.Start(bot, s, p)
 	for _, e in ipairs(VisibleEnemies()) do
 		local d = D2(p.loc, e:GetLocation())
 		local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
-		if d <= K.rotateMax and not banned then
+		-- No chase on a known illusion: its player slot is its owner's, so its death never read 'objetivo_muerto' and the chase
+		-- ended banning the real hero (review of round 2).
+		if d <= K.rotateMax and not banned and not e:IsIllusion() then
 			local v = Evaluate(bot, p, e, d)
 			if not v.withoutMe and v.score >= v.margin and Medio.MayStart(bot, s, v.score, v.margin)
 				and (v.kind == 'matar' or (MayRotate(bot, s, e) and v.travel <= K.rotateTravel and p.hp > 0.6))
-				and Unsafe(bot, p, e) == nil and v.score > bestScore then
+				and Unsafe(bot, p, e) == nil and v.score > bestScore
+				-- A pair's kill only where the retreat would not cut it at once (DiesFirst, as C.Committed): 23 cut chases had started
+				-- under 0,65 of health (package 2 round 2). Without a partner near the target, as before.
+				and not (v.kind == 'matar' and not p.late and DiesFirst(p) and #Partners(p, e, K.joinRadius) > 0) then
 				best, bestScore = { e = e, d = d, dmg = v.dmg, helpers = v.helpers, kind = v.kind, lock = v.lock, window = v.window }, v.score
 			end
 		end
 	end
 	if best == nil then return nil end
 	local e = best.e
+	-- pid: the player slot, read now that it is in sight; Continue tells a death by it alone (a fogged handle does not say whose it is).
 	s.chase = { target = e, name = Short(e), kind = best.kind, since = p.now, seenAt = p.now, lastLoc = e:GetLocation(),
-		kills0 = GetHeroKills(bot:GetPlayerID()) }
+		kills0 = GetHeroKills(bot:GetPlayerID()), pid = e:GetPlayerID(), illusion = e:IsIllusion() }
+	if best.kind == 'matar' then Pareja.SetChase(bot, s.chase.name) end
 	-- A lane kill with a partner near the target is announced, so the partner opens with us (Join) instead of going on farming.
 	if best.kind == 'matar' and not p.late and #Partners(p, e, K.joinRadius) > 0 then
 		Pareja.Announce(bot, e, 'kill', p.now + K.chaseMax, p.now,
@@ -340,7 +394,8 @@ function C.Start(bot, s, p)
 end
 
 -- Joining the partner (package 2): a live announcement on the board (pareja.lua) from an ally that started a kill, or cast a lock or an
--- opener inside one (KillCast; harass casts do not announce), is answered at once, as a chase on that target, so the hero's KillCast opens
+-- opener (in a kill or in harass: Spike, Beam, Tail, Breathe Fire, Frost Blast; round 2), is answered at once, as a chase on that
+-- target, so the hero's KillCast opens
 -- on it in the same second (linea.lua, Decide) and Continue keeps it safe. The announcement says where and when; whether to go is ours,
 -- with Start's gates (review of package 2): not within 2 s of a chase's end, not on a target banned after a failed chase, not
 -- outnumbered around us (package 1's p.alone) nor around the target, not unsafe (low health, the other enemies' burst, the target under
@@ -356,8 +411,9 @@ function C.Join(bot, s, p)
 	for _, call in ipairs(Pareja.Calls(bot, p.now, ActivePids(p))) do
 		local e = call.target
 		local d = D2(p.loc, e:GetLocation())
-		-- Out of the lane's width it is not this pair's fight: no decision, no line (the board holds the other lane's too).
-		if not s.joined[call.id] and d <= K.joinRadius then
+		-- Out of the lane's width it is not this pair's fight: no decision, no line (the board holds the other lane's too). No known
+		-- illusion either (Pareja.Announce already leaves them out; review of round 2).
+		if not s.joined[call.id] and d <= K.joinRadius and not e:IsIllusion() then
 			-- One per hero: the API does not tell every enemy illusion from its hero (intercambio.lua, OnePerHero).
 			local enemies, allies = 0, 1 + #Partners(p, e, K.joinRadius)
 			for _, o in ipairs(Intercambio.OnePerHero(e:GetLocation(), VisibleEnemies())) do
@@ -368,6 +424,7 @@ function C.Join(bot, s, p)
 			if s.chaseBan ~= nil and (s.chaseBan[call.name] or -1000) > p.now then why = 'veto_reciente'
 			elseif p.alone then why = string.format('superado_aqui %d enemigos, %d de los nuestros', p.nEnemyNear or 0, p.nAllyNear or 0)
 			elseif enemies > allies then why = string.format('superado %d enemigos, %d de los nuestros', enemies, allies)
+			elseif DiesFirst(p) then why = string.format('moriria_antes daño3s %d medido3s %d >= vida %d', p.enemyBurst, 3 * (p.dps or 0), p.hpAbs)
 			elseif v.withoutMe then why = 'lo_matan_sin_mi'
 			elseif v.score < v.margin then why = string.format('margen x%.2f < %.2f', v.score, v.margin)
 			else why = Unsafe(bot, p, e) end
@@ -382,7 +439,8 @@ function C.Join(bot, s, p)
 				s.joined[call.id] = true
 				Pareja.Log(bot, 'me_uno ' .. head .. ' motivo=' .. call.why)
 				s.chase = { target = e, name = call.name, kind = 'matar', since = p.now, seenAt = p.now, lastLoc = e:GetLocation(),
-					kills0 = GetHeroKills(bot:GetPlayerID()), join = { id = call.id, pid = call.pid } }
+					kills0 = GetHeroKills(bot:GetPlayerID()), join = { id = call.id, pid = call.pid }, pid = e:GetPlayerID(), illusion = false }
+				Pareja.SetChase(bot, call.name)
 				return { intent = 'matar', target = e, start = true,
 					reason = string.format('pareja con pid %d sobre %s (%s), vida %d a %d, x%.2f', call.pid, call.name, call.why, e:GetHealth(), d, v.score) }
 			end

@@ -58,6 +58,19 @@ local function Live(bot, pid, a, now, active)
 	return pid ~= bot:GetPlayerID() and a.untilT > now and (active == nil or active[pid] == true)
 end
 
+-- Which enemy each of our bots is chasing in a lane kill ('matar'), by its short name, or nil: a partner's C.Committed (combate.lua) asks
+-- whether the ally near the target is really on it, not merely near it (review of round 2). Written at a chase's start and end.
+local CHASE = {} -- team -> player id -> short name
+function P.SetChase(bot, name)
+	local team = GetTeam()
+	CHASE[team] = CHASE[team] or {}
+	CHASE[team][bot:GetPlayerID()] = name
+end
+function P.Chasing(pid)
+	local t = CHASE[GetTeam()]
+	return t ~= nil and t[pid] or nil
+end
+
 -- The other bots' live announcements, on visible enemy heroes.
 function P.Calls(bot, now, active)
 	local list = {}

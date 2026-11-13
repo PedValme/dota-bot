@@ -160,7 +160,10 @@ function H.Harass(bot, s, p)
 		end
 	end
 	if best == nil then return nil end
-	return { intent = ON_UNIT, ability = a, target = best, castPoint = a:GetCastPoint(),
+	-- opens (no lock, lockSec 0): the Blast goes on the pair's board, announced only with the partner near the target (67 harass Blasts
+	-- against 10 in kills, never announced: p2 logs, package 2 round 2). Luna joins only when her own pair estimate gives the kill
+	-- (combate.lua, Join).
+	return { intent = ON_UNIT, ability = a, target = best, castPoint = a:GetCastPoint(), opens = best, lockSec = 0,
 		reason = string.format('frost blast a %s a %d (alcance %d), maná %.0f%%', Short(best), D2(p.loc, best:GetLocation()), range,
 			100 * bot:GetMana() / math.max(bot:GetMaxMana(), 1)) }
 end
@@ -173,7 +176,7 @@ function H.KillCast(bot, s, p, e)
 	local a = Ready(bot, 'lich_frost_nova')
 	if a ~= nil and d <= a:GetCastRange() then
 		-- opens: on the pair's board with no lock (lockSec 0), so Luna, if she did not open, joins the Frost Blast with her Beam and hits
-		-- (combate.lua, package 2). In Harass it stays a harass: a lane of frequent Blasts must not drag her in each time.
+		-- (combate.lua, package 2), when her own pair estimate gives the kill.
 		return { intent = ON_UNIT, ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = 0,
 			reason = string.format('en la kill sobre %s', Short(e)) }
 	end

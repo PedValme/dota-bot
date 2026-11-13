@@ -307,13 +307,24 @@ end
 local function RuleRetreat(bot, s, p)
 	local reason = nil
 	local danger = false -- the reason is the enemy heroes' damage: with two of them in sight, the holds below start
+	-- A pair's kill under way that the numbers still give (combate.lua, C.Committed): the soft reasons below (marked Soft) yield to it
+	-- unless we would die first (C.DiesFirst). They ended 51 of 129 lane chases whose score was a kill (package 2 round 2). The hard
+	-- ones (tower, health under retreatHp, the sustained damage measured on us, a retreat already held) are untouched: the sustained
+	-- damage is health really being lost, creeps and damage over time included, which no reading of the enemies sees (review of round
+	-- 2). What was yielded is logged once a second.
+	local committed = not NO_COMBAT and not Combate.DiesFirst(p) and Combate.Committed(bot, s, p)
+	local held = nil
+	local function Soft(name)
+		if committed then held = held or name return false end
+		return true
+	end
 	if p.towerOnMe then reason = 'torre_me_ataca'
 	elseif p.hp < K.retreatHp then
 		reason = string.format('vida %.2f < %.2f', p.hp, K.retreatHp)
 		s.lowHp = true
 	-- The burst alone was a false alarm (fase1d: 108 s fleeing with over 60 % health, every 4 s). It counts only if a hero
 	-- is really on us: it hit us in the last 2 s, or stands within 600.
-	elseif p.enemyBurst > K.enemyBurst * p.hpAbs and p.heroOnMe then
+	elseif p.enemyBurst > K.enemyBurst * p.hpAbs and p.heroOnMe and Soft('daño_enemigo_3s') then
 		reason = string.format('daño_enemigo_3s %d > %.0f%% de %d', p.enemyBurst, K.enemyBurst * 100, p.hpAbs)
 		s.burstUntil = p.now + K.burstHold
 		danger = true
@@ -331,7 +342,7 @@ local function RuleRetreat(bot, s, p)
 		s.lowHp = true
 	-- Touched, and an enemy that can reach us: out now, before its next spell decides it (presion4: three deaths in lane to Lina,
 	-- from 0,3-0,5 of health; Pedro, 2026-11-05: «asume mas daño [d]el necesario antes de escapar»).
-	elseif p.hp < K.exposedHp and p.enemyBurst > 0 then
+	elseif p.hp < K.exposedHp and p.enemyBurst > 0 and Soft('expuesto') then
 		reason = string.format('expuesto %.2f < %.2f', p.hp, K.exposedHp)
 		s.burstUntil = p.now + K.burstHold
 		danger = true
@@ -348,7 +359,10 @@ local function RuleRetreat(bot, s, p)
 		for _, e in ipairs(p.enemyHeroes) do
 			if Valid(e) and D2(p.loc, e:GetLocation()) <= e:GetAttackRange() + 200 then
 				local trade = Intercambio.Eval(bot, p, e)
-				if trade.ratio < edge then
+				-- Against the target itself a lost trade still counts: the kill is not going our way. Against the other enemy it is the
+				-- price of the kill (17 of the 51 cut chases, all of them against the enemy that was not the target).
+				local onTarget = s.chase ~= nil and Valid(s.chase.target) and s.chase.target:GetUnitName() == e:GetUnitName()
+				if trade.ratio < edge and (onTarget or Soft('intercambio_perdido')) then
 					reason = string.format('intercambio_perdido %.2f < %.2f frente a %s', trade.ratio, edge,
 						(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')))
 					s.burstUntil, s.stepBack = p.now + K.burstHold, true
@@ -357,6 +371,11 @@ local function RuleRetreat(bot, s, p)
 				end
 			end
 		end
+	end
+	if held ~= nil and reason == nil and p.now - (s.heldLogAt or -1000) >= 1 then
+		s.heldLogAt = p.now
+		Log(s, bot, 'pareja', string.format('sigo_en_la_kill objetivo=%s ignoro=%s daño3s=%d vida=%d vida_frac=%.2f', s.chase.name, held,
+			p.enemyBurst, p.hpAbs, p.hp))
 	end
 	-- Holds of a retreat from two enemy heroes (package 1). It went back to the lane as soon as burstHold ran out, at 0,38-0,42 of
 	-- health, and died: Luna and Lich, t=479-496 of fase2-humo-equipo 1, four 'expuesto' and 'linea' in a row each. With only one

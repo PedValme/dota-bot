@@ -173,7 +173,10 @@ function H.Harass(bot, s, p)
 			elseif not reduced and creeps >= WAVE_CREEPS then kind = 'héroe y oleada'
 			elseif not reduced and share >= SOLO_MANA then kind = 'héroe solo' end
 			if kind ~= nil then
-				return { intent = 'shrapnel', ability = a, at = at, castPoint = a:GetCastPoint(),
+				-- opens (no lock, lockSec 0): the flame goes on the pair's board, announced only with the partner near the target, as
+				-- OHA opens with it and Earth Spike in the same second (some 60 harass flames against 10 in kills, never announced: p2
+				-- logs, package 2 round 2). Lion joins only when its own pair estimate gives the kill (combate.lua, Join).
+				return { intent = 'shrapnel', ability = a, at = at, castPoint = a:GetCastPoint(), opens = e, lockSec = 0,
 					reason = string.format('breathe_fire %s: %s a %d, %d héroes y %d creeps, maná tras %.0f%%', kind, Short(e),
 						D2(p.loc, e:GetLocation()), heroes, creeps, 100 * share) }
 			end
