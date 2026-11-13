@@ -520,6 +520,162 @@ local function NoteCreepKill(e, unit, victim, vteam)
 		dist, hero:IsAlive() and 1 or 0)
 end
 
+-- Fine lane record, the first FINE_UNTIL game seconds, all ten heroes (trabajo/plan-mejora-equipo.md, Pedro 2026-11-13: «Estudiar a
+-- OHA y reescribir la línea de dos»): what the 30 s and 5 s lines cannot show of a 2 against 2 lane. Server side, the same for every
+-- bot, so OHA's and the own bot's lanes are read with one analysis. Four kinds of lines:
+--   "fino"   every second per hero: position, health, mana, attack target and disables (s stun, h hex, r root, m silence);
+--   "frente" every 2 s per team: the lane creep closest to the enemy ancient in each lane (the wave's front);
+--   "lanza"  each cast: caster position, target unit and distance or cursor point, heroes of each side within 1200;
+--   "golpe"  hero against hero damage, summed per second, attacker, victim and source (attack or ability).
+local FINE_UNTIL = 900
+local fineDamage = {} -- "attacker>victim:source" -> { total, n }, flushed every second
+local function FineOn()
+	local t = GameRules:GetDOTATime(false, true)
+	return t >= 0 and t <= FINE_UNTIL
+end
+local function ShortName(unit)
+	if unit == nil or unit.GetUnitName == nil then return "-" end
+	if unit.IsHero and unit:IsHero() then
+		local name = unit:GetUnitName():gsub("npc_dota_hero_", "")
+		return (unit.IsIllusion and unit:IsIllusion()) and (name .. "~") or name
+	end
+	if unit.IsTower and unit:IsTower() then return "torre" end
+	if unit.IsCreep and unit:IsCreep() then return "creep" end
+	if unit.IsBuilding and unit:IsBuilding() then return "edificio" end
+	return (unit:GetUnitName():gsub("npc_dota_", ""))
+end
+-- An attack target as seen by `hero`: its kind, "+" allied or "-" enemy for creeps and towers (a deny, or a last hit or a harass), and
+-- its health in percent. GetAttackTarget may still point at a target while the hero walks: "atk" says whether it is attacking.
+local function TargetOf(hero, unit)
+	if unit == nil or unit.GetUnitName == nil or unit:IsNull() then return "-" end
+	local name = ShortName(unit)
+	if not (unit.IsHero and unit:IsHero()) then
+		name = name .. ((unit:GetTeamNumber() == hero:GetTeamNumber()) and "+" or "-")
+	end
+	local maxhp = unit:GetMaxHealth()
+	return string.format("%s:%d", name, maxhp > 0 and math.floor(100 * unit:GetHealth() / maxhp) or -1)
+end
+local function HeroesNear(team, pos, radius)
+	local own, foe = 0, 0
+	for _, h in ipairs(HeroList:GetAllHeroes()) do
+		if h:IsRealHero() and h:IsAlive() and (h:GetAbsOrigin() - pos):Length2D() <= radius then
+			if h:GetTeamNumber() == team then own = own + 1 else foe = foe + 1 end
+		end
+	end
+	return own, foe
+end
+local function Disables(hero)
+	local s = ""
+	if hero:IsStunned() then s = s .. "s" end
+	if hero:IsHexed() then s = s .. "h" end
+	if hero:IsRooted() then s = s .. "r" end
+	if hero:IsSilenced() then s = s .. "m" end
+	return s == "" and "-" or s
+end
+local function FineSnapshot()
+	for pid = 0, 23 do
+		if PlayerResource:IsValidPlayerID(pid) and PlayerResource:IsFakeClient(pid) then
+			local hero = PlayerResource:GetSelectedHeroEntity(pid)
+			if hero then
+				local pos = hero:GetAbsOrigin()
+				local target = hero:IsAlive() and hero:GetAttackTarget() or nil
+				Obs("fino pid=%d team=%d %s alive=%d x=%d y=%d hp=%d maxhp=%d mp=%d obj=%s atk=%d ctl=%s", pid, hero:GetTeamNumber(),
+					HeroOf(pid), hero:IsAlive() and 1 or 0, pos.x, pos.y, hero:GetHealth(), hero:GetMaxHealth(), hero:GetMana(),
+					TargetOf(hero, target), (hero:IsAlive() and hero:IsAttacking()) and 1 or 0, Disables(hero))
+			end
+		end
+	end
+end
+local creepLane = {} -- entindex -> lane
+local function FineFront()
+	for _, team in ipairs({ DOTA_TEAM_GOODGUYS, DOTA_TEAM_BADGUYS }) do
+		local goal, own = nil, nil
+		for _, fort in ipairs(Entities:FindAllByClassname("npc_dota_fort")) do
+			if fort:GetTeamNumber() ~= team then goal = fort:GetAbsOrigin() else own = fort:GetAbsOrigin() end
+		end
+		if goal == nil then return end
+		local best = {}
+			-- A creep's lane is fixed the first time it stands 3000 from its own ancient: near the bases the diagonal rule
+			-- would put a deep top or bottom creep in mid (review 2026-11-13).
+		local creeps = FindUnitsInRadius(team, Vector(0, 0, 0), nil, FIND_UNITS_EVERYWHERE, DOTA_UNIT_TARGET_TEAM_FRIENDLY,
+			DOTA_UNIT_TARGET_CREEP, DOTA_UNIT_TARGET_FLAG_NONE, FIND_ANY_ORDER, false)
+		for _, c in ipairs(creeps) do
+			local name = c:GetUnitName()
+			if c:IsAlive() and (name:find("creep_goodguys") or name:find("creep_badguys")) then
+				local p = c:GetAbsOrigin()
+				local idx = c:entindex()
+				if creepLane[idx] == nil and own and (p - own):Length2D() > 3000 then
+					creepLane[idx] = (p.y - p.x > 3000) and "top" or ((p.x - p.y > 3000) and "bot" or "mid")
+				end
+				local lane = creepLane[idx]
+				local d = (p - goal):Length2D()
+				if lane and (best[lane] == nil or d < best[lane].d) then best[lane] = { d = d, x = p.x, y = p.y } end
+			end
+		end
+		local function At(lane) return best[lane] and string.format("%d,%d", best[lane].x, best[lane].y) or "-" end
+		Obs("frente team=%d top=%s mid=%s bot=%s", team, At("top"), At("mid"), At("bot"))
+	end
+end
+local function FineCast(e)
+	if not FineOn() then return end
+	local hero = e.caster_entindex and EntIndexToHScript(e.caster_entindex) or nil
+	if not hero or not hero.IsHero or not hero:IsHero() then
+		hero = e.PlayerID ~= nil and e.PlayerID >= 0 and PlayerResource:GetSelectedHeroEntity(e.PlayerID) or nil
+	end
+	if not hero then return end
+	local pos = hero:GetAbsOrigin()
+	local ability = e.abilityname and (hero:FindAbilityByName(e.abilityname) or hero:FindItemInInventory(e.abilityname)) or nil
+	-- A no-target ability keeps the cursor of an older cast: nothing is written for it (review 2026-11-13). For the rest the cursor is
+	-- checked against the "golpe" lines of the same second in the smoke before the study uses it.
+	local noTarget = ability and ability.GetBehaviorInt and bit.band(ability:GetBehaviorInt(), DOTA_ABILITY_BEHAVIOR_NO_TARGET) ~= 0
+	local target = (not noTarget) and ability and ability.GetCursorTarget and ability:GetCursorTarget() or nil
+	local where = "-"
+	if noTarget then
+		where = "-"
+	elseif target and target.GetAbsOrigin then
+		where = string.format("%d", math.floor((target:GetAbsOrigin() - pos):Length2D()))
+	elseif ability and ability.GetCursorPosition then
+		local p = ability:GetCursorPosition()
+		if p and (p.x ~= 0 or p.y ~= 0) then where = string.format("%d,%d", p.x, p.y) end
+	end
+	local own, foe = HeroesNear(hero:GetTeamNumber(), pos, 1200)
+	own = own - ((hero:IsRealHero() and hero:IsAlive()) and 1 or 0) -- allies besides the caster
+	Obs("lanza pid=%d team=%d %s %s x=%d y=%d mp=%d obj=%s dist=%s aliados1200=%d rivales1200=%d", e.PlayerID, hero:GetTeamNumber(),
+		HeroOf(e.PlayerID), tostring(e.abilityname), pos.x, pos.y, hero:GetMana(), ShortName(target), where, own, foe)
+end
+local function NoteFineDamage(e)
+	if not FineOn() then return end
+	local attacker = e.entindex_attacker_const and EntIndexToHScript(e.entindex_attacker_const)
+	local victim = e.entindex_victim_const and EntIndexToHScript(e.entindex_victim_const)
+	if not attacker or not victim or not victim.IsHero or not victim:IsHero() or not attacker.GetTeamNumber then return end
+	if attacker:GetTeamNumber() == victim:GetTeamNumber() then return end
+	-- A summon or controlled unit counts for its owner's hero, marked "*"; creeps and towers on a hero are the price of the lane.
+	local from
+	if attacker.IsHero and attacker:IsHero() then
+		from = ShortName(attacker)
+	elseif attacker.IsTower and attacker:IsTower() then
+		from = "torre"
+	elseif attacker.GetPlayerOwnerID and attacker:GetPlayerOwnerID() >= 0 then
+		from = HeroOf(attacker:GetPlayerOwnerID()) .. "*"
+	else
+		from = "creep"
+	end
+	local inflictor = e.entindex_inflictor_const and EntIndexToHScript(e.entindex_inflictor_const)
+	local source = inflictor and inflictor.GetAbilityName and inflictor:GetAbilityName() or "ataque"
+	local key = from .. ">" .. ShortName(victim) .. ":" .. source
+	local d = fineDamage[key] or { total = 0, n = 0 }
+	d.total, d.n = d.total + e.damage, d.n + 1
+	fineDamage[key] = d
+end
+local function FineDamageFlush()
+	local parts = {}
+	for key, d in pairs(fineDamage) do table.insert(parts, string.format("%s:%d:%d", key, math.floor(d.total), d.n)) end
+	fineDamage = {}
+	if #parts == 0 then return end
+	table.sort(parts)
+	Obs("golpe %s", table.concat(parts, ","))
+end
+
 local function Listen(event, handler)
 	ListenToGameEvent(event, function(e)
 		local ok, err = pcall(handler, e)
@@ -532,6 +688,7 @@ local function StartObserver()
 	-- Reads only: always lets the damage through as it came, also if the note fails.
 	GameRules:GetGameModeEntity():SetDamageFilter(function(_, e)
 		Note("dano", NoteDamage, e)
+		Note("golpe", NoteFineDamage, e)
 		return true
 	end, {})
 	Listen("dota_item_purchased", function(e)
@@ -542,6 +699,7 @@ local function StartObserver()
 	end)
 	Listen("dota_player_used_ability", function(e)
 		Obs("cast pid=%s %s %s", tostring(e.PlayerID), HeroOf(e.PlayerID), tostring(e.abilityname))
+		Note("lanza", FineCast, e)
 		-- Ultimates (Pedro, 2026-10-31: ultimates thrown at creeps or at nothing in the own base): where the caster is
 		-- and which enemy heroes were near, to tell wasted ones from global ones (e.g. Zeus) that are fine from base.
 		local hero = e.PlayerID ~= nil and e.PlayerID >= 0 and PlayerResource:GetSelectedHeroEntity(e.PlayerID) or nil
@@ -603,7 +761,7 @@ local function StartObserver()
 			end, "dotabench_ward_" .. tostring(e.entindex), 0.1)
 		end
 	end)
-	local nextSnapshot, nextLane, nextDamage = 0, 0, 0
+	local nextSnapshot, nextLane, nextDamage, nextFine, nextFront = 0, 0, 0, 0, 0
 	local function Safely(name, fn)
 		local ok, err = pcall(fn)
 		if not ok then print("[dotabench] obs error " .. name .. " " .. tostring(err)) end
@@ -628,6 +786,19 @@ local function StartObserver()
 		if state >= DOTA_GAMERULES_STATE_PRE_GAME and now >= nextDamage then
 			nextDamage = now + 10
 			Safely("dano", DamageSnapshot)
+		end
+		-- From the horn (t >= 0) to FINE_UNTIL: every second, so this think runs every half second meanwhile.
+		if state >= DOTA_GAMERULES_STATE_GAME_IN_PROGRESS and now >= 0 and now <= FINE_UNTIL then
+			if now >= nextFine then
+				nextFine = math.floor(now) + 1
+				Safely("fino", FineSnapshot)
+				Safely("golpe", FineDamageFlush)
+			end
+			if now >= nextFront then
+				nextFront = math.floor(now) + 2
+				Safely("frente", FineFront)
+			end
+			return 0.5
 		end
 		return 1
 	end, "dotabench_observer", 1)
