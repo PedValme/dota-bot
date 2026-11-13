@@ -582,6 +582,14 @@ local function Decide(bot, s, p)
 		end
 		r = Medio.TeleportToFight(bot, s, p)
 		if r then return r end
+		-- An enemy in range and safe: shoot, but a last hit ready without a step first (as with the team below).
+		r = Medio.Shoot(bot, s, p)
+		if r then
+			local lh = RuleLastHit(bot, s, p)
+			if lh ~= nil then return lh end
+			local cast = hero ~= nil and hero.KillCast(bot, s, p, r.target) or nil
+			return cast or WithAim(bot, s, p, hero, r)
+		end
 		-- Before the last hits: it leaves the creeps for the team, not the other way round.
 		r = Medio.WithTeam(bot, s, p)
 		if r then
@@ -590,6 +598,8 @@ local function Decide(bot, s, p)
 				local lh = RuleLastHit(bot, s, p)
 				if lh ~= nil then return lh end
 			end
+			-- Farming first behind a lone ally (paquete2) gave the last hits back (126 to 154) but took kills 7,3 to 5,0, damage 24.549
+			-- to 17.724 and deaths 0,7 to 2,0: undone, and Pedro's game decides between farm and presence (MEDICIONES 2026-11-12).
 			local hide = r.intent == 'con_el_grupo' and Medio.Hide(bot, s, p, r.to) or nil
 			return hide or r
 		end

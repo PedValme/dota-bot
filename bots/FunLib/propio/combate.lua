@@ -2,14 +2,14 @@
 -- kill, perseguir pertinentemente, moverse de línea»). Each rule returns a decision with its reason, or nil; a chase
 -- keeps its state in s.chase and ends with a logged reason (kill, lost sight, tower, danger, too long, too far).
 -- The kill check and the danger are ours, from hits and abilities read live (SideDamage, intercambio.lua), not Valve's
--- estimate, which cannot be supervised. Rotations are off until the rest is measured (K.rotar; DECISIONES 2026-11-04:
--- 8 of 8 ended with no kill).
+-- estimate, which cannot be supervised. Rotations were off from 2026-11-04 (8 of 8 with no kill) and are on again with
+-- their cause fixed (MayRotate, Evaluate; DECISIONES 2026-11-04, acotado el 2026-11-12).
 local C = {}
 local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
 local Medio = require(GetScriptDirectory()..'/FunLib/propio/medio')
 
 local K = {
-	rotar = false,        -- walking out of the lane for a kill
+	rotar = true,         -- walking out of the lane for a kill, to an enemy an ally is near (MayRotate)
 	-- Going for runes. Off: from the own Think() no form of the order picks one up, standing on it with its type read
 	-- (Action_, ActionQueue_ and ActionPush_PickUpRune: 0 activations, fase1g and fase1h; open defect, ESTADO), so each trip
 	-- only cost farm. The same Action_PickUpRune works in OHA, from its rune mode.
@@ -133,7 +133,9 @@ function C.Continue(bot, s, p)
 	if c == nil then return nil, nil end
 	local e = c.target
 	if GetHeroKills(bot:GetPlayerID()) > c.kills0 then return nil, Ends(bot, s, p, 'kill') end
-	if e == nil or e:IsNull() or not e:IsAlive() then return nil, Ends(bot, s, p, 'objetivo_muerto') end
+	if e == nil or e:IsNull() then return nil, Ends(bot, s, p, 'objetivo_muerto') end
+	-- IsAlive() alone read 6 of 18 'objetivo_muerto' on heroes still alive in the fog (fase1c-f): the player slot says it.
+	if not e:IsAlive() and not IsHeroAlive(e:GetPlayerID()) then return nil, Ends(bot, s, p, 'objetivo_muerto') end
 	if Seen(e) then c.seenAt = p.now end
 	if p.now - c.seenAt > K.chaseLost then return nil, Ends(bot, s, p, 'perdido_de_vista') end
 	local limit = c.kind == 'rotar' and (K.rotateTravel + K.chaseMax) or K.chaseMax
@@ -154,18 +156,37 @@ function C.Continue(bot, s, p)
 	return { intent = c.kind, target = e, reason = string.format('%s vida %d a %d', c.name, e:GetHealth(), d) }, nil
 end
 
--- Walking out for a kill: off (DECISIONES 2026-11-04: 8 of 8 with no kill). Tried once the lane is over and with an ally beside it:
--- 43 chases, 4 kills, and worse overall (fijo-p4 against fijo-p2).
-local function MayRotate(bot, s)
-	return K.rotar
+-- Walking out for a kill, only to an enemy an ally is already near, as OHA's early kills away from mid come in a group (9 of 9 after
+-- TEAM_ROAM, ROAM or DEFEND_TOWER, ref-oha and base2-oha). Off on 2026-11-04 (8 of 8 with no kill: it chose targets the allies were
+-- already killing); on again with that cause fixed in Evaluate (DECISIONES 2026-11-04, acotado el 2026-11-12).
+local function MayRotate(bot, s, e)
+	if not K.rotar then return false end
+	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if a ~= bot and Seen(a) and not a:IsIllusion() and D2(a:GetLocation(), e:GetLocation()) < K.alliesRadius then return true end
+	end
+	return false
 end
 
 -- What a kill on this enemy looks like now: the numbers Start() decides on.
 local function Evaluate(bot, p, e, d)
 	local dmg, helpers, hits, burst = SideDamage(bot, p, e)
 	local travel = math.max(0, d - p.range) / math.max(p.moveSpeed, 1)
-	return { dmg = dmg, helpers = helpers, hits = hits, burst = burst, score = dmg / math.max(e:GetHealth(), 1), travel = travel,
-		kind = d > K.rotateMin and 'rotar' or 'matar',
+	-- The allies keep hitting while we walk: the health left when we arrive. Scoring the health now made it rotate to the targets
+	-- the allies were killing (12 of 18 'objetivo_muerto' died to another 0-3 s later, scores x7 to x236; fase1c-f).
+	local allyDmg = dmg - hits - burst
+	-- Every ally near it, not only those attacking it: they kill with spells too, and 11 of 15 rotations still ended 'objetivo_muerto'
+	-- with '0 aliados' in the count (paquete1).
+	local nearDmg = 0
+	for _, a in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES) or {}) do
+		if a ~= bot and Seen(a) and not a:IsIllusion() and D2(a:GetLocation(), e:GetLocation()) < K.alliesRadius then nearDmg = nearDmg + HitsDamage(a, e, K.window) end
+	end
+	allyDmg = math.max(allyDmg, nearDmg)
+	local hpArrive = e:GetHealth() - allyDmg * travel / K.window
+	-- Up to chaseFar it is the lane's kill, not a rotation: 10 vetoes on the mid rival at 1.221-1.498 with the score above the margin
+	-- (build2, to min 10).
+	return { dmg = dmg, helpers = helpers, hits = hits, burst = burst, score = dmg / math.max(hpArrive, 1), travel = travel,
+		withoutMe = travel > 0 and hpArrive <= 0,
+		kind = d > K.chaseFar and 'rotar' or 'matar',
 		-- The damage window starts when we arrive: walking time asks for a bigger margin.
 		margin = K.killMargin * (1 + travel / K.window) }
 end
@@ -182,8 +203,8 @@ function C.KillEval(bot, s, p)
 			local v = Evaluate(bot, p, e, d)
 			local unsafe = Unsafe(bot, p, e)
 			local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
-			local veto = (banned and 'veto_reciente') or (v.score < v.margin and 'margen') or (unsafe and 'inseguro')
-				or (v.kind == 'rotar' and not (MayRotate(bot, s) and v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
+			local veto = (banned and 'veto_reciente') or (v.withoutMe and 'lo_matan_sin_mi') or (v.score < v.margin and 'margen') or (unsafe and 'inseguro')
+				or (v.kind == 'rotar' and not (MayRotate(bot, s, e) and v.travel <= K.rotateTravel and p.hp > 0.6) and 'rotacion') or '-'
 			lines = lines or {}
 			-- intencion: the previous decision's. veto=- is not "it starts": the rules before Start() may still win.
 			local trade = Intercambio.Eval(bot, p, e)
@@ -207,8 +228,8 @@ function C.Start(bot, s, p)
 		local banned = s.chaseBan ~= nil and (s.chaseBan[Short(e)] or -1000) > p.now
 		if d <= K.rotateMax and not banned then
 			local v = Evaluate(bot, p, e, d)
-			if v.score >= v.margin and Medio.MayStart(bot, s, v.score, v.margin)
-				and (v.kind == 'matar' or (MayRotate(bot, s) and v.travel <= K.rotateTravel and p.hp > 0.6))
+			if not v.withoutMe and v.score >= v.margin and Medio.MayStart(bot, s, v.score, v.margin)
+				and (v.kind == 'matar' or (MayRotate(bot, s, e) and v.travel <= K.rotateTravel and p.hp > 0.6))
 				and Unsafe(bot, p, e) == nil and v.score > bestScore then
 				best, bestScore = { e = e, d = d, dmg = v.dmg, helpers = v.helpers, kind = v.kind }, v.score
 			end

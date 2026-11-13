@@ -1487,3 +1487,75 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Lectura: **la causa es una regla del retoque** (`medio.lua`, `TeamSpot`): el aliado suelto solo se sigue con riesgo cerca. Devolvió el farm (162 LH en el banco), pero lo deja solo más tiempo. Así llega a las peleas sin estar ya oculto tras el grupo, que es lo que Pedro vio. La presión viene de Shrapnel antes del intercambio y de no contestar perdiendo.
 - Validez: una partida; cuenta su juicio (DECISIONES 2026-11-05).
 - Decisión: pendiente de Pedro.
+
+### 2026-11-12 · Paquete de varias mejoras, ronda 1 (`paquete1-*`, los 3 enfrentamientos de `build2`, 2 y 2 y 2, min 25): predicción antes de lanzar
+- Pregunta (DECISIONES 2026-11-12, «retomemos esa estrategia», varias mejoras a la vez): ¿se mueven a la vez las cuatro brechas del Sniper frente a OHA sin perder farm ni muertes? Mecanismo, contra `build2` y `base2-oha`.
+- Qué cambió desde `build2` (`27485a6`), cada uno con su causa leída en los registros:
+  1. **Grupo y sigilo** (`medio.lua`, `TeamSpot`): vuelve a seguir al aliado más cercano aunque no haya riesgo; los campamentos, solo junto a él (del retoque).
+  2. **Rotaciones encendidas** (`combate.lua`; Pedro: «Sí, con su causa»): de 28 rotaciones de `fase1c-f`, 18 acabaron `objetivo_muerto` y 12 de esas murieron a manos de otro 0-3 s después; la puntuación usaba la vida de ahora (×7 a ×236). Ahora:
+     - usa la vida al llegar, restando el daño de los aliados durante el viaje, y descarta con `lo_matan_sin_mi`;
+     - solo rota hacia un enemigo con un aliado a menos de 1.200, como OHA (9 de 9 kills fuera de mid, en grupo);
+     - hasta 1.400 es kill de línea, no rotación (10 vetos `rotacion` sobre el rival de mid en `build2`);
+     - `objetivo_muerto` se decide con `IsHeroAlive`: 6 de 18 eran héroes vivos en la niebla.
+  3. **Remates** (`sniper.lua`): el filtro «lo matan mis golpes» queda absuelto (de 27 descartes, 13 acabaron en kill propia). La causa era otra:
+     - Assassinate a tiro con un aliado encima paraba los golpes 2 s: de 18 remates, 9 los cobró otro 0-2 s después. Ahora, en esa situación, sigue pegando;
+     - la apertura de pelea gastaba el definitivo sobre objetivos a tiro (32 órdenes: 5 kills propias, 12 de otros) y los remates bajaron de 38 a 18. Ahora solo abre sobre objetivos fuera de su alcance, o para interrumpir una canalización.
+  4. **Disparo a tiro** (`medio.lua`, `Shoot`, antes de `WithTeam` y los últimos golpes): con un enemigo visible a menos de 1.000 atacaba el 41 % del tiempo, porque `Fight` pide un aliado que ya pegue. Ahora dispara si:
+     - tiene vida;
+     - no está superado en número;
+     - ninguno de los dos está junto a una torre enemiga;
+     - no hay un último golpe listo sin dar un paso.
+- Predicción frente a `build2` (OHA entre paréntesis):
+  - kills ≥ 7 (5,2; OHA 9,5);
+  - remata cuando pega ≥ 58 % (48 %; 67 %);
+  - golpes a héroes del min 10 al 20 ≥ 40 (30; 56);
+  - kills hasta el min 10 ≥ 1,5 (1,0; 3,2), y en los registros, rotaciones que terminan `objetivo_muerto` en menos de 2 s cerca de 0;
+  - `con_el_grupo` por encima de `alejarse` del min 12 en adelante.
+- Lo que no debe empeorar: muertes ≤ 2 (1,0), últimos golpes ≥ 145 (153) y daño del min 0 al 25 ≥ 21.313.
+- Es la ronda 1 de 2 como mucho (DECISIONES 2026-11-06); luego juega Pedro si hay mejora plausible.
+- Máquina y código: CPU y memoria en `bench/series.csv` (CPU media 34-38 %, máxima 42-63 %, memoria libre 43-46 %). Código `27485a6`, 6 de 6 válidas.
+- Resultado (marcador, `a11.py` y `a12.py`; `build2` → `paquete1`, OHA entre paréntesis):
+
+  | | `build2` | `paquete1` | OHA | Predicho |
+  |---|---|---|---|---|
+  | Kills / muertes / asistencias | 5,2 / 1,0 / 7,3 | **7,3 / 0,7 / 9,0** | 9,5 / 3,1 / 5,2 | kills ≥ 7, cumple; muertes, cumple |
+  | Remata cuando pega | 48 % | **59 %** | 67 % | ≥ 58 %, cumple |
+  | Kills al min 10 | 1,0 | 1,7 | 3,2 | ≥ 1,5, cumple |
+  | Golpes a héroes, min 10-20 / 20-25 | 30 / 38 | 31 / **49** | 56 / 26 | min 10-20 ≥ 40, **no cumple** |
+  | Daño a héroes, min 0-25 | 21.313 | **24.549** | 25.285 | ≥ 21.313, cumple |
+  | Últimos golpes / GPM | 153 / 799 | **126** / 813 | 154 / 892 | ≥ 145, **no cumple** |
+  | Peleas grandes atendidas, min 20-25 | 74 % | 85 % | 39 % | |
+
+- Lectura:
+  - **Kills, remates, daño y muertes mejoran a la vez:** es el mejor Sniper propio en todo menos el farm.
+  - **El farm cae por la regla 1:** las decisiones de ir con un solo aliado pasan de 58 a 310, y `linea` del min 10 al 25 baja de 477 a 177 muestras. En el banco no entra oculto más veces (60 y 60): la mejora de sigilo es para el humano, y aquí solo se ve su coste.
+  - **Las rotaciones siguen fallando:** 15, con 2 kills; 11 acaban `objetivo_muerto` y la mayoría dicen «0 aliados». Los aliados cerca matan con hechizos, y la cuenta solo veía a los que atacaban al objetivo.
+  - **El disparo a tiro sale 155 veces,** pero los golpes del min 10 al 20 no se mueven; sí suben en el min 20-25.
+- Validez: n=6, solo mecanismo; los cuatro cambios van juntos.
+- Decisión: ronda 2, la última, con las dos causas leídas: la vida al llegar cuenta a todo aliado cerca del objetivo, y tras un aliado suelto (sin grupo) la oleada por farmear va primero.
+
+### 2026-11-12 · Paquete de varias mejoras, ronda 2, la última (`paquete2-*`, mismos 3 enfrentamientos): predicción antes de lanzar
+- Qué cambió desde `paquete1`:
+  - en la rotación, el daño de los aliados durante el viaje cuenta a todo aliado a menos de 1.200 del objetivo;
+  - tras un aliado suelto, si hay un último golpe listo o próximo, farmea en vez de seguirlo; con un grupo de dos o más, va.
+- Predicción frente a `paquete1`:
+  - últimos golpes ≥ 145;
+  - rotaciones `objetivo_muerto` ≤ 1 de cada 3;
+  - lo demás sin perder más de un 15 %: kills ≥ 6,2, remata ≥ 55 %, muertes ≤ 1,5, daño ≥ 21.313.
+- Máquina y código: CPU media 34-38 %, máxima 41-50 %, memoria libre 43-46 %. Código `ea135cc`, 6 de 6 válidas.
+- Resultado (`paquete1` → `paquete2`; OHA entre paréntesis):
+
+  | | `paquete1` | `paquete2` | OHA | Predicho |
+  |---|---|---|---|---|
+  | Últimos golpes | 126 | **154** | 154 | ≥ 145, cumple |
+  | Kills / muertes / asistencias | 7,3 / 0,7 / 9,0 | 5,0 / 2,0 / 5,3 | 9,5 / 3,1 / 5,2 | kills ≥ 6,2 y muertes ≤ 1,5, **no cumple** |
+  | Remata cuando pega | 59 % | 52 % | 67 % | ≥ 55 %, **no cumple** |
+  | Daño a héroes, min 0-25 | 24.549 | 17.724 | 25.285 | ≥ 21.313, **no cumple** |
+  | Golpes a héroes, min 10-20 / 20-25 | 31 / 49 | 39 / 18 | 56 / 26 | |
+  | Rotaciones: terminadas / con kill / `objetivo_muerto` | 15 / 2 / 11 | 22 / 2 / 17 | | `objetivo_muerto` ≤ 1 de 3, **no cumple** |
+
+- Lectura:
+  - **El farm vuelve y la presencia se va:** es el mismo intercambio de las versiones anteriores (`equipo2` frente a `retoque`). Con n=6 y el ruido medido (DECISIONES 2026-11-06), no se distingue cuánto es la regla y cuánto el azar.
+  - **Las rotaciones no se arreglan contando a los aliados cerca:** los objetivos siguen muriendo en menos de 1 s, a 2.000-4.500. La estimación de golpes no ve los hechizos de los aliados. Cuestan poco tiempo, porque acaban enseguida, y dan 2 kills por ronda.
+- Validez: n=6, solo mecanismo.
+- Decisión: rondas agotadas (2 de 2). Se deshace la regla de farmear tras un aliado suelto y se queda la versión de `paquete1`, que es una mejora plausible frente a `build2` en lo que Pedro pidió: kills 5,2 → 7,3, remates 48 % → 59 %, muertes 1,0 → 0,7, daño 21.313 → 24.549. El coste son los últimos golpes (153 → 126). La cuenta de aliados de la rotación se queda (no cambia nada medible). Juega Pedro.

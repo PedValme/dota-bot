@@ -3,7 +3,7 @@
 import json, sys, re, os, collections, bisect, math
 import numpy as np
 exec(open(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "a4_lib.py")).read())
-VERS = [("OHA", r"base2-(humo-)?oha.*"), ("v0 base2", r"base2-(humo-)?propio.*"), ("v1 equipo2", r"equipo2-.*"), ("v2 retoque", r"retoque-.*"), ("v3 build1", r"build1-.*"), ("v4 build2", r"build2-.*")]
+VERS = [("OHA", r"base2-(humo-)?oha.*"), ("v0 base2", r"base2-(humo-)?propio.*"), ("v1 equipo2", r"equipo2-.*"), ("v2 retoque", r"retoque-.*"), ("v3 build1", r"build1-.*"), ("v4 build2", r"build2-.*"), ("v5 paquete1", r"paquete1-.*"), ("v6 paquete2", r"paquete2-.*")]
 PH = [("0-10", 0, 600), ("10-20", 600, 1200), ("20-25", 1200, 1500)]
 for name, pat in VERS:
     gs = [g for g in G if re.fullmatch(pat, g["etiqueta"])]

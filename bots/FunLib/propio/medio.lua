@@ -342,6 +342,23 @@ function M.Fight(bot, s, p)
 	return { intent = 'a_la_pelea', to = spot, reason = string.format('a %d de %s, %d aliados, %d enemigos', nearestD, Short(nearest), engaged, near) }
 end
 
+-- An enemy hero in range and it is safe to shoot: it shoots, before walking to the team or taking the creeps. With one visible within
+-- 1.000 it attacked 41 % of that time, and Fight wants an ally already hitting: 30 hits on heroes from minute 10 to 20 against OHA's 56
+-- (build2). Not hidden (Fight decides how to open from the Blade), not outnumbered, not low, nobody under an enemy tower.
+function M.Shoot(bot, s, p)
+	if p.hp < K.fightHp or bot:IsInvisible() or M.Outnumbered(bot, p) then return nil end
+	local best, bestHp = nil, 1e9
+	for _, e in ipairs(p.enemyHeroes) do
+		if Valid(e) and not e:IsAttackImmune() and D2(p.loc, e:GetLocation()) <= p.range and e:GetHealth() < bestHp then best, bestHp = e, e:GetHealth() end
+	end
+	if best == nil then return nil end
+	for _, tw in ipairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS) or {}) do
+		if tw ~= nil and not tw:IsNull() and tw:IsAlive() and tw:IsTower()
+			and (D2(p.loc, tw:GetLocation()) < K.towerMargin or D2(best:GetLocation(), tw:GetLocation()) < K.towerMargin) then return nil end
+	end
+	return { intent = 'acosar', target = best, reason = string.format('a tiro: %s vida %d a %d', Short(best), bestHp, D2(p.loc, best:GetLocation())) }
+end
+
 -- A fight of two or more allies too far to walk to: by teleport to our tower next to it. It kept farming alone while the team
 -- fought: 1,5 kills from minute 10 against OHA's 9,5 (presion-propio, presion-oha).
 function M.TeleportToFight(bot, s, p)
@@ -433,21 +450,15 @@ local function TeamSpot(bot, p)
 		end
 		if n > bestN then best, bestN = a, n end
 	end
-	-- OHA's groups last a median of 12 s and exist 38 % of the time (equipo1): with none, the nearest ally within a short walk, but
-	-- only with risk about: following a carry clearing camps or a support warding cost 224 s a match with nothing to hit (equipo2).
+	-- OHA's groups last a median of 12 s and exist 38 % of the time (equipo1): with none, the nearest ally within a short walk. Following
+	-- a carry clearing camps cost 224 s a match with nothing to hit (equipo2); Neutrals now takes the camps next to them instead. Following
+	-- it only with risk about (retoque) left it alone: against Pedro it entered 1 fight hidden, 13 before (lobby 2026-11-12).
 	if best == nil then
 		local nearest = K.teamWalk
 		for _, a in ipairs(allies) do
 			local d = D2(p.loc, a:GetLocation())
 			if d < nearest then best, nearest = a, d end
 		end
-		local risky = best ~= nil and M.Risk(bot, p.loc) >= K.holdRisk
-		if best ~= nil and not risky then
-			for _, e in ipairs(VisibleEnemies(p.loc)) do
-				if D2(e:GetLocation(), best:GetLocation()) < K.riskRadius then risky = true break end
-			end
-		end
-		if not risky then best = nil end
 	end
 	if best == nil then return nil end
 	local spot = Toward(best:GetLocation(), GetAncient(p.team):GetLocation(), K.groupBehind)

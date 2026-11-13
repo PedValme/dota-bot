@@ -2,15 +2,11 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Qué se estaba haciendo:** pulir el medio juego del Sniper propio (variante `control_sniper`) frente al de OHA, con el banco arreglado (tienda universal, #85), el marcador de fin de partida (`tools/analisis/evaluacion-2026-11-06/a11.py`, `a12.py`) y la build según los enemigos (`trabajo/build-estrategica.md`, #92). Historia completa en MEDICIONES, del 2026-11-06 al 2026-11-12.
-- **Dónde quedó:** última versión, `build2` (#92). Frente a OHA en el banco: daño 21.313 y 25.285, muertes 1,0 y 3,1, últimos golpes 153 y 154; kills 5,2 y 9,5. En la quinta partida de Pedro (2026-11-12): «se posiciona regular, antes se ocultaba mejor [...] pero su presión es mucho mayor, si es más agresivo y jodido, bastante jodido».
-- **Qué se probó:** de una en una, las mejoras dan poco (Pedro, 2026-11-12: «estamos atacando muy poco»). Lo que mejor funcionó fueron los paquetes de varias mejoras con causas leídas en el registro («con el equipo», #87).
-- **Siguiente acción:** un paquete de varias mejoras a la vez (DECISIONES 2026-11-12), con diagnóstico en los registros, a lo sumo 2 rondas de mecanismo y luego la partida de Pedro. Candidatas, todas con su causa vista:
-  - posición y sigilo: volver a seguir siempre al aliado más cercano, manteniendo los campamentos junto a él (la regla del retoque en `medio.lua`, `TeamSpot`; entra oculto a 1 pelea frente a 13);
-  - remates: 48 % de las muertes en las que pega frente a 67 % de OHA (¿el filtro «lo matan mis golpes» de `sniper.lua`?);
-  - kills de línea: 1,0 al min 10 frente a 3,2 (las rotaciones las apagó Pedro el 2026-11-04: pedirle su palabra para encenderlas);
-  - golpes a héroes entre los min 10 y 20: 30 frente a 56.
-- Espera al dueño: nada hasta que el paquete esté medido
+- **Qué se estaba haciendo:** pulir el medio juego del Sniper propio (variante `control_sniper`) frente al de OHA con un paquete de varias mejoras (DECISIONES 2026-11-12). Historia en MEDICIONES, del 2026-11-06 al 2026-11-12.
+- **Dónde quedó:** versión `paquete1` (este PR): sigue siempre al aliado más cercano, rotaciones encendidas solo hacia un enemigo con un aliado cerca (Pedro: «Sí, con su causa»), Assassinate no corta los golpes a tiro con un aliado encima ni se gasta abriendo peleas sobre objetivos a tiro, y dispara a un enemigo a tiro si es seguro. Frente a `build2` en el banco: kills 5,2 → 7,3 (OHA 9,5), remates 48 % → 59 % (67 %), muertes 1,0 → 0,7, daño 21.313 → 24.549 (25.285); últimos golpes 153 → 126 (154).
+- **Qué se probó:** en la ronda 2, farmear antes de seguir a un aliado suelto devolvió los últimos golpes (154) pero bajó kills, daño y remates: se deshizo. Contar a todo aliado cerca del objetivo no arregla las rotaciones (17 de 22 acaban `objetivo_muerto`: los aliados matan con hechizos que la estimación no ve); cuestan poco y dan 2 kills por ronda.
+- **Siguiente acción:** la partida de Pedro contra `paquete1` (rondas agotadas). Después, según lo que vea: farm frente a presencia, y si las rotaciones se quedan.
+- Espera al dueño: jugar contra el Sniper `paquete1` (lobby, ver `bench/README.md`) y contar qué ve · Recomendado: sí, es una mejora plausible en lo que pediste (más ataque), a cambio de farm
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -30,7 +26,7 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-04 · Vuelta de la fase 1: banco con `--corte` y `--heroes` (#56), registro (#57), defectos y build (#58, #59),
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
-- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93).
+- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95).
 
 ## Siguientes pasos
 1. Medio juego del Sniper propio, hasta el visto bueno de Pedro: paquete de varias mejoras (ver «Próxima sesión»); `trabajo/bot-propio.md`.
@@ -58,8 +54,9 @@ Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
     hacen nada desde el `Think` propio, y la misma llamada funciona en OHA desde su modo. Causa sin explicar; apagadas (`K.runas`);
   - menos kills que OHA (1,6 frente a 2,4 hasta el min 10): el daño de 4 s queda en la mitad de la vida del rival;
   - el rival de mid farmea más que contra OHA (12,1 LH frente a 10,8): deuda aceptada por Pedro al cerrar la línea (DECISIONES 2026-11-05);
-  - menos kills que OHA (5,2 frente a 9,5, `build2`) y remata menos cuando pega (48 % frente a 67 %);
-  - contra Pedro (2026-11-12) se oculta y se posiciona peor que en la versión anterior (menos tiempo con el grupo);
+  - menos kills que OHA (7,3 frente a 9,5, `paquete1`) y remata menos cuando pega (59 % frente a 67 %);
+  - menos últimos golpes que OHA desde que sigue siempre al aliado (126 frente a 154, `paquete1`);
+  - las rotaciones eligen objetivos que los aliados matan con hechizos antes de que llegue (17 de 22 `objetivo_muerto`, `paquete2`);
   - la API no distingue una ilusión enemiga (`IsIllusion` falso con tres Zeus a la vez): el peligro ya cuenta una por héroe, pero
     `VisibleEnemies` y el Assassinate aún pueden apuntar a una copia.
 - **Bot OHA:**

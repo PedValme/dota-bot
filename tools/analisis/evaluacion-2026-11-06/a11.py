@@ -5,7 +5,7 @@ import json, sys, re, os, bisect, math, collections
 import numpy as np
 G = json.load(open(sys.argv[1])); repo = sys.argv[2]
 OBS = os.path.join(repo, "bench", "observaciones")
-VERS = [("OHA", r"base2-(humo-)?oha.*"), ("v0 base2", r"base2-(humo-)?propio.*"), ("v1 equipo2", r"equipo2-.*"), ("v2 retoque", r"retoque-.*"), ("v3 build1", r"build1-.*"), ("v4 build2", r"build2-.*")]
+VERS = [("OHA", r"base2-(humo-)?oha.*"), ("v0 base2", r"base2-(humo-)?propio.*"), ("v1 equipo2", r"equipo2-.*"), ("v2 retoque", r"retoque-.*"), ("v3 build1", r"build1-.*"), ("v4 build2", r"build2-.*"), ("v5 paquete1", r"paquete1-.*"), ("v6 paquete2", r"paquete2-.*")]
 ITEMS = ["power_treads", "dragon_lance", "maelstrom", "mask_of_madness", "force_staff", "hurricane_pike", "invis_sword", "silver_edge", "black_king_bar", "mjollnir", "ultimate_scepter", "lesser_crit", "greater_crit", "satanic", "monkey_king_bar"]
 def track(g, pid):
     p = g["pos"].get(str(pid), []); return [x[0] for x in p], p
