@@ -6,7 +6,7 @@
 - **Dónde quedó:** versión `paquete1` (este PR): sigue siempre al aliado más cercano, rotaciones encendidas solo hacia un enemigo con un aliado cerca (Pedro: «Sí, con su causa»), Assassinate no corta los golpes a tiro con un aliado encima ni se gasta abriendo peleas sobre objetivos a tiro, y dispara a un enemigo a tiro si es seguro. Frente a `build2` en el banco: kills 5,2 → 7,3 (OHA 9,5), remates 48 % → 59 % (67 %), muertes 1,0 → 0,7, daño 21.313 → 24.549 (25.285); últimos golpes 153 → 126 (154).
 - **Qué se probó:** en la ronda 2, farmear antes de seguir a un aliado suelto devolvió los últimos golpes (154) pero bajó kills, daño y remates: se deshizo. Contar a todo aliado cerca del objetivo no arregla las rotaciones (17 de 22 acaban `objetivo_muerto`: los aliados matan con hechizos que la estimación no ve); cuestan poco y dan 2 kills por ronda.
 - **Siguiente acción:** la partida de Pedro contra `paquete1` (rondas agotadas). Después, según lo que vea: farm frente a presencia, y si las rotaciones se quedan.
-- Espera al dueño: jugar contra el Sniper `paquete1` (lobby, ver `bench/README.md`) y contar qué ve · Recomendado: sí, es una mejora plausible en lo que pediste (más ataque), a cambio de farm
+- Lo que espera a Pedro vive en OmniBrain (P-177): `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
