@@ -3,28 +3,23 @@
 <!-- pic-method: next-session -->
 ## Próxima sesión
 - **Qué se estaba haciendo:** el plan de mejora del equipo propio, firmado por Pedro (`trabajo/plan-mejora-equipo.md`, DECISIONES 2026-11-13). Meta: ganar con sobra al equipo de OHA, con cada cambio medido cara a cara, intercalado, en 3 alineaciones y con `tools/bench/equipo.mjs`.
-- **Dónde quedó:**
-  - A contra A hecho, con la tabla de ruido en MEDICIONES;
-  - paquetes 1 («sobrevivir») y 2 («matar en pareja») agotados sin cumplir. Su código está en `main`: no mejora el resultado, pero quita defectos (retirada que cruzaba el mapa, falsos `objetivo_muerto`, ilusiones) y deja el tablero de pareja.
-  
-  Al min 12, frente a OHA con los mismos héroes: diferencia de kills del equipo −19, líneas de dos con 4-5 niveles menos, y la línea segura con +4,8 muertes.
-- **Qué se probó:** parchear las reglas de línea del 1 contra 1 del Sniper (retiradas, intercambio, kill en pareja). Los mecanismos funcionan en el registro y el resultado no se mueve.
-- **Siguiente acción** (Pedro: «Diagnosticar las muertes (Recomendado)», DECISIONES 2026-11-14): diagnosticar las muertes de `h2-*` contra el registro fino. Se mira:
-  - qué daño llega y en qué orden;
-  - dónde estaba cada héroe;
-  - qué decidió nuestro bot en los 10 s anteriores.
+- **Dónde quedó:** cinco paquetes en la línea de dos. Los paquetes 1 y 2 (reglas de línea), la capa de pareja `dos.lua` y el paquete 3 (héroes) no movieron el resultado; su código sigue en `main`, tras la variante.
+  - El diagnóstico de las 94 muertes de `h2`, con su revisión adversarial, mostró la causa: no devolvíamos daño y nadie seguía nuestras aperturas.
+  - El paquete 4 ataca eso.
+  - Al min 12 frente a OHA con los mismos héroes, la diferencia de kills del equipo ronda −10 a −12.
+- **Qué se probó:** reglas del 1 contra 1, pareja que entra y sale, hechizos como OHA, y ahora seguir las aperturas y presionar en pareja.
+- **Siguiente acción:** paquete 4 (firmado por Pedro, DECISIONES 2026-11-14; variante `control_equipo_p4`), ronda 1 hecha (MEDICIONES 2026-11-14):
+  - la pareja ya hace el daño que le faltaba: difícil ×1,67, tras una apertura 228 frente a 51;
+  - la difícil mejora (+1,7 kills);
+  - la segura empeora (+1,8 muertes, −2,2k);
+  - el equipo queda en −2,2 kills, dentro del ruido.
 
-  Con eso se lleva a Pedro un solo paquete, con causas leídas, para su firma.
+  Siguiente:
+  1. diagnosticar en `p4a-*` por qué empeora la segura (¿presión 2 contra 2 frente a rivales tanque?) y comprobar si el tango «con un rival a 900» son rivales que el bot no ve;
+  2. ronda 2, la última, solo con causas leídas;
+  3. después, el piloto de guías de YouTube.
 
-  Lo previo (MEDICIONES 2026-11-13/14):
-  - la capa de la línea de dos (#103) y el paquete 3 de héroes (#105) agotaron sus rondas sin cumplir;
-  - un error en `dos.lua` invalidó `dos1`, `dos2` y `h1` y ya está corregido; la ronda válida del paquete 3 es `h1b`.
-
-  Hoy, al min 12 frente a OHA con los mismos héroes:
-  - diferencia de kills del equipo, unas −12;
-  - las muertes llegan con el 88-90 % de vida 10 s antes, frente a 2 rivales;
-  - los hechizos ya se lanzan como en OHA, salvo Dragon Tail.
-  
+  Antes: diagnóstico de las muertes de `h2` y su revisión adversarial.
   Cada tanda se revisa por `prop error` antes de leerla.
 - **Después, en sesión nueva** (Pedro, DECISIONES 2026-11-14): piloto de reglas de héroe sacadas de guías de YouTube, con los cinco héroes (`trabajo/guias-youtube.md`).
   - Las transcripciones se bajan con `yt-dlp`, a instalar con pip: el conector de YouTube solo da subtítulos de los videos del canal propio.
@@ -49,7 +44,7 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-04 · Vuelta de la fase 1: banco con `--corte` y `--heroes` (#56), registro (#57), defectos y build (#58, #59),
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
-- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100); registro fino y estudio de OHA en las líneas de dos (#101); capa de la línea de dos, TP a la fuente y sombra, 2 rondas sin cumplir (#103); paquete 3, héroes, sin cumplir (#105).
+- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100); registro fino y estudio de OHA en las líneas de dos (#101); capa de la línea de dos, TP a la fuente y sombra, 2 rondas sin cumplir (#103); paquete 3, héroes, sin cumplir (#105); paquete 4, la pareja sigue sus aperturas, ronda 1 (#108).
 
 ## Siguientes pasos
 1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): diagnóstico de las muertes en las líneas de dos (ver «Próxima sesión»).

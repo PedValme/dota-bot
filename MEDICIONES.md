@@ -1888,3 +1888,19 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - entradas de 2 s o más: en A ≥ 70 % (en `h2`, unas 38 %);
   - `curar_tango` con un rival a 900 o menos: 0 en A.
 - Salvaguarda (`equipo.mjs` A − B): diferencia de kills del equipo no peor que −3, y muertes por línea no más de +2. Con 6 partidas por brazo, la diferencia mínima detectable es de unas 7 kills: el equipo no decide, solo avisa.
+- Resultado de la ronda 1 (código `725c3dd`, 12 de 12 válidas, **0 `prop error`** en los dos brazos, CPU media 46-67 % y máxima 56-93 %, igual en los dos):
+
+  | Por línea (A `p4a` / B `p4b`) | Difícil | Segura |
+  |---|---|---|
+  | Daño de la pareja, t 0-600 (ataques + hechizos) | 7.585 / 4.553 (×1,67; ataques ×3) | 6.606 / 4.571 |
+  | Daño de la pareja en 5 s tras una apertura (mediana) | 228 / 51 | 208 / 153 |
+  | Entradas de 2 s o más | 51 % / 36 % | 53 % / 52 % |
+  | Decisiones de tango con un rival a 900 | 18 / 22 | 19 / 41 |
+  | Kills / muertes | 2,3 / 5,2 frente a 0,7 / 5,0 | 0,7 / 10,0 frente a 0,3 / 8,2 |
+
+  - `equipo.mjs` A − B: diferencia de kills del equipo −2,2 (−10,0 a 5,6); patrimonio de la segura −2,2k (−4,8k a 0,3k); la difícil +1,5k de patrimonio y +1,7 kills, dentro del ruido; DK +1,5 niveles.
+- Lectura:
+  - **cumplen** el daño (×1,67 en la difícil, predicción ≥ ×1,5), el seguimiento de las aperturas (≥ 100) y la salvaguarda del equipo (−2,2, no peor que −3; muertes +1,8, no más de +2);
+  - **no cumplen** las entradas de 2 s o más (≥ 70 %) ni el tango (0). Lo más probable es que el tango lo explique el registro, que cuenta rivales que el bot no ve; hay que comprobarlo;
+  - la difícil mejora y la segura empeora. Hipótesis por comprobar en el registro: presionar 2 contra 2 contra rivales tanque (Bristleback, Axe, Tidehunter) cuesta más de lo que da.
+- Decisión: queda la ronda 2, la última del paquete. Antes se diagnostica en el registro por qué empeora la segura, y solo se cambia lo que tenga causa leída.
