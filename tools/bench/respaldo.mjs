@@ -8,7 +8,7 @@
 // overwritten with a smaller file. Default destination: F:\respaldo-dota-bot\observaciones (the HDD, apart from the system SSD), or
 // the DOTABOT_RESPALDO environment variable.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -22,7 +22,8 @@ if (drive && !existsSync(drive[0])) {
   console.error(`No existe la unidad ${drive[0]}: no copio nada.`);
   process.exit(1);
 }
-if (resolve(dest).toLowerCase().startsWith(root.toLowerCase())) {
+const destFull = resolve(dest).toLowerCase();
+if (destFull === root.toLowerCase() || destFull.startsWith(root.toLowerCase() + sep)) {
   console.error("El respaldo no puede estar dentro del repositorio.");
   process.exit(1);
 }
@@ -33,6 +34,7 @@ if (!existsSync(source)) {
 mkdirSync(dest, { recursive: true });
 
 let copied = 0, same = 0, kept = 0;
+const failed = [];
 for (const f of readdirSync(source)) {
   const from = join(source, f);
   if (!statSync(from).isFile()) continue;
@@ -43,8 +45,12 @@ for (const f of readdirSync(source)) {
     if (old === size) { same++; continue; }
     if (old > size) { kept++; continue; } // never replace a larger backup with a smaller file
   }
-  copyFileSync(from, to);
-  copied++;
+  // A file a running batch holds open is skipped, not the whole backup; it is copied on the next run.
+  try { copyFileSync(from, to); copied++; } catch (e) { failed.push(`${f} (${e.code || e.message})`); }
 }
 const total = readdirSync(dest).length;
 console.log(`Respaldo en ${dest}: ${copied} copiados, ${same} ya estaban${kept ? `, ${kept} con copia mayor que se conserva` : ""}; ${total} archivos en el respaldo.`);
+if (failed.length) {
+  console.error(`Sin copiar (se reintentan en la próxima pasada): ${failed.join(", ")}`);
+  process.exit(2);
+}
