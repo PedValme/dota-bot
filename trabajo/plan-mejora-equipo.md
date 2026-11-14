@@ -145,4 +145,8 @@ Son la especificación de la reescritura, no su base: se copia lo que gana y se 
   - Las kills y las muertes no se mueven.
   - Siguiente, por decisión de Pedro (DECISIONES 2026-11-14): diagnosticar las muertes antes de más código.
 
+- 2026-11-14, diagnóstico de las 94 muertes de `h2`, con su revisión adversarial: no devolvíamos daño y nadie seguía nuestras aperturas. De ahí sale el paquete 4, firmado por Pedro.
+  - Ronda 1 (`p4a` frente a `p4b`): la pareja hace el daño que faltaba (×1,67 en la difícil); la difícil mejora y la segura empeora.
+  - Falta la ronda 2 (ESTADO, «Próxima sesión»).
+
 **Herramienta:** el mismo análisis lee los brazos del bot propio, y cada versión se compara con `oha-dos-*` en estas métricas. La medición que decide sigue siendo `equipo.mjs`.
