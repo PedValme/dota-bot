@@ -246,7 +246,8 @@ function P.Buy(bot, s, now)
 	-- The next item waits until the Treads are assembled. A Belt of Strength (Dragon Lance) arriving with their parts makes them
 	-- strength Treads, leaves the Boots of Elves over and the Lance without its part: it never came together, the inventory
 	-- filled and the courier went back and forth for minutes (presion-propio 3, t=210-575). A minute at most.
-	if not s.treadsDone and next.of ~= 'item_power_treads' and next.of ~= 'item_wraith_band' then
+	-- The Raindrops (guides package, rule E) go before the Treads and have no parts that could mix with theirs.
+	if not s.treadsDone and next.of ~= 'item_power_treads' and next.of ~= 'item_wraith_band' and next.of ~= 'item_infused_raindrop' then
 		local slot = bot:FindItemSlot('item_power_treads')
 		s.treadsWait = s.treadsWait or now
 		if slot >= 0 or now - s.treadsWait > 60 then s.treadsDone = true else return nil end

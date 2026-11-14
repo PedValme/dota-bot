@@ -151,7 +151,9 @@ if GUIAS1 then
 				local real = c:GetActualIncomingDamage(f.dmg, DAMAGE_TYPE_MAGICAL)
 				if real >= c:GetHealth() + c:GetHealthRegen() * eta then
 					local heroes = Hits(f, p, at)
-					if heroes >= 1 or after - cost >= ManaToKeep(bot) then
+					-- Outnumbered (Perceive, p.alone) a hero in the flame is a harass the lane rules forbid there (package 1): only the
+					-- mana path (code review).
+					if (heroes >= 1 and not p.alone) or after - cost >= ManaToKeep(bot) then
 						return { intent = 'shrapnel', ability = a, at = at, castPoint = a:GetCastPoint(),
 							reason = string.format('breathe_fire remata un creep a distancia: vida %d, %d héroes en la llama', c:GetHealth(), heroes) }
 					end
