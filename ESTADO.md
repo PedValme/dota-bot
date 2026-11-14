@@ -16,7 +16,7 @@
 - **Siguiente acción:**
   1. Convertir en comprobación de validez el defecto visto en `g1b-c` 1: un héroe nuestro cargado tarde (t > −20) o sin ninguna compra. Va antes de cualquier serie, y como toca el orquestador, se revisa antes.
   2. Después, lo que decida Pedro (OmniBrain, P-841). Recomendado: diagnosticar en los registros de `p4r2a` dónde se pierde lo que queda frente a OHA y proponer el siguiente paquete del plan.
-- **Reglas de la tanda:** cada tanda se revisa por `prop error` antes de leerla. No se edita `bots/` del clon principal mientras juega, y se trabaja en un worktree **sin junctions** hacia datos del clon (ver problemas conocidos).
+- **Reglas de la tanda:** al terminar cada tanda, `node tools/bench/respaldo.mjs` copia sus registros a `F:\respaldo-dota-bot\observaciones` (DECISIONES 2026-11-14). Cada tanda se revisa por `prop error` antes de leerla. No se edita `bots/` del clon principal mientras juega, y se trabaja en un worktree **sin junctions** hacia datos del clon (ver problemas conocidos).
 - Lo que espera a Pedro vive en OmniBrain: `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
 ## Madurez

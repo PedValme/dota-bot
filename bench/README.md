@@ -40,7 +40,8 @@ node tools/bench/orquestador.mjs --partidas 40 --dificultad 4 --velocidad 4 --mo
   `FunLib/bench_observe.lua`): con él, el `print` de los bots llega al log y cada bot de dota-bot anota su modo activo
   y su deseo cada 2 s (`[bench] mode`). Todo eso, más las líneas del motor sobre los bots (errores de script, órdenes
   inválidas, funciones lentas, edificios), queda por partida en `observaciones/<etiqueta>-<fecha>-<n>.log` (ignorado por
-  git: pesan varios MB). `node tools/bench/analizar.mjs observaciones/<archivo>.log` lo resume: zonas, agrupación,
+  git: pesan varios MB; no tienen otra copia que el respaldo: `node tools/bench/respaldo.mjs` al terminar cada tanda, a
+  `F:\respaldo-dota-bot\observaciones`). `node tools/bench/analizar.mjs observaciones/<archivo>.log` lo resume: zonas, agrupación,
   farm, couriers, modos de dota-bot según su ventaja, empuje en grupo y errores.
 - Héroes: mismo enfrentamiento en los dos lados desde el 2026-10-31 (DECISIONES). El motor nunca da el mismo héroe a
   los dos equipos (0 de 112 partidas): antes, Dire pedía los de Radiant y recibía **héroes al azar** (S4 de
