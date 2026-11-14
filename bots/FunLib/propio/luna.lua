@@ -102,12 +102,14 @@ end
 -- Lucent Beam on the enemy laner: only with mana for another beam on top of Eclipse's, so a sure kill (Finish) is never left
 -- without one, and not more often than every HARASS_GAP seconds, so the mana goes to kills rather than to chip damage. Only on
 -- a laner within our attack range plus a little: the hits that follow it are what turn the beam into a trade.
-local HARASS_GAP = 8
+-- Package 3 (trabajo/plan-mejora-equipo.md): as OHA, which keeps only Eclipse's mana and has no gap (hero_luna.lua:224-242); with a
+-- gap of 8 s and two beams' mana it cast 9,7 beams a lane against OHA's 27,3 (propio-dos against oha-dos, MEDICIONES 2026-11-13).
+local HARASS_GAP = 3
 function H.Harass(bot, s, p)
 	local a = Beam(bot)
 	if a == nil then return nil end
 	if p.now - (s.beamAt or -1000) < HARASS_GAP then return nil end
-	if bot:GetMana() - 2 * a:GetManaCost() < ManaToKeep(bot) then return nil end
+	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
 	local reach = math.min(a:GetCastRange(), p.range + 200)
 	for _, e in ipairs(p.enemyHeroes) do
 		if Beamable(s, p, a, e) and D2(p.loc, e:GetLocation()) <= reach then
@@ -118,6 +120,39 @@ function H.Harass(bot, s, p)
 			return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = BeamLock(a),
 				reason = string.format('acoso a %s a %d (alcance %d), maná %.0f%%', Short(e), D2(p.loc, e:GetLocation()), reach,
 					100 * bot:GetMana() / math.max(bot:GetMaxMana(), 1)) }
+		end
+	end
+	return nil
+end
+
+-- Package 3: Lucent Beam on the hero we trade hits with (linea.lua's 'acosar'), as OHA casts it on its attack target (hero_luna.lua:
+-- 224-242), keeping Eclipse's mana.
+function H.TradeCast(bot, s, p, e)
+	local a = Beam(bot)
+	if a == nil or not Beamable(s, p, a, e) then return nil end
+	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
+	s.beamAt = p.now
+	return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = BeamLock(a),
+		reason = string.format('en el intercambio con %s', Short(e)) }
+end
+
+-- Package 3: Lucent Beam to last-hit a lane creep it surely kills, out of our attack range plus 80 (the attack takes the near ones):
+-- ranged, siege and flag bearers always; melee once the beam is level 2 or the mana is over 90 %. OHA's own lane rule (hero_luna.lua:
+-- 271-301), 75 of its 165 beams in oha-dos. Eclipse's mana is kept.
+function H.FarmCast(bot, s, p)
+	local a = Beam(bot)
+	if a == nil or bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
+	local full = bot:GetMana() / math.max(bot:GetMaxMana(), 1) > 0.9
+	for _, c in ipairs(p.enemyCreeps) do
+		if Seen(c) then
+			local name, d = c:GetUnitName(), D2(p.loc, c:GetLocation())
+			local kind = nil
+			if string.find(name, 'ranged') or string.find(name, 'siege') or string.find(name, 'flagbearer') then kind = 'lejos'
+			elseif string.find(name, 'melee') and (a:GetLevel() >= 2 or full) then kind = 'cerca' end
+			if kind ~= nil and d <= a:GetCastRange() and d > p.range + 80 and c:GetHealth() <= BeamDamage(a, c) then
+				return { intent = 'rematar', ability = a, target = c, castPoint = a:GetCastPoint(),
+					reason = string.format('lucent beam remata un creep (%s) a %d, vida %d', kind, d, c:GetHealth()) }
+			end
 		end
 	end
 	return nil

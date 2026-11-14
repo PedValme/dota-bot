@@ -140,4 +140,9 @@ Son la especificación de la reescritura, no su base: se copia lo que gana y se 
 - 2026-11-13, capa de la línea de dos (`dos.lua`, rondas `dos1` y `dos2`): no cumple. La segura muere menos (de 8,8 a 5,8), pero la pareja no mata (0,5-0,7 kills por línea) y la difícil pierde farm.
 - La sombra (`linea-dos.mjs --sombra`) confirma la regla de entrada en OHA: mata con «nuestro» ≥ 1,2, «suyo» ≤ 0,6 y la pareja a 530-710. Nuestros héroes leen «suyo» cerca de 1,0-1,6: falta nivel y daño, que es el paquete 3 (Pedro, DECISIONES 2026-11-13).
 
+- 2026-11-14, paquete 3 (héroes, `h1b` y `h2`): no cumple.
+  - Los hechizos se lanzan como en OHA (Lucent Beam, Frost Blast y Hex), y la pareja entra junta con las lecturas de OHA.
+  - Las kills y las muertes no se mueven.
+  - Siguiente, por decisión de Pedro (DECISIONES 2026-11-14): diagnosticar las muertes antes de más código.
+
 **Herramienta:** el mismo análisis lee los brazos del bot propio, y cada versión se compara con `oha-dos-*` en estas métricas. La medición que decide sigue siendo `equipo.mjs`.

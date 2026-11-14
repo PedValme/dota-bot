@@ -692,6 +692,9 @@ end
 -- carries its bonus.
 local function WithAim(bot, s, p, hero, r)
 	if hero == nil or r == nil or r.target == nil or (r.intent ~= 'acosar' and r.intent ~= 'matar') or bot:IsInvisible() then return r end
+	-- Package 3: trading hits with a hero, the hero's spells on it first, as OHA casts on its attack target (TradeCast).
+	local trade = r.intent == 'acosar' and hero.TradeCast ~= nil and not p.late and hero.TradeCast(bot, s, p, r.target) or nil
+	if trade then return trade end
 	return Medio.Berserk(bot, s, p, r.target) or hero.Aim(bot, s, p, r.target) or r
 end
 
@@ -793,6 +796,11 @@ local function Decide(bot, s, p)
 		end
 	end
 	local hidden = bot:IsInvisible()
+	-- Package 3: a spell to last-hit a lane creep the attack does not reach (Luna's Beam, Lich's Frost Blast), OHA's lane rule.
+	if not NO_COMBAT and not late and not hidden and hero ~= nil and hero.FarmCast ~= nil then
+		r = hero.FarmCast(bot, s, p)
+		if r then return r end
+	end
 	local ready, soon
 	if not hidden then
 		r, ready, soon = RuleLastHit(bot, s, p)

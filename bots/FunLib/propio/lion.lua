@@ -210,13 +210,31 @@ end
 
 -- Earth Spike to harass, rarely: on an enemy hero in range, only when the mana left still pays for Hex and Finger and half the pool,
 -- and not within 20 s of the last one. A support that spends its mana in lane has no lock when the kill comes.
-local HARASS_EVERY = 20
+-- Package 3: with a gap of 20 s and half the pool kept it cast 9,8 spikes a lane against OHA's 18,8 (MEDICIONES 2026-11-13). OHA casts it
+-- on its target with the spell at level 2 or the mana over 68 % (hero_lion.lua:367-383); here a gap of 6 s and Hex and Finger's mana.
+local HARASS_EVERY = 6
 function H.Harass(bot, s, p)
 	local a = bot:GetAbilityByName('lion_impale')
+	-- Package 3 round 2: with the spike not ready, Hex on the laner in range, not locked, keeping Finger's mana, as OHA hexes its attack
+	-- target (8,3 a lane against our 3,0 in h1b). Only with the partner near (linea.lua calls Harass so, dos.lua).
+	if (a == nil or not a:IsFullyCastable()) and p.now - (s.lionCastAt or -1000) >= 0.8 then
+		local f = bot:GetAbilityByName('lion_finger_of_death')
+		local keep = (f ~= nil and f:GetLevel() > 0 and f:GetCooldownTimeRemaining() < 10) and f:GetManaCost() or 0
+		local h = bot:GetAbilityByName('lion_voodoo')
+		if h ~= nil and h:IsFullyCastable() and bot:GetMana() - h:GetManaCost() >= keep then
+			for _, e in ipairs(p.enemyHeroes) do
+				if Seen(e) and not e:IsIllusion() and not Locked(e, 0.3) then
+					local d = HexOn(bot, s, p, e, 'acoso')
+					if d ~= nil then s.lionCastAt = p.now return d end
+				end
+			end
+		end
+	end
 	if a == nil or not a:IsFullyCastable() then return nil end
 	if p.now - (s.spikeHarassAt or -1000) < HARASS_EVERY then return nil end
 	local left = bot:GetMana() - a:GetManaCost()
-	if left < ManaToKeep(bot) or left < 0.5 * bot:GetMaxMana() then return nil end
+	if left < ManaToKeep(bot) then return nil end
+	if not (a:GetLevel() >= 2 or bot:GetMana() / math.max(bot:GetMaxMana(), 1) > 0.68) then return nil end
 	for _, e in ipairs(p.enemyHeroes) do
 		if Seen(e) and not e:IsMagicImmune() and not e:IsIllusion() and not Locked(e, 0.3)
 			and D2(p.loc, e:GetLocation()) <= a:GetCastRange() then
@@ -229,6 +247,22 @@ function H.Harass(bot, s, p)
 		end
 	end
 	return nil
+end
+
+-- Package 3: on the hero we trade hits with, as OHA on its attack target: Earth Spike with the spell at level 2, the mana over 68 % or
+-- the target under half (hero_lion.lua:367-383), else Hex once the spike is not just out (0,8 s, hero_lion.lua:518) and the target is
+-- not locked (611-628). Finger stays for Finish and the kills.
+function H.TradeCast(bot, s, p, e)
+	if not Seen(e) or e:IsMagicImmune() or e:IsIllusion() or p.now - (s.lionCastAt or -1000) < 0.8 or Locked(e, 0.3) then return nil end
+	local spike = bot:GetAbilityByName('lion_impale')
+	local d = nil
+	if spike ~= nil and spike:IsFullyCastable() and (spike:GetLevel() >= 2 or bot:GetMana() / math.max(bot:GetMaxMana(), 1) > 0.68
+		or e:GetHealth() < 0.5 * e:GetMaxHealth()) then
+		d = SpikeOn(bot, s, p, e, 'en el intercambio')
+	end
+	d = d or HexOn(bot, s, p, e, 'en el intercambio')
+	if d ~= nil then s.lionCastAt = p.now end
+	return d
 end
 
 -- During a kill: lock it, then the ultimate. Earth Spike first (it stuns on landing), else Hex; a new lock only once the last one is

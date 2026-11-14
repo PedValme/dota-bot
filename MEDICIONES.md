@@ -1821,3 +1821,46 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - la sombra.
 
   El siguiente paso lo decide Pedro.
+
+### 2026-11-13 · Paquete 3, héroes, ronda de mecanismo 1 (`h1-*`): predicción antes de lanzar
+- Pregunta (Pedro: «Paquete 3: héroes (Recomendado)»): ¿lanzan más hechizos nuestros héroes, al estilo de OHA, y con ello ganan nivel y kills en las líneas de dos?
+- Qué cambió desde `dos2-*` (rama `claude/paquete3-heroes`). Reglas de OHA leídas en `BotLib/hero_*.lua`:
+  - `TradeCast`: al cambiar golpes con un héroe, Dragon Tail o Breathe Fire, Earth Spike o Hex, Lucent Beam y Frost Blast;
+  - `FarmCast`: Lucent Beam y Frost Blast para rematar creeps;
+  - menos espera y reserva en el acoso: Lucent Beam de 8 a 3 s, Earth Spike de 20 a 6 s y sin la mitad del maná, Breathe Fire sin el 60 %.
+- Diseño: el de `dos1` y `dos2` (6 partidas, alineaciones a, b y c, min 12). Se compara con `dos2-*` (`equipo.mjs`) y con `oha-dos-*` (`linea-dos.mjs`).
+- Predicción (min 12, por línea):
+  - lanzamientos: Lucent Beam ≥ 18, Breathe Fire ≥ 18, Dragon Tail ≥ 6, Hex ≥ 5 y Frost Blast ≥ 12 (en `dos2`: 8-10, 10-12, 1-2, 1-2 y 7-8);
+  - nivel de los cuatro héroes de las líneas de dos +1 o más frente a `dos2`;
+  - kills sobre sus rivales ≥ 2 en cada línea.
+- **Invalidez (anotada antes de leer el resultado de `h1`):** `dos.lua` tenía un error desde el cambio a la carrera (`dos-humo2`, `dos1`, `dos2` y `h1`).
+  - En el bucle de entrada, la variable local `ours` (la parte de la carrera) tapaba la lista de héroes, y `#ours` fallaba cada vez que la pareja estaba junta y un objetivo pasaba los primeros filtros.
+  - Errores por tanda en los registros (`prop error ... dos.lua:266`): 65 en `dos-humo2`, 120 en `dos1`, 173 en `dos2` y 118 en `h1`.
+  - Cada error aborta la decisión de ese tick del bot que decide, y la entrada «juntos» no pudo darse nunca (todas las entradas registradas dicen «solo»).
+  - **Por eso las rondas `dos1` y `dos2` no miden la capa de la línea de dos, ni `h1` el paquete 3.** Lo que se lee sin ese camino vale: la sombra (llama a la carrera fuera del bucle), los lanzamientos y el TP.
+  - Corregido en `claude/paquete3-heroes`, con un segundo fallo del mismo origen que aparecía al renombrar. Desde ahora, cada tanda se revisa por `prop error` antes de leerla.
+- Resultado de `h1`, solo descriptivo por la invalidez: Lucent Beam 16,2 (49 a héroes y 48 a creeps), Frost Blast 17,5, Breathe Fire 12,8, Dragon Tail 1,7 y Hex 1,3 por línea; las kills no se mueven (0,2 y 0,8).
+- Decisión: repetir la ronda con el código corregido (`h1b`) y medir la capa de la línea de dos sola, corregida (`dos3`), porque sus dos rondas no valieron.
+
+### 2026-11-14 · Paquete 3, ronda 1 válida (`h1b-*`) y ronda 2 (`h2-*`): predicción antes de lanzar
+- `h1b` (código `e2c1c0c`, 6 de 6 válidas, **0 `prop error`**, CPU media 34-45 %): la pareja entra junta (170 entradas «juntos» y 8 «solo»; antes 0 juntas).
+- Lanzamientos por línea: Lucent Beam 18,7 (55 a creeps) y Frost Blast 15,8 cumplen. Breathe Fire 13,8, Dragon Tail 2,3 y Hex 3,0 no.
+- Kills 0,8 y 1,5, muertes 7,8 y 8,7. `equipo.mjs` frente a `dos2`: sin diferencia fuera del ruido salvo el Sniper (+3,5 niveles). **No cumple.**
+- Lectura: las entradas propias que acaban en muerte (10 en la segura, 13 en la difícil) se leían con «nuestro» 0,9-1,1 y «suyo» 0,9-1,2. Las que OHA gana, con 1,2-1,8 y 0,5-0,7. La puerta deja pasar carreras que OHA no corre. Dragon Tail y Hex solo salen en el intercambio, que en la línea de dos casi no se da.
+- Ronda 2 (la última del paquete):
+  - entrada con las lecturas de las entradas que gana OHA: «nuestro» ≥ 1,2 y «suyo» ≤ 0,7;
+  - Dragon Tail y Hex también en el acoso, con el compañero cerca y guardando el maná de la forma y de Finger.
+- Predicción (min 12, por línea, frente a `h1b`):
+  - muertes ≤ 6 en cada línea;
+  - kills ≥ 2;
+  - Dragon Tail ≥ 6 y Hex ≥ 5.
+- Resultado de `h2` (código de la rama, 6 de 6 válidas, **0 `prop error`**, CPU media 41-56 % y máxima 49-85 %: carga alta, anotada):
+  - kills 1,5 en la segura y 0,7 en la difícil, muertes 7,2 y 8,5 (predicho ≥ 2 y ≤ 6);
+  - Hex 5,8 (cumple), Dragon Tail 2,8 (no cumple);
+  - `equipo.mjs` frente a `h1b`: ninguna diferencia fuera del ruido, y la diferencia de kills del equipo igual (−12).
+  - **No cumple.**
+- Lectura:
+  - las muertes siguen llegando con el 88-90 % de vida 10 s antes, frente a 2 rivales;
+  - no hay oro sin gastar: la diferencia de patrimonio (5-7k por línea) viene de las kills regaladas;
+  - los héroes de OHA llevan Magic Wand y los nuestros no.
+- Decisión: **el paquete 3 agotó sus 2 rondas sin cumplir.** Su código (hechizos en el intercambio y el acoso, remate de creeps, entrada con las lecturas de OHA) se queda tras la variante del bot propio. El siguiente paso lo decide Pedro.
