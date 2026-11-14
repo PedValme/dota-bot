@@ -9,25 +9,23 @@
   
   Al min 12, frente a OHA con los mismos héroes: diferencia de kills del equipo −19, líneas de dos con 4-5 niveles menos, y la línea segura con +4,8 muertes.
 - **Qué se probó:** parchear las reglas de línea del 1 contra 1 del Sniper (retiradas, intercambio, kill en pareja). Los mecanismos funcionan en el registro y el resultado no se mueve.
-- **Siguiente acción** (Pedro: «Paquete 3: héroes (Recomendado)», DECISIONES 2026-11-13): uso de habilidades como OHA:
-  - Lucent Beam y Breathe Fire también para farmear y acosar;
-  - Dragon Tail y Hex para abrir;
-  - reserva de maná;
-  - builds comparadas con las de OHA.
+- **Siguiente acción** (Pedro: «Diagnosticar las muertes (Recomendado)», DECISIONES 2026-11-14): diagnosticar las muertes de `h2-*` contra el registro fino. Se mira:
+  - qué daño llega y en qué orden;
+  - dónde estaba cada héroe;
+  - qué decidió nuestro bot en los 10 s anteriores.
 
-  Se mide con `linea-dos.mjs --sombra` (lanzamientos por héroe, «nuestro» y «suyo» de la carrera) y con `equipo.mjs` frente a `dos2-*`, como mucho en 2 rondas.
+  Con eso se lleva a Pedro un solo paquete, con causas leídas, para su firma.
+
+  Lo previo (MEDICIONES 2026-11-13/14):
+  - la capa de la línea de dos (#103) y el paquete 3 de héroes (#105) agotaron sus rondas sin cumplir;
+  - un error en `dos.lua` invalidó `dos1`, `dos2` y `h1` y ya está corregido; la ronda válida del paquete 3 es `h1b`.
+
+  Hoy, al min 12 frente a OHA con los mismos héroes:
+  - diferencia de kills del equipo, unas −12;
+  - las muertes llegan con el 88-90 % de vida 10 s antes, frente a 2 rivales;
+  - los hechizos ya se lanzan como en OHA, salvo Dragon Tail.
   
-  Lo previo:
-  - estudio de OHA (#101);
-  - capa de la línea de dos (`dos.lua`, #103), 2 rondas sin cumplir: la segura muere 3 veces menos, la pareja no mata y la difícil pierde farm. Detalle en MEDICIONES 2026-11-13.
-  
-  Brechas en el registro, frente a OHA:
-  - Lucent Beam: 9,7 lanzamientos frente a 27,3;
-  - Breathe Fire: 11,8 frente a 23,3;
-  - Dragon Tail: 1,7 frente a 11,8;
-  - Hex: 2,3 frente a 8,3.
-  
-  OHA usa el Beam y el Breathe Fire también sobre creeps.
+  Cada tanda se revisa por `prop error` antes de leerla.
 - Lo que espera a Pedro vive en OmniBrain (P-177): `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
 ## Madurez
@@ -48,10 +46,10 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-04 · Vuelta de la fase 1: banco con `--corte` y `--heroes` (#56), registro (#57), defectos y build (#58, #59),
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
-- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100); registro fino y estudio de OHA en las líneas de dos (#101); capa de la línea de dos, TP a la fuente y sombra, 2 rondas sin cumplir (#103).
+- 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100); registro fino y estudio de OHA en las líneas de dos (#101); capa de la línea de dos, TP a la fuente y sombra, 2 rondas sin cumplir (#103); paquete 3, héroes, sin cumplir (#105).
 
 ## Siguientes pasos
-1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): paquete 3, héroes (ver «Próxima sesión»).
+1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): diagnóstico de las muertes en las líneas de dos (ver «Próxima sesión»).
 2. Medio juego del Sniper: farm frente a presencia y las rotaciones, con lo que Pedro vea al jugar contra el equipo.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
