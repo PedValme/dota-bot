@@ -27,6 +27,9 @@ local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
 -- Observer mode: the lane of two's shadow line (dos.lua, Sombra), the same one OHA's bots log, to read both with one vara.
 local OBSERVE = dofile(GetScriptDirectory()..'/FunLib/bench_observe')
 local NO_COMBAT = Variant.sin_combate == true
+-- Package 4 (signed by Pedro on 2026-11-14): the pair follows its openings, presses 2 against 2, no tango in a fight, Magic Wand.
+local P4 = Variant.paquete4 == true
+local Pareja = require(GetScriptDirectory()..'/FunLib/propio/pareja')
 
 -- Thresholds of the rules (one place, so the log and the rules agree).
 local K = {
@@ -489,7 +492,8 @@ local function RuleHeal(bot, s, p)
 		return { intent = 'curar_salvia', reason = string.format('vida %.2f, sin enemigos cerca', p.hp), item = salve }
 	end
 	local tango = HasItem(bot, 'item_tango')
-	if tango ~= nil and tango:IsFullyCastable() and bot:GetMaxHealth() - p.hpAbs > 120 then
+	-- Package 4: the tango under the salve's safety too: 15-20 deaths in h2 had a tango eaten with an enemy hero within 1000.
+	if tango ~= nil and tango:IsFullyCastable() and bot:GetMaxHealth() - p.hpAbs > 120 and (safe or not P4) then
 		-- Far trees only with nothing to farm and no enemy near (the walk leaves the wave), and the nearest one that
 		-- is not under an enemy tower.
 		local reach = (safe and not Combate.WaveInReach(p)) and K.treeSafe or K.treeNear
@@ -635,7 +639,10 @@ local function RuleTrade(bot, s, p, ready, soon)
 				-- (plan, package 1: 8 of 16 deaths in the safe lane). Said once a second, so the log shows what was given up.
 				-- In a lane of two (dos.lua) the pair alone takes the initiative: Luna pressed Bristleback by its own trade (ratio 1,79),
 				-- got both enemies' answer and the pair left too late (dos-humo 2, t=453-461).
-				local press = not p.dos and company and (alone or pair) and ready == nil and v.ratio >= K.pressEdge
+				-- Package 4: pressing again in the lane of two, with the partner near and the board on the lane: the hard lane hit 15 times
+				-- less with attacks than OHA's from minute 0 (h2: Dragon Knight 186 against 2.758). The partner joins it (dos.lua).
+				local pairPress = P4 and p.dos ~= nil and p.dos.partnerNear and p.dos.board.mode == 'linea'
+				local press = (not p.dos or pairPress) and company and (alone or pair) and ready == nil and v.ratio >= K.pressEdge
 				if (answer or press) and p.alone then
 					if p.now - (s.aloneLogAt or -1000) >= 1 then
 						s.aloneLogAt = p.now
@@ -652,6 +659,9 @@ local function RuleTrade(bot, s, p, ready, soon)
 				elseif not company and ready == nil and d <= p.range and d >= e:GetAttackRange() + K.freeShotGap
 					and #p.enemyHeroes == 1 and v.ratio >= K.pressEdge and p.hp >= K.freeShotHp then kind = 'disparo' end
 				if kind ~= nil then
+					if P4 and p.dos ~= nil and string.find(kind, '^presiono') then
+						Pareja.Announce(bot, e, 'apertura', p.now + 3, p.now, kind)
+					end
 					return { intent = 'acosar', target = e, walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1),
 						reason = string.format('%s a %s: ratio %.2f, mi_dps %d, su_dps %d, altura %d, a %d, aliados %d', kind,
 							(string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')), v.ratio, v.mine, v.against, v.height, d, v.allies) }
@@ -713,6 +723,13 @@ local function Decide(bot, s, p)
 		if bkb then return bkb end
 	end
 	p.dos = (not late and not NO_COMBAT) and Dos.Applies(bot, s, p, function(pid) return S[pid] end) or nil
+	-- Package 4: Magic Wand under half health (an instant heal, no safety needed), as every OHA hero carries and uses one.
+	if P4 and p.hp < 0.5 then
+		local wand = HasItem(bot, 'item_magic_wand')
+		if wand ~= nil and wand:IsFullyCastable() and (wand:GetCurrentCharges() or 0) >= 3 then
+			return { intent = 'usar_objeto', item = wand, reason = string.format('magic wand, vida %.2f, %d cargas', p.hp, wand:GetCurrentCharges()) }
+		end
+	end
 	local r = RuleRetreat(bot, s, p)
 	-- Retreating for health alone (no tower on us, no enemy burst), healing comes first: RuleHeal itself requires
 	-- no enemy hero near and no recent hero or tower damage.
@@ -967,6 +984,8 @@ local function Act(bot, s, p, d)
 		-- An opening on an enemy hero (the hero module marks it: Hex, Dragon Tail, Lucent Beam, Lich's Frost Blast in a kill) goes on the
 		-- pair's board (package 2).
 		if d.opens ~= nil then Combate.AnnounceOpening(bot, s, p, d) end
+		-- Package 4: the caster keeps hitting the hero it opened on (dos.lua, Act).
+		if P4 and p.dos and d.opens ~= nil then s.dosOpen = { target = d.opens, untilT = p.now + d.castPoint + (d.lockSec or 0) + 3 } end
 		if name == 'sniper_assassinate' then
 			s.assassinate = { target = d.target, name = string.gsub(d.target:GetUnitName(), 'npc_dota_hero_', ''),
 				hp0 = d.target:GetHealth(), kills0 = GetHeroKills(bot:GetPlayerID()), at = p.now + d.castPoint + 3.0,
@@ -1000,6 +1019,7 @@ local function Act(bot, s, p, d)
 		Log(s, bot, 'habilidad', (d.ability:GetName() == 'sniper_shrapnel' and 'shrapnel' or d.ability:GetName()) .. ': ' .. d.reason)
 		-- Earth Spike's lock is cast on the ground: the module names the enemy it aims at (package 2).
 		if d.opens ~= nil then Combate.AnnounceOpening(bot, s, p, d) end
+		if P4 and p.dos and d.opens ~= nil then s.dosOpen = { target = d.opens, untilT = p.now + d.castPoint + (d.lockSec or 0) + 3 } end
 		return
 	end
 	if d.intent == 'acosar' then

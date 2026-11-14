@@ -172,6 +172,10 @@ export const VARIANTS = {
   // Phase 2 (trabajo/fase2.md): the five own heroes, with --heroes luna,sniper,dragon_knight,lion,lich/...; the ones the
   // draw does not give dota-bot play as OHA.
   control_equipo: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", empuje: false, thinkless: 1 },
+  // Package 4 (trabajo/plan-mejora-equipo.md, signed by Pedro on 2026-11-14): the same team with the pair's package on, measured
+  // against control_equipo in the same batch.
+  control_equipo_p4: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", paquete4: true, empuje: false,
+    thinkless: 1 },
   // The own Sniper with its fighting off (no kills, abilities on heroes or trades), to measure what fighting costs in
   // farm (trabajo/fase1-plan.md, step 5).
   control_sniper_sincombate: { control_completo: "sniper", linea_heroe: "sniper", sin_combate: true, empuje: false, thinkless: 1 },
