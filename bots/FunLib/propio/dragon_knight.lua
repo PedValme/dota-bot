@@ -158,6 +158,22 @@ end
 local SOLO_MANA = 0    -- a flame on one hero alone with this share of mana left after it
 local WAVE_CREEPS = 2  -- creeps in the flame that make a hero's flame worth it
 function H.Harass(bot, s, p)
+	-- Package 3 round 2: Dragon Tail on the laner in reach, not locked, keeping the form's mana, as OHA tails its attack target (11,8 a
+	-- lane against our 2,3 in h1b: trades, where TradeCast casts it, are rare in a lane of two). linea.lua calls Harass only with the
+	-- partner near (dos.lua).
+	local t = Ready(bot, 'dragon_knight_dragon_tail')
+	if t ~= nil then
+		local u = bot:GetAbilityByName('dragon_knight_elder_dragon_form')
+		local keep = (u ~= nil and u:GetLevel() > 0 and u:GetCooldownTimeRemaining() < 10) and u:GetManaCost() or 0
+		if bot:GetMana() - t:GetManaCost() >= keep then
+			for _, e in ipairs(p.enemyHeroes) do
+				if Seen(e) and not e:IsIllusion() and not Locked(e) and D2(p.loc, e:GetLocation()) <= t:GetCastRange() + TAIL_WALK then
+					local tail = DragonTailOn(bot, s, p, e, 'acoso')
+					if tail then return tail end
+				end
+			end
+		end
+	end
 	local a = Ready(bot, 'dragon_knight_breathe_fire')
 	if a == nil or p.now - (s.shrapnelAt or -1000) < 1.5 then return nil end
 	local after = bot:GetMana() - a:GetManaCost()

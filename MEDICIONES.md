@@ -1841,3 +1841,16 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - Corregido en `claude/paquete3-heroes`, con un segundo fallo del mismo origen que aparecía al renombrar. Desde ahora, cada tanda se revisa por `prop error` antes de leerla.
 - Resultado de `h1`, solo descriptivo por la invalidez: Lucent Beam 16,2 (49 a héroes y 48 a creeps), Frost Blast 17,5, Breathe Fire 12,8, Dragon Tail 1,7 y Hex 1,3 por línea; las kills no se mueven (0,2 y 0,8).
 - Decisión: repetir la ronda con el código corregido (`h1b`) y medir la capa de la línea de dos sola, corregida (`dos3`), porque sus dos rondas no valieron.
+
+### 2026-11-14 · Paquete 3, ronda 1 válida (`h1b-*`) y ronda 2 (`h2-*`): predicción antes de lanzar
+- `h1b` (código `e2c1c0c`, 6 de 6 válidas, **0 `prop error`**, CPU media 34-45 %): la pareja entra junta (170 entradas «juntos» y 8 «solo»; antes 0 juntas).
+- Lanzamientos por línea: Lucent Beam 18,7 (55 a creeps) y Frost Blast 15,8 cumplen. Breathe Fire 13,8, Dragon Tail 2,3 y Hex 3,0 no.
+- Kills 0,8 y 1,5, muertes 7,8 y 8,7. `equipo.mjs` frente a `dos2`: sin diferencia fuera del ruido salvo el Sniper (+3,5 niveles). **No cumple.**
+- Lectura: las entradas propias que acaban en muerte (10 en la segura, 13 en la difícil) se leían con «nuestro» 0,9-1,1 y «suyo» 0,9-1,2. Las que OHA gana, con 1,2-1,8 y 0,5-0,7. La puerta deja pasar carreras que OHA no corre. Dragon Tail y Hex solo salen en el intercambio, que en la línea de dos casi no se da.
+- Ronda 2 (la última del paquete):
+  - entrada con las lecturas de las entradas que gana OHA: «nuestro» ≥ 1,2 y «suyo» ≤ 0,7;
+  - Dragon Tail y Hex también en el acoso, con el compañero cerca y guardando el maná de la forma y de Finger.
+- Predicción (min 12, por línea, frente a `h1b`):
+  - muertes ≤ 6 en cada línea;
+  - kills ≥ 2;
+  - Dragon Tail ≥ 6 y Hex ≥ 5.

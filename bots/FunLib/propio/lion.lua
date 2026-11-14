@@ -215,6 +215,21 @@ end
 local HARASS_EVERY = 6
 function H.Harass(bot, s, p)
 	local a = bot:GetAbilityByName('lion_impale')
+	-- Package 3 round 2: with the spike not ready, Hex on the laner in range, not locked, keeping Finger's mana, as OHA hexes its attack
+	-- target (8,3 a lane against our 3,0 in h1b). Only with the partner near (linea.lua calls Harass so, dos.lua).
+	if (a == nil or not a:IsFullyCastable()) and p.now - (s.lionCastAt or -1000) >= 0.8 then
+		local f = bot:GetAbilityByName('lion_finger_of_death')
+		local keep = (f ~= nil and f:GetLevel() > 0 and f:GetCooldownTimeRemaining() < 10) and f:GetManaCost() or 0
+		local h = bot:GetAbilityByName('lion_voodoo')
+		if h ~= nil and h:IsFullyCastable() and bot:GetMana() - h:GetManaCost() >= keep then
+			for _, e in ipairs(p.enemyHeroes) do
+				if Seen(e) and not e:IsIllusion() and not Locked(e, 0.3) then
+					local d = HexOn(bot, s, p, e, 'acoso')
+					if d ~= nil then s.lionCastAt = p.now return d end
+				end
+			end
+		end
+	end
 	if a == nil or not a:IsFullyCastable() then return nil end
 	if p.now - (s.spikeHarassAt or -1000) < HARASS_EVERY then return nil end
 	local left = bot:GetMana() - a:GetManaCost()

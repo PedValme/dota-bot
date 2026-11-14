@@ -50,7 +50,11 @@ local K = {
 	-- The race (dos-humo: combate.lua's 4 s kill estimate stayed under half its margin in 80 % of the readings with an enemy within
 	-- 900, so the pair entered 10 times in two matches, while OHA goes in on rivals at 91-95 % of health and wins by chasing 15-21 s).
 	raceWindow = 10,    -- seconds of the race: our damage on the target against the enemies' on the weaker of ours
-	raceKill = 1.0,     -- enter when our damage in the window takes the target's health...
+	-- Package 3 round 2 (h1b): 23 of our entries ended in our death with the shadow at our share 0,9-1,1 and theirs 0,9-1,2, while
+	-- OHA's winning entries read 1,2-1,8 and 0,5-0,7 (oha-sombra). A rule that let through races OHA does not run; the two below are
+	-- OHA's readings, not a tuning round.
+	raceKill = 1.2,     -- enter when our damage in the window takes this share of the target's health...
+	raceTheirs = 0.7,   -- ...their damage takes at most this share of our weaker one's...
 	raceEdge = 1.3,     -- ...and our share of its health is this many times their share of our weaker one's
 	raceKeep = 0.8,     -- an entry holds while our share stays at this or more
 	lockCap = 4,        -- our lock seconds on the target, at most this, take its own damage out of the race
@@ -257,7 +261,7 @@ local function Decide(bot, s, p, mate, b)
 				for _, o in ipairs(enemies) do if D2(o:GetLocation(), e:GetLocation()) <= 1200 then around = around + 1 end end
 				local usShare, themShare = Race(bot, p, mate, e, enemies, weakest, weakHp)
 				local score = usShare / math.max(themShare, 0.1)
-				local ok = D2(p.loc, e:GetLocation()) <= K.joinMax and usShare >= K.raceKill and themShare < 1 and score >= K.raceEdge
+				local ok = D2(p.loc, e:GetLocation()) <= K.joinMax and usShare >= K.raceKill and themShare <= K.raceTheirs and score >= K.raceEdge
 					and p.hp >= K.enterHp and Combate.Unsafe(bot, p, e) == nil and threat < K.leaveShare * weakHp
 				if ok and mate ~= nil and D2(mate:GetLocation(), e:GetLocation()) <= K.joinMax then
 					ok = mate:GetHealth() >= K.enterHp * mate:GetMaxHealth() and MateUnsafe(mate, e) == nil
