@@ -29,6 +29,7 @@ local OBSERVE = dofile(GetScriptDirectory()..'/FunLib/bench_observe')
 local NO_COMBAT = Variant.sin_combate == true
 -- Package 4 (signed by Pedro on 2026-11-14): the pair follows its openings, presses 2 against 2, no tango in a fight, Magic Wand.
 local P4 = Variant.paquete4 == true
+local G1_PRESS = Variant.guias1_presion == true -- guides package, rule A (trabajo/guias/resumen.md)
 local Pareja = require(GetScriptDirectory()..'/FunLib/propio/pareja')
 
 -- Thresholds of the rules (one place, so the log and the rules agree).
@@ -629,11 +630,16 @@ local function RuleTrade(bot, s, p, ready, soon)
 	-- asks the same edge. Pressing needed one enemy in sight, and the lanes of two never pressed: a rival with its partner in sight
 	-- was never pushed off its farm (trabajo/plan-mejora-equipo.md, «Presionar en 2 contra 2 cuando la suma de las parejas lo da»).
 	local pair = not s.late and #p.allyHeroes >= 1 and #p.enemyHeroes <= #p.allyHeroes + 1
+	-- Guides package, rule A: a melee hero presses from further (heroes.lua, R.ALCANCE.cuerpo.presionaDesde), with health.
+	local alcance = select(2, Heroes.Rol(bot))
+	local pressReach = (G1_PRESS and alcance.presionaDesde ~= nil and p.hp >= alcance.presionaHp) and alcance.presionaDesde or K.pressReach
 	for _, e in ipairs(p.enemyHeroes) do
 		if Valid(e) and not e:IsIllusion() and not e:IsAttackImmune() then
 			local d = D2(p.loc, e:GetLocation())
 			local inRange = d <= p.range + 50
-			if d <= p.range + K.pressReach and (inRange or not TowerBlocks(bot, p, Toward(e:GetLocation(), p.loc, p.range))) then
+			-- Answering keeps its own reach (contestaDesde, below); the wider one only lets a press through.
+			local within = d <= p.range + K.pressReach or (pressReach > K.pressReach and d <= p.range + pressReach)
+			if within and (inRange or not TowerBlocks(bot, p, Toward(e:GetLocation(), p.loc, p.range))) then
 				local v = Intercambio.Eval(bot, p, e)
 				local kind = nil
 				-- Once the lane is over, alone: no pressing, and hitting back only from out of its reach.

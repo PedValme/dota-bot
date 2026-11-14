@@ -132,6 +132,38 @@ local function ElderForm(bot, s, p, why)
 	return { intent = 'apuntar', ability = a, castPoint = a:GetCastPoint(), reason = 'elder_dragon_form: ' .. why }
 end
 
+-- Guides package (trabajo/guias/resumen.md, rule B): Breathe Fire to last-hit the ranged creep the attack does not reach, as three
+-- guides and OHA do (hero_dragon_knight.lua:393-404). Only with an enemy hero in the same flame, or with mana for a harass flame after
+-- it: the flame also lowers the rival's damage, which the trade reads (adversarial review). linea.lua calls it before RuleLastHit.
+local GUIAS1 = dofile(GetScriptDirectory()..'/FunLib/bench_variant').guias1 == true
+if GUIAS1 then
+	function H.FarmCast(bot, s, p)
+		local a = Ready(bot, 'dragon_knight_breathe_fire')
+		if a == nil or p.now - (s.shrapnelAt or -1000) < 1.5 then return nil end
+		local cost = a:GetManaCost()
+		local after = bot:GetMana() - cost
+		if after < ManaToKeep(bot) then return nil end
+		local f = Fire(a)
+		for _, c in ipairs(p.enemyCreeps) do
+			if Seen(c) and string.find(c:GetUnitName(), 'ranged') and D2(p.loc, c:GetLocation()) <= a:GetCastRange()
+				and D2(p.loc, c:GetLocation()) > p.range + 100 then
+				local at, eta = FireAt(a, f, p.loc, c)
+				local real = c:GetActualIncomingDamage(f.dmg, DAMAGE_TYPE_MAGICAL)
+				if real >= c:GetHealth() + c:GetHealthRegen() * eta then
+					local heroes = Hits(f, p, at)
+					-- Outnumbered (Perceive, p.alone) a hero in the flame is a harass the lane rules forbid there (package 1): only the
+					-- mana path (code review).
+					if (heroes >= 1 and not p.alone) or after - cost >= ManaToKeep(bot) then
+						return { intent = 'shrapnel', ability = a, at = at, castPoint = a:GetCastPoint(),
+							reason = string.format('breathe_fire remata un creep a distancia: vida %d, %d héroes en la llama', c:GetHealth(), heroes) }
+					end
+				end
+			end
+		end
+		return nil
+	end
+end
+
 -- Breathe Fire: only to finish a visible enemy hero it surely kills, counting the health it regains while the flame flies.
 function H.Finish(bot, s, p)
 	local a = Ready(bot, 'dragon_knight_breathe_fire')
