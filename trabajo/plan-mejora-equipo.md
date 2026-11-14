@@ -147,6 +147,9 @@ Son la especificación de la reescritura, no su base: se copia lo que gana y se 
 
 - 2026-11-14, diagnóstico de las 94 muertes de `h2`, con su revisión adversarial: no devolvíamos daño y nadie seguía nuestras aperturas. De ahí sale el paquete 4, firmado por Pedro.
   - Ronda 1 (`p4a` frente a `p4b`): la pareja hace el daño que faltaba (×1,67 en la difícil); la difícil mejora y la segura empeora.
-  - Falta la ronda 2 (ESTADO, «Próxima sesión»).
+  - Ronda 2 (`p4r2`): seguir o unirse a una apertura solo si la pareja gana la carrera. **Cierra el paquete:** `control_equipo_p4` le saca al
+    bot propio sin el paquete +7,2k de patrimonio del equipo (IC fuera del 0), y la segura deja de morir de más. Es la referencia desde ahora.
+- 2026-11-14, paquete de guías de YouTube (`guias1`, `trabajo/guias/`): ronda 1 sin cumplir y sin ronda 2. La presión lejana del DK y las
+  Raindrops cuestan y no dan nada; Breathe Fire a creeps es neutro. Se queda tras su variante, sin adoptarse (MEDICIONES 2026-11-14).
 
 **Herramienta:** el mismo análisis lee los brazos del bot propio, y cada versión se compara con `oha-dos-*` en estas métricas. La medición que decide sigue siendo `equipo.mjs`.
