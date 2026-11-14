@@ -25,6 +25,9 @@ local Heroes = require(GetScriptDirectory()..'/FunLib/propio/heroes')
 local Intercambio = require(GetScriptDirectory()..'/FunLib/propio/intercambio')
 local Combate = require(GetScriptDirectory()..'/FunLib/propio/combate')
 local Pareja = require(GetScriptDirectory()..'/FunLib/propio/pareja')
+-- Package 4 (signed by Pedro on 2026-11-14, after the death diagnosis and its adversarial review): only with the variant on.
+local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
+local P4 = Variant.paquete4 == true
 
 local K = {
 	pairNear = 800,     -- the partner this close (alive, seen) makes hitting a hero allowed: OHA's pairs fight 573-673 apart
@@ -149,7 +152,7 @@ end
 -- The race on target e over raceWindow: our share (our damage, each of ours within joinMax of it: its hero's abilities and its hits
 -- after casting and walking, over e's health and regeneration) and theirs (all enemies near the weaker of ours, their hits and ready
 -- abilities, e's own shortened by our locks, over its health). Each hero module's KillBurst and Disable give the abilities.
-local function Race(bot, p, mate, e, enemies, weakest, weakHp)
+local function Race(bot, p, mate, e, enemies, weakest, weakHp, clash)
 	local W = K.raceWindow
 	local us, lock = 0, 0
 	for _, h in ipairs({ bot, mate or false }) do
@@ -164,7 +167,10 @@ local function Race(bot, p, mate, e, enemies, weakest, weakHp)
 	lock = math.min(lock, K.lockCap)
 	local them = 0
 	for _, o in ipairs(enemies) do
-		if D2(o:GetLocation(), weakest:GetLocation()) <= Reach(o) + 600 then
+		-- clash (package 4, entry only): also every enemy that reaches the target's spot, where we are going. Without it the gate did
+		-- not count the second enemy until we walked in, and 52 of 82 entries left within 2 s reading «suyo» 0,47 -> 1,35 (h2, review).
+		if D2(o:GetLocation(), weakest:GetLocation()) <= Reach(o) + 600
+			or (clash ~= nil and D2(o:GetLocation(), clash:GetLocation()) <= Reach(o) + 600) then
 			them = them + Intercambio.Threat(o, weakest, o == e and math.max(0, W - lock) or W)
 		end
 	end
@@ -259,7 +265,7 @@ local function Decide(bot, s, p, mate, b)
 			if (b.ban[name] or -1000) <= p.now then
 				local around = 0
 				for _, o in ipairs(enemies) do if D2(o:GetLocation(), e:GetLocation()) <= 1200 then around = around + 1 end end
-				local usShare, themShare = Race(bot, p, mate, e, enemies, weakest, weakHp)
+				local usShare, themShare = Race(bot, p, mate, e, enemies, weakest, weakHp, P4 and e or nil)
 				local score = usShare / math.max(themShare, 0.1)
 				local ok = D2(p.loc, e:GetLocation()) <= K.joinMax and usShare >= K.raceKill and themShare <= K.raceTheirs and score >= K.raceEdge
 					and p.hp >= K.enterHp and Combate.Unsafe(bot, p, e) == nil and threat < K.leaveShare * weakHp
@@ -359,6 +365,7 @@ function D.Act(bot, s, p, home, safeSpot)
 	-- Not in an entry: a chase left from one ends now (the pair left it).
 	if s.chase ~= nil and s.chase.dos ~= nil then StopChase(bot, s, p, 'pareja_' .. b.mode) end
 	if b.mode == 'salir' then
+		s.dosOpen = nil -- leaving together forgets the opening to follow (review of package 4)
 		-- Out of every enemy's reach (Perceive's reachNeed), together: both read the same board.
 		if p.reachNeed > -100 then
 			return { intent = 'alejarse', reason = 'pareja_sale ' .. (b.why or ''), to = Toward(p.loc, home, math.max(350, p.reachNeed + 100)) }
@@ -368,6 +375,30 @@ function D.Act(bot, s, p, home, safeSpot)
 	end
 	local mate = p.dos.mate
 	local mateDist = mate ~= nil and D2(p.loc, mate:GetLocation()) or 1e9
+	-- Package 4: an opening spell on a hero is followed, not left alone. After h2, Breathe Fire and Earth Spike were followed by 0 damage
+	-- in the next 5 s (OHA: 100-146), and 249 announcements on the board had 0 joins: linea.lua skips combate.lua's Join in a lane of
+	-- two. The caster keeps hitting its target (s.dosOpen, set by linea.lua's Act), the partner joins the partner's announcement, both as
+	-- a trade ('acosar', so TradeCast adds the hero's spells), while the board is on the lane, our health holds and the target is safe
+	-- to hit (combate.lua's Unsafe: our health, the other enemies' burst, its tower).
+	-- Never alone before two (review of package 4: the caster's branch asked no partner near).
+	if P4 and b.mode == 'linea' and p.hp >= K.enterHp and (mateDist <= K.aloneFrom or #(p.enemyHeroes or {}) < 2) then
+		local o = s.dosOpen
+		if o ~= nil and p.now <= o.untilT and Seen(o.target) and D2(p.loc, o.target:GetLocation()) <= K.joinMax
+			and Combate.Unsafe(bot, p, o.target) == nil then
+			return { intent = 'acosar', target = o.target, reason = 'sigo mi apertura sobre ' .. Short(o.target) }
+		end
+		if mate ~= nil and mateDist <= K.joinMax then
+			local active = {}
+			for _, a in ipairs(p.allyActive or {}) do active[a:GetPlayerID()] = true end
+			for _, call in ipairs(Pareja.Calls(bot, p.now, active)) do
+				local e = call.target
+				if call.pid == mate:GetPlayerID() and Seen(e) and not e:IsIllusion() and D2(p.loc, e:GetLocation()) <= K.joinMax
+					and Combate.Unsafe(bot, p, e) == nil then
+					return { intent = 'acosar', target = e, reason = string.format('me uno a la apertura de mi pareja sobre %s (%s)', call.name, call.why) }
+				end
+			end
+		end
+	end
 	local enemiesNear = #(p.enemyHeroes or {})
 	-- Alone before two: by its tower, not in the lane, until the partner is back.
 	if mateDist > K.aloneFrom and enemiesNear >= 2 then

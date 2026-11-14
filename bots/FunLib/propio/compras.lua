@@ -7,6 +7,22 @@ local P = {}
 local Build = require(GetScriptDirectory()..'/FunLib/propio/build')
 
 local Heroes = require(GetScriptDirectory()..'/FunLib/propio/heroes')
+-- Package 4: Magic Wand as the second item, as every OHA hero carries one (h2: 4-17 uses a match per rival hero, none of ours).
+local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
+local function WithWand(items, done)
+	if Variant.paquete4 ~= true or (done ~= nil and done.item_magic_wand) then return items end
+	for _, it in ipairs(items) do if it == 'item_magic_wand' then return items end end
+	-- Second item at the start; after a replan (done holds the first), the next one: the plan left keeps no bought items.
+	local at = (done ~= nil and next(done) ~= nil) and 0 or 1
+	local out = {}
+	if at == 0 then table.insert(out, 'item_magic_wand') end
+	for i, it in ipairs(items) do
+		table.insert(out, it)
+		if i == at then table.insert(out, 'item_magic_wand') end
+	end
+	if #out == 0 then out = { 'item_magic_wand' } end
+	return out
+end
 
 -- The basic parts of an item, from the engine's first recipe, leaving out what is already in the build (have).
 local function Parts(item, out, have, depth)
@@ -52,7 +68,7 @@ function P.Queue(bot, s)
 	if s.buyQueue ~= nil then return s.buyQueue end
 	s.buyQueue = {}
 	local datos = Heroes.Datos(bot:GetUnitName())
-	Append(s, Build.Plan(bot, s) or datos.compras or {}, {}, datos)
+	Append(s, WithWand(Build.Plan(bot, s) or datos.compras or {}), {}, datos)
 	s.buyIndex = 1
 	return s.buyQueue
 end
@@ -73,7 +89,7 @@ local function Replan(bot, s)
 	s.buyQueue = kept
 	-- A courier sent for a secret part of the old plan would make the next one look late and skip it.
 	s.secretSince = nil
-	Append(s, Build.Plan(bot, s, done) or {}, done, Heroes.Datos(bot:GetUnitName()))
+	Append(s, WithWand(Build.Plan(bot, s, done) or {}, done), done, Heroes.Datos(bot:GetUnitName()))
 	return 'plan de nuevo: cambió lo que amenazan'
 end
 

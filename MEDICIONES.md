@@ -1864,3 +1864,43 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - no hay oro sin gastar: la diferencia de patrimonio (5-7k por línea) viene de las kills regaladas;
   - los héroes de OHA llevan Magic Wand y los nuestros no.
 - Decisión: **el paquete 3 agotó sus 2 rondas sin cumplir.** Su código (hechizos en el intercambio y el acoso, remate de creeps, entrada con las lecturas de OHA) se queda tras la variante del bot propio. El siguiente paso lo decide Pedro.
+
+### 2026-11-14 · Paquete 4 (la pareja sigue sus aperturas), ronda 1 (`p4a-*` frente a `p4b-*`): predicción antes de lanzar
+- Pregunta (paquete firmado por Pedro, DECISIONES 2026-11-14): ¿hace la pareja el daño que le faltaba, sin morir más?
+- Cambios, tras la variante `control_equipo_p4`:
+  - quien abre sigue pegando y su pareja se une;
+  - la puerta de entrada cuenta el punto de choque;
+  - presión en 2 contra 2;
+  - tango con la seguridad de la salvia;
+  - Magic Wand.
+  
+  Revisión del código por Opus con sus hallazgos aplicados: el anuncio de presión a lo sumo una vez por segundo; una retirada o un «salir» olvidan la apertura; quien abrió no la sigue solo frente a dos; la varita no se usa muda, hexeada ni dos veces en 1 s.
+- Humo `p4-humo` (2 partidas, alineación a), antes de esos arreglos:
+  - 0 `prop error`, y los mecanismos salen: 244 «me uno a la apertura», 243 «sigo mi apertura», 207 `presiono_2c2` y 112 usos de la varita;
+  - CPU media 61-63 % y máxima 80-90 %, carga anotada.
+- Diseño:
+  - brazos A, `control_equipo_p4` (`p4a-*`), y B, `control_equipo` (`p4b-*`), los dos contra `base` (OHA), en la misma tanda y con el mismo código;
+  - orden ABBA por alineación (a: A, B; b: B, A; c: A, B);
+  - 2 partidas por invocación con cambio de lado: 12 partidas al min 12.
+- Métricas principales, de mecanismo (A frente a B, por línea de dos):
+  - daño a héroes de la pareja entre t=0 y 600, de ataques y de hechizos: en A al menos 1,5 veces el de B en la difícil (en `h2`, 3.675 frente a 10.764 de OHA);
+  - daño de la pareja en los 5 s tras una apertura nuestra: en A ≥ 100 de mediana (en `h2`, 0 tras Breathe Fire y Earth Spike);
+  - entradas de 2 s o más: en A ≥ 70 % (en `h2`, unas 38 %);
+  - `curar_tango` con un rival a 900 o menos: 0 en A.
+- Salvaguarda (`equipo.mjs` A − B): diferencia de kills del equipo no peor que −3, y muertes por línea no más de +2. Con 6 partidas por brazo, la diferencia mínima detectable es de unas 7 kills: el equipo no decide, solo avisa.
+- Resultado de la ronda 1 (código `725c3dd`, 12 de 12 válidas, **0 `prop error`** en los dos brazos, CPU media 46-67 % y máxima 56-93 %, igual en los dos):
+
+  | Por línea (A `p4a` / B `p4b`) | Difícil | Segura |
+  |---|---|---|
+  | Daño de la pareja, t 0-600 (ataques + hechizos) | 7.585 / 4.553 (×1,67; ataques ×3) | 6.606 / 4.571 |
+  | Daño de la pareja en 5 s tras una apertura (mediana) | 228 / 51 | 208 / 153 |
+  | Entradas de 2 s o más | 51 % / 36 % | 53 % / 52 % |
+  | Decisiones de tango con un rival a 900 | 18 / 22 | 19 / 41 |
+  | Kills / muertes | 2,3 / 5,2 frente a 0,7 / 5,0 | 0,7 / 10,0 frente a 0,3 / 8,2 |
+
+  - `equipo.mjs` A − B: diferencia de kills del equipo −2,2 (−10,0 a 5,6); patrimonio de la segura −2,2k (−4,8k a 0,3k); la difícil +1,5k de patrimonio y +1,7 kills, dentro del ruido; DK +1,5 niveles.
+- Lectura:
+  - **cumplen** el daño (×1,67 en la difícil, predicción ≥ ×1,5), el seguimiento de las aperturas (≥ 100) y la salvaguarda del equipo (−2,2, no peor que −3; muertes +1,8, no más de +2);
+  - **no cumplen** las entradas de 2 s o más (≥ 70 %) ni el tango (0). Lo más probable es que el tango lo explique el registro, que cuenta rivales que el bot no ve; hay que comprobarlo;
+  - la difícil mejora y la segura empeora. Hipótesis por comprobar en el registro: presionar 2 contra 2 contra rivales tanque (Bristleback, Axe, Tidehunter) cuesta más de lo que da.
+- Decisión: queda la ronda 2, la última del paquete. Antes se diagnostica en el registro por qué empeora la segura, y solo se cambia lo que tenga causa leída.

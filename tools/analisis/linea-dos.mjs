@@ -64,6 +64,7 @@ function parse(file) {
   const hits = [];
   const kills = [];
   const modes = [];
+  const props = []; // own bot: "prop dos" board lines and "prop decision" lines, {t, pid, kind, text}
   const sombra = []; // dos.lua shadow lines: {t, team pid, linea, amenaza, vida, targets: [{name, ours, theirs, dist, hp}]}
   for (const line of readFileSync(join(obsDir, file), "utf8").split(/\r?\n/)) {
     let m = line.match(/obs t=(-?\d+) (\w+) (.*)$/);
@@ -75,7 +76,7 @@ function parse(file) {
       if (kind === "fino") {
         const hero = body.split(" ")[2];
         if (!fino.has(t)) fino.set(t, new Map());
-        fino.get(t).set(hero, { team: kv.team, alive: kv.alive === "1", x: +kv.x, y: +kv.y, hp: +kv.hp, maxhp: +kv.maxhp, mp: +kv.mp,
+        fino.get(t).set(hero, { pid: +kv.pid, team: kv.team, alive: kv.alive === "1", x: +kv.x, y: +kv.y, hp: +kv.hp, maxhp: +kv.maxhp, mp: +kv.mp,
           obj: kv.obj, atk: kv.atk === "1", ctl: kv.ctl });
       } else if (kind === "frente") {
         const p = (s) => (s && s !== "-" ? { x: +s.split(",")[0], y: +s.split(",")[1] } : null);
@@ -96,13 +97,15 @@ function parse(file) {
     }
     m = line.match(/\[bench\] mode t=(-?\d+) pid=\d+ (\S+) (\S+) ([\d.]+)/);
     if (m) { modes.push({ t: +m[1], hero: m[2], mode: m[3], desire: +m[4] }); continue; }
+    m = line.match(/\[bench\] prop (dos|decision) t=(-?[\d.]+) pid=(\d+) (.*)$/);
+    if (m) { props.push({ kind: m[1], t: +m[2], pid: +m[3], text: m[4] }); continue; }
     m = line.match(/\[bench\] prop dos_sombra t=(-?[\d.]+) pid=(\d+) linea=(\w+) pareja=(-?\d+) debil=(\S+) amenaza3s=([\d.]+) vida=(-?\d+)\/(-?\d+) (.*)$/);
     if (m) {
       const targets = m[9].split(",").map((x) => x.split(":")).map(([name, o, t, dd, hp]) => ({ name, ours: +o, theirs: +t, dist: +dd, hp: +hp }));
       sombra.push({ t: Math.floor(+m[1]), pid: +m[2], linea: m[3], pareja: +m[4], amenaza: +m[6], vida: [+m[7], +m[8]], targets });
     }
   }
-  return { fino, front, casts, hits, kills, modes, sombra };
+  return { fino, front, casts, hits, kills, modes, sombra, props };
 }
 
 const stateAt = (d, t, hero) => {
@@ -248,7 +251,54 @@ function studyLane(d, ourTeam, ours, theirs, laneName) {
   }
   // Every shadow second of this lane, for how often each reading happens.
   const sombraLane = d.sombra.filter((x) => x.linea === laneName && x.t >= 0 && x.t <= T && x.targets.some((tg) => theirs.includes(tg.name)));
-  return { fights, deaths, kills: killsOf, pos, trips, castsBy, sombraLane };
+  // Package 4 metrics (MEDICIONES 2026-11-14). The pair's damage to heroes, t=0 to 600, by attacks and by spells.
+  let atk = 0, spell = 0;
+  for (const h of d.hits) {
+    if (h.t < 0 || h.t > 600 || !ours.includes(bare(h.att)) || !theirs.includes(bare(h.vic))) continue;
+    if (h.src === "ataque") atk += h.dmg; else spell += h.dmg;
+  }
+  // After each opening of ours (a combat spell of one of the pair on one of their lane heroes, with the other of ours within 1200), the
+  // pair's damage to heroes over the next 5 s, the opening itself left out.
+  const follow = [];
+  for (const c of d.casts) {
+    if (c.t < 0 || c.t > T || !ours.includes(c.hero) || NOT_COMBAT.test(c.ability) || !theirs.includes(c.obj.replace("~", ""))) continue;
+    const mate = ours.find((h) => h !== c.hero);
+    const ms = stateAt(d, c.t, mate), cs = stateAt(d, c.t, c.hero);
+    if (!ms || !cs || !ms.alive || dist(ms, cs) > 1200) continue;
+    let dmg = 0;
+    for (const h of d.hits) {
+      if (h.t > c.t && h.t <= c.t + 5 && ours.includes(bare(h.att)) && theirs.includes(bare(h.vic)) && !(h.src === c.ability && h.t <= c.t + 1)) dmg += h.dmg;
+    }
+    follow.push(dmg);
+  }
+  // Entries of the pair's board (dos.lua, "pareja entrar"), logged by the decider: how long until the board changed.
+  const team = ourTeam;
+  const board = d.props.filter((x) => x.kind === "dos" && /pareja (entrar|linea|salir)/.test(x.text));
+  const entries = [];
+  const byPid = {};
+  for (const x of board) (byPid[x.pid] ??= []).push(x);
+  for (const list of Object.values(byPid)) {
+    for (let i = 0; i < list.length; i++) {
+      const x = list[i];
+      if (!/pareja entrar/.test(x.text) || x.t < 0 || x.t > T) continue;
+      const target = (x.text.match(/objetivo=(\S+)/) || [])[1];
+      if (!theirs.includes(target)) continue;
+      const next = list[i + 1];
+      entries.push(next ? next.t - x.t : 99);
+    }
+  }
+  // Tango eaten with an enemy hero within 900 (the decision line and the enemy's place at that second).
+  let tangoFight = 0;
+  for (const x of d.props) {
+    if (x.kind !== "decision" || !/intencion=curar_tango/.test(x.text) || x.t < 0 || x.t > T) continue;
+    const t = Math.floor(x.t);
+    const snap = d.fino.get(t);
+    if (!snap) continue;
+    const me = [...snap].find(([h, st]) => st.pid === x.pid);
+    if (!me || !ours.includes(me[0])) continue;
+    if ([...snap].some(([h, st]) => st.team !== team && st.alive && dist(st, me[1]) <= 900)) tangoFight++;
+  }
+  return { fights, deaths, kills: killsOf, pos, trips, castsBy, sombraLane, atk, spell, follow, entries, tangoFight };
 }
 
 // ---- run over the matches ----
@@ -324,6 +374,12 @@ for (const [name, list] of Object.entries(lanes)) {
   }
   const trips = list.flatMap((l) => l.trips);
   console.log(`Viajes a la base vivos: ${trips.length} (${f1(trips.length / n)} por línea); vida al dejar la línea (mediana) ${f1(100 * median(trips.map((x) => x.hp)))} %; con TP ${trips.filter((x) => x.tp).length}`);
+  {
+    const fol = list.flatMap((l) => l.follow), ent = list.flatMap((l) => l.entries);
+    console.log(`Daño de la pareja a sus rivales (t 0-600), por línea: ataques ${f0(list.reduce((a, l) => a + l.atk, 0) / n)}, hechizos ${f0(list.reduce((a, l) => a + l.spell, 0) / n)}`);
+    console.log(`Tras una apertura nuestra con el compañero a 1200: ${fol.length} aperturas, daño de la pareja en 5 s mediana ${f0(median(fol))} [${f0(q(fol, 0.25))}-${f0(q(fol, 0.75))}]`);
+    console.log(`Entradas de la pareja: ${ent.length} (${f1(ent.length / n)} por línea), de 2 s o más ${pct(ent.filter((x) => x >= 2).length, ent.length)}; tango con un rival a 900: ${list.reduce((a, l) => a + l.tangoFight, 0)}`);
+  }
   const cb = {};
   for (const l of list) for (const [k, v] of Object.entries(l.castsBy)) {
     cb[k] = cb[k] ?? { n: 0, heroe: 0, creep: 0, otro: 0, sinRival: 0 };
