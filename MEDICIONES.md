@@ -1864,3 +1864,27 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - no hay oro sin gastar: la diferencia de patrimonio (5-7k por línea) viene de las kills regaladas;
   - los héroes de OHA llevan Magic Wand y los nuestros no.
 - Decisión: **el paquete 3 agotó sus 2 rondas sin cumplir.** Su código (hechizos en el intercambio y el acoso, remate de creeps, entrada con las lecturas de OHA) se queda tras la variante del bot propio. El siguiente paso lo decide Pedro.
+
+### 2026-11-14 · Paquete 4 (la pareja sigue sus aperturas), ronda 1 (`p4a-*` frente a `p4b-*`): predicción antes de lanzar
+- Pregunta (paquete firmado por Pedro, DECISIONES 2026-11-14): ¿hace la pareja el daño que le faltaba, sin morir más?
+- Cambios, tras la variante `control_equipo_p4`:
+  - quien abre sigue pegando y su pareja se une;
+  - la puerta de entrada cuenta el punto de choque;
+  - presión en 2 contra 2;
+  - tango con la seguridad de la salvia;
+  - Magic Wand.
+  
+  Revisión del código por Opus con sus hallazgos aplicados: el anuncio de presión a lo sumo una vez por segundo; una retirada o un «salir» olvidan la apertura; quien abrió no la sigue solo frente a dos; la varita no se usa muda, hexeada ni dos veces en 1 s.
+- Humo `p4-humo` (2 partidas, alineación a), antes de esos arreglos:
+  - 0 `prop error`, y los mecanismos salen: 244 «me uno a la apertura», 243 «sigo mi apertura», 207 `presiono_2c2` y 112 usos de la varita;
+  - CPU media 61-63 % y máxima 80-90 %, carga anotada.
+- Diseño:
+  - brazos A, `control_equipo_p4` (`p4a-*`), y B, `control_equipo` (`p4b-*`), los dos contra `base` (OHA), en la misma tanda y con el mismo código;
+  - orden ABBA por alineación (a: A, B; b: B, A; c: A, B);
+  - 2 partidas por invocación con cambio de lado: 12 partidas al min 12.
+- Métricas principales, de mecanismo (A frente a B, por línea de dos):
+  - daño a héroes de la pareja entre t=0 y 600, de ataques y de hechizos: en A al menos 1,5 veces el de B en la difícil (en `h2`, 3.675 frente a 10.764 de OHA);
+  - daño de la pareja en los 5 s tras una apertura nuestra: en A ≥ 100 de mediana (en `h2`, 0 tras Breathe Fire y Earth Spike);
+  - entradas de 2 s o más: en A ≥ 70 % (en `h2`, unas 38 %);
+  - `curar_tango` con un rival a 900 o menos: 0 en A.
+- Salvaguarda (`equipo.mjs` A − B): diferencia de kills del equipo no peor que −3, y muertes por línea no más de +2. Con 6 partidas por brazo, la diferencia mínima detectable es de unas 7 kills: el equipo no decide, solo avisa.

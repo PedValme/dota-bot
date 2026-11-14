@@ -659,7 +659,12 @@ local function RuleTrade(bot, s, p, ready, soon)
 				elseif not company and ready == nil and d <= p.range and d >= e:GetAttackRange() + K.freeShotGap
 					and #p.enemyHeroes == 1 and v.ratio >= K.pressEdge and p.hp >= K.freeShotHp then kind = 'disparo' end
 				if kind ~= nil then
-					if P4 and p.dos ~= nil and string.find(kind, '^presiono') then
+					-- At most once a second per target: RuleTrade runs every 0,2 s, and each call made a new id and log line (review of
+					-- package 4).
+					local ename = string.gsub(e:GetUnitName(), 'npc_dota_hero_', '')
+					if P4 and p.dos ~= nil and string.find(kind, '^presiono')
+						and (p.now - (s.pressAnnAt or -1000) >= 1 or s.pressAnnName ~= ename) then
+						s.pressAnnAt, s.pressAnnName = p.now, ename
 						Pareja.Announce(bot, e, 'apertura', p.now + 3, p.now, kind)
 					end
 					return { intent = 'acosar', target = e, walk = math.max(0, d - p.range) / math.max(p.moveSpeed, 1),
@@ -726,7 +731,9 @@ local function Decide(bot, s, p)
 	-- Package 4: Magic Wand under half health (an instant heal, no safety needed), as every OHA hero carries and uses one.
 	if P4 and p.hp < 0.5 then
 		local wand = HasItem(bot, 'item_magic_wand')
-		if wand ~= nil and wand:IsFullyCastable() and (wand:GetCurrentCharges() or 0) >= 3 then
+		-- Not muted or hexed (no item then, and the order would be sent each tick ahead of the retreat), not again within a second.
+		if wand ~= nil and wand:IsFullyCastable() and (wand:GetCurrentCharges() or 0) >= 3 and not bot:IsMuted() and not bot:IsHexed()
+			and p.now - ((s.itemUsed or {}).item_magic_wand or -1000) >= 1 then
 			return { intent = 'usar_objeto', item = wand, reason = string.format('magic wand, vida %.2f, %d cargas', p.hp, wand:GetCurrentCharges()) }
 		end
 	end
@@ -738,13 +745,16 @@ local function Decide(bot, s, p)
 		if h then
 			if s.chase ~= nil then Log(s, bot, 'persecucion', Combate.Stop(bot, s, p, 'curarse')) end
 			if p.dos then Dos.End(bot, s, p, 'retirada curarse') end
+			s.dosOpen = nil
 			return h
 		end
 	end
 	if r then
 		if s.chase ~= nil then Log(s, bot, 'persecucion', Combate.Stop(bot, s, p, 'retirada')) end
-		-- One of the pair retreating ends the pair's entry for both (dos.lua): the partner must not stay on it alone.
+		-- One of the pair retreating ends the pair's entry for both (dos.lua): the partner must not stay on it alone. It also forgets the
+		-- opening it was following (package 4), or it went back to hit once the retreat's hold ran out (review of package 4).
 		if p.dos then Dos.End(bot, s, p, 'retirada ' .. (r.reason or '')) end
+		s.dosOpen = nil
 		return (late and Medio.Escape(bot, s, p, Home(p.team))) or r
 	end
 	r = RuleHeal(bot, s, p)

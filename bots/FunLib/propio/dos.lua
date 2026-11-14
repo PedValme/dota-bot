@@ -365,6 +365,7 @@ function D.Act(bot, s, p, home, safeSpot)
 	-- Not in an entry: a chase left from one ends now (the pair left it).
 	if s.chase ~= nil and s.chase.dos ~= nil then StopChase(bot, s, p, 'pareja_' .. b.mode) end
 	if b.mode == 'salir' then
+		s.dosOpen = nil -- leaving together forgets the opening to follow (review of package 4)
 		-- Out of every enemy's reach (Perceive's reachNeed), together: both read the same board.
 		if p.reachNeed > -100 then
 			return { intent = 'alejarse', reason = 'pareja_sale ' .. (b.why or ''), to = Toward(p.loc, home, math.max(350, p.reachNeed + 100)) }
@@ -379,7 +380,8 @@ function D.Act(bot, s, p, home, safeSpot)
 	-- two. The caster keeps hitting its target (s.dosOpen, set by linea.lua's Act), the partner joins the partner's announcement, both as
 	-- a trade ('acosar', so TradeCast adds the hero's spells), while the board is on the lane, our health holds and the target is safe
 	-- to hit (combate.lua's Unsafe: our health, the other enemies' burst, its tower).
-	if P4 and b.mode == 'linea' and p.hp >= K.enterHp then
+	-- Never alone before two (review of package 4: the caster's branch asked no partner near).
+	if P4 and b.mode == 'linea' and p.hp >= K.enterHp and (mateDist <= K.aloneFrom or #(p.enemyHeroes or {}) < 2) then
 		local o = s.dosOpen
 		if o ~= nil and p.now <= o.untilT and Seen(o.target) and D2(p.loc, o.target:GetLocation()) <= K.joinMax
 			and Combate.Unsafe(bot, p, o.target) == nil then

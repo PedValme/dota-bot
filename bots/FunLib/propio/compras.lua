@@ -12,10 +12,13 @@ local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
 local function WithWand(items, done)
 	if Variant.paquete4 ~= true or (done ~= nil and done.item_magic_wand) then return items end
 	for _, it in ipairs(items) do if it == 'item_magic_wand' then return items end end
+	-- Second item at the start; after a replan (done holds the first), the next one: the plan left keeps no bought items.
+	local at = (done ~= nil and next(done) ~= nil) and 0 or 1
 	local out = {}
+	if at == 0 then table.insert(out, 'item_magic_wand') end
 	for i, it in ipairs(items) do
 		table.insert(out, it)
-		if i == 1 then table.insert(out, 'item_magic_wand') end
+		if i == at then table.insert(out, 'item_magic_wand') end
 	end
 	if #out == 0 then out = { 'item_magic_wand' } end
 	return out
