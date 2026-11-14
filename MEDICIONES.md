@@ -1923,3 +1923,50 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - daño de la pareja en la difícil ≥ ×1,4 sobre B (ronda 1: ×1,67), con la mediana tras una apertura ≥ 100;
   - tango visto por el bot con un rival a 900: 0;
   - salvaguarda: diferencia de kills del equipo A − B no peor que −3, y muertes por línea no más de +2. Con 6 partidas por brazo, el equipo solo avisa.
+- Resultado de la ronda 2. Datos de la tanda:
+  - código `6189cc4`, 12 de 12 válidas, **0 `prop error`**;
+  - CPU media 46-66 % y máxima 53-96 %, igual en los dos brazos;
+  - velocidad real ×2,06 y ×1,94.
+
+  | Predicción (A `p4r2a` / B `p4r2b`) | Resultado | ¿Cumple? |
+  |---|---|---|
+  | Muertes de la segura ≤ 9,0 | 9,5 / 9,3 | no (pero A − B pasa de +1,8 a +0,2) |
+  | Peleas abiertas por nosotros con muerte, segura ≤ 15 | 17 / 14 (ronda 1: 26) | no, por poco |
+  | Seguir o unirse con muerte en 10 s, segura ≤ 20 % | 16 de 80, 20 % (ronda 1: 41 de 142) | sí |
+  | Daño de la pareja en la difícil ≥ ×1,4, mediana tras apertura ≥ 100 | 7.507 / 4.879 (×1,54); 168 | sí |
+  | Tango visto por el bot con un rival a 900: 0 | 1 de 52 / 38 de 54 | casi (1) |
+  | Salvaguarda: kills del equipo no peor que −3; muertes por línea ≤ +2 | +1,3; +0,2 y +1,2 | sí |
+
+  - `equipo.mjs` A − B, fuera del ruido:
+    - patrimonio del equipo +7,2k (IC de 0,9k a 13,4k);
+    - últimos golpes de la difícil +25 (de 8 a 42);
+    - nivel de Luna +1,5;
+    - patrimonio de Lion +0,6k.
+  - Dentro del ruido: patrimonio de la difícil +3,3k, nivel del DK +1,3, kills de la difícil +1,2 (2,7 frente a 1,5).
+- Lectura: el cambio de la ronda 2 quitó la mitad de los seguimientos que mataban en la segura, y la segura deja de morir más que B. La difícil mantiene el daño y gana farm. La comprobación del tango con lo que ve el bot confirma el diagnóstico: en A, 1 de 52 tangos con un rival visible a 900 o menos; en B, que no lleva la regla, 38 de 54. El recuento omnisciente viejo seguía contando 26.
+- Decisión: **el paquete 4 cierra con sus 2 rondas, y `control_equipo_p4` es el mejor brazo.** Primer paquete del plan que mueve el patrimonio del equipo fuera del ruido. Pasa a ser la referencia del paquete de guías (DECISIONES 2026-11-14).
+
+### 2026-11-14 · Paquete de guías (`guias1`), ronda 1 (`g1a-*` frente a `g1b-*`): predicción antes de lanzar
+- Pregunta: ¿las reglas de las guías que el bot no cumplía mejoran la línea difícil (patrimonio y nivel del DK) sin empeorar la segura?
+- Origen: 5 tablas de reglas sacadas de 28 transcripciones de YouTube (`trabajo/guias/`), resumen y paquete en `trabajo/guias/resumen.md`, revisión adversarial de Opus y revisión del código por Opus. Firma de Pedro por adelantado (DECISIONES 2026-11-14).
+- Cambios (variante `control_equipo_g1` = `control_equipo_p4` + estas reglas):
+  - A: el DK presiona hasta 550 más allá de su alcance (antes 300), con vida ≥ 0,6. Lo dicen 2 guías de DK, y los registros de `p4r2` lo muestran ocioso con el intercambio a favor;
+  - B: Breathe Fire remata el creep a distancia que el ataque no alcanza, solo con un rival en la llama (y sin estar superado) o con maná para otra llama. Lo dicen 3 guías, y OHA lo hace;
+  - E: Infused Raindrops para Luna antes de las Treads, si la tienda lo vende (2 guías).
+- Diseño:
+  - A, `control_equipo_g1` (`g1a-*`), frente a B, `control_equipo_p4` (`g1b-*`), los dos contra `base`, en la misma tanda;
+  - orden ABBA (a: A, B; b: B, A; c: A, B), 12 partidas al min 12, alineaciones de MEDICIONES 2026-11-13.
+- Humo `g1-humo` (2 partidas, alineación a), cotejado con `p4r2a-a`. Debe mostrar que cada regla actúa:
+  - `presiono` del DK a más de 450;
+  - «breathe_fire remata un creep a distancia» en el registro;
+  - Luna compra las Raindrops.
+
+  Y además: 0 `prop error`, y ni el nivel del DK ni las muertes de la difícil peor que en `p4r2a-a`.
+- Decisión por resultado, con `equipo.mjs` A − B (revisión adversarial: las métricas de mecanismo cuentan lo que las reglas añaden por construcción). **Cumple** si:
+  - el patrimonio de la difícil es ≥ +1,0k;
+  - el nivel del DK es ≥ +0,5;
+  - el patrimonio de Luna es ≥ −300;
+  - las muertes por línea no suben más de +1;
+  - la diferencia de kills del equipo no es peor que −3.
+- Con 6 partidas por brazo, la diferencia mínima detectable del patrimonio de la difícil ronda los 5k: la ronda solo puede dar una señal que confirmar, no probar el efecto.
+- Mecanismo, solo para leer (A − B): ataques de la pareja en la difícil (t 0-600) ×1,3 o más (B en `p4r2a`: 3.015); lanzamientos de Breathe Fire por línea +3 o más (14,5).

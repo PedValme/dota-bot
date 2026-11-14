@@ -5,6 +5,12 @@ registros de la ronda en curso. Firma de Pedro (DECISIONES 2026-11-14): «solo r
 toquen situaciones frecuentes en los registros; como mucho 8 reglas; revisión adversarial de Opus antes de programar; predicción escrita
 antes de medir; como mucho 2 rondas».
 
+> **Lo que se programó, tras la revisión adversarial de Opus (2026-11-14):** solo las reglas A, B y E. Se quitaron C (la situación
+> «rival a ≤ 700» no es la de las guías, y Lich 6 dice lo contrario) y D (casi sin brecha y mezcla su efecto con B). La revisión también
+> cambió la decisión: el paquete cumple por resultado (nivel y patrimonio por héroe y línea, `equipo.mjs`), y las métricas de mecanismo
+> de la sección 4 solo sirven para ver en el humo que cada regla actúa. B exige un rival en la llama o maná para otra llama, y no acosa
+> estando superado. La predicción vigente está en MEDICIONES (2026-11-14, `g1`); la de la sección 4 queda como borrador.
+
 ## Cómo se midió la frecuencia
 - **Registros:** los logs viejos (`h2`, `p4a`, `p4b`) se perdieron. Uso los 4 de la ronda en curso que había a las 23:55 del 2026-11-13:
   - `p4r2a-a` #1 y #2, brazo A (`control_equipo_p4`);
