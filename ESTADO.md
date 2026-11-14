@@ -19,8 +19,19 @@
   2. ronda 2, la última, solo con causas leídas;
   3. después, el piloto de guías de YouTube.
 
-  Antes: diagnóstico de las muertes de `h2` y su revisión adversarial.
-  Cada tanda se revisa por `prop error` antes de leerla.
+  Cómo se hace:
+  - **Diagnóstico** (paso 1):
+    - `node tools/analisis/linea-dos.mjs "p4a-.*" --sombra --detalle` frente a `"p4b-.*"`;
+    - las decisiones `prop decision`, `prop dos` y `presiono_2c2` de Luna y Lich en los 10 s antes de cada muerte;
+    - el tango contra las líneas `fino` (¿el rival era visible para el bot?).
+  - **Ronda 2** (paso 2): la predicción, escrita antes en MEDICIONES. Después, 12 partidas con `--rival dotabot --variantes <brazo>,base --modo turbo --observar --corte 12 --heroes luna,sniper,dragon_knight,lion,lich/<alineación>`:
+    - orden ABBA: `control_equipo_p4` y `control_equipo` en a, al revés en b y como en a en c;
+    - etiquetas `p4r2a-<x>` y `p4r2b-<x>`;
+    - alineaciones como en MEDICIONES 2026-11-13, A contra A.
+  - **Lectura de la ronda:** `linea-dos.mjs` por brazo y `node tools/bench/equipo.mjs "p4r2a-.*" "p4r2b-.*" --t 720`.
+  - **Reglas:**
+    - cada tanda se revisa por `prop error` antes de leerla;
+    - no se edita `bots/` en este clon mientras juega una tanda (usar un worktree).
 - **Después, en sesión nueva** (Pedro, DECISIONES 2026-11-14): piloto de reglas de héroe sacadas de guías de YouTube, con los cinco héroes (`trabajo/guias-youtube.md`).
   - Las transcripciones se bajan con `yt-dlp`, a instalar con pip: el conector de YouTube solo da subtítulos de los videos del canal propio.
   - Va después de cerrar la ronda del paquete 4.
