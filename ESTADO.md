@@ -26,6 +26,9 @@
   - los hechizos ya se lanzan como en OHA, salvo Dragon Tail.
   
   Cada tanda se revisa por `prop error` antes de leerla.
+- **Después, en sesión nueva** (Pedro, DECISIONES 2026-11-14): piloto de reglas de héroe sacadas de guías de YouTube, con los cinco héroes (`trabajo/guias-youtube.md`).
+  - Las transcripciones se bajan con `yt-dlp`, a instalar con pip: el conector de YouTube solo da subtítulos de los videos del canal propio.
+  - Va después de cerrar la ronda del paquete 4.
 - Lo que espera a Pedro vive en OmniBrain (P-177): `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
 ## Madurez
