@@ -1833,3 +1833,11 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - lanzamientos: Lucent Beam ≥ 18, Breathe Fire ≥ 18, Dragon Tail ≥ 6, Hex ≥ 5 y Frost Blast ≥ 12 (en `dos2`: 8-10, 10-12, 1-2, 1-2 y 7-8);
   - nivel de los cuatro héroes de las líneas de dos +1 o más frente a `dos2`;
   - kills sobre sus rivales ≥ 2 en cada línea.
+- **Invalidez (anotada antes de leer el resultado de `h1`):** `dos.lua` tenía un error desde el cambio a la carrera (`dos-humo2`, `dos1`, `dos2` y `h1`).
+  - En el bucle de entrada, la variable local `ours` (la parte de la carrera) tapaba la lista de héroes, y `#ours` fallaba cada vez que la pareja estaba junta y un objetivo pasaba los primeros filtros.
+  - Errores por tanda en los registros (`prop error ... dos.lua:266`): 65 en `dos-humo2`, 120 en `dos1`, 173 en `dos2` y 118 en `h1`.
+  - Cada error aborta la decisión de ese tick del bot que decide, y la entrada «juntos» no pudo darse nunca (todas las entradas registradas dicen «solo»).
+  - **Por eso las rondas `dos1` y `dos2` no miden la capa de la línea de dos, ni `h1` el paquete 3.** Lo que se lee sin ese camino vale: la sombra (llama a la carrera fuera del bucle), los lanzamientos y el TP.
+  - Corregido en `claude/paquete3-heroes`, con un segundo fallo del mismo origen que aparecía al renombrar. Desde ahora, cada tanda se revisa por `prop error` antes de leerla.
+- Resultado de `h1`, solo descriptivo por la invalidez: Lucent Beam 16,2 (49 a héroes y 48 a creeps), Frost Blast 17,5, Breathe Fire 12,8, Dragon Tail 1,7 y Hex 1,3 por línea; las kills no se mueven (0,2 y 0,8).
+- Decisión: repetir la ronda con el código corregido (`h1b`) y medir la capa de la línea de dos sola, corregida (`dos3`), porque sus dos rondas no valieron.

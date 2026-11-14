@@ -227,9 +227,9 @@ local function Decide(bot, s, p, mate, b)
 		elseif p.now > b.untilT then why = 'demasiado_larga'
 		elseif threat >= weakHp then why = string.format('moririamos %s daño3s %d vida %d', Short(weakest), threat, weakHp)
 		elseif Seen(e) then
-			local ours, theirs = Race(bot, p, mate, e, enemies, weakest, weakHp)
-			if ours < K.raceKeep then why = string.format('ya_no_da nuestro %.2f < %.2f', ours, K.raceKeep)
-			elseif theirs >= 1 then why = string.format('moririamos carrera suyo %.2f', theirs) end
+			local usShare, themShare = Race(bot, p, mate, e, enemies, weakest, weakHp)
+			if usShare < K.raceKeep then why = string.format('ya_no_da nuestro %.2f < %.2f', usShare, K.raceKeep)
+			elseif themShare >= 1 then why = string.format('moririamos carrera suyo %.2f', themShare) end
 		end
 		if why ~= nil then EndEntry(bot, b, why, p.now) end
 		return
@@ -255,9 +255,9 @@ local function Decide(bot, s, p, mate, b)
 			if (b.ban[name] or -1000) <= p.now then
 				local around = 0
 				for _, o in ipairs(enemies) do if D2(o:GetLocation(), e:GetLocation()) <= 1200 then around = around + 1 end end
-				local ours, theirs = Race(bot, p, mate, e, enemies, weakest, weakHp)
-				local score = ours / math.max(theirs, 0.1)
-				local ok = D2(p.loc, e:GetLocation()) <= K.joinMax and ours >= K.raceKill and theirs < 1 and score >= K.raceEdge
+				local usShare, themShare = Race(bot, p, mate, e, enemies, weakest, weakHp)
+				local score = usShare / math.max(themShare, 0.1)
+				local ok = D2(p.loc, e:GetLocation()) <= K.joinMax and usShare >= K.raceKill and themShare < 1 and score >= K.raceEdge
 					and p.hp >= K.enterHp and Combate.Unsafe(bot, p, e) == nil and threat < K.leaveShare * weakHp
 				if ok and mate ~= nil and D2(mate:GetLocation(), e:GetLocation()) <= K.joinMax then
 					ok = mate:GetHealth() >= K.enterHp * mate:GetMaxHealth() and MateUnsafe(mate, e) == nil
@@ -267,7 +267,7 @@ local function Decide(bot, s, p, mate, b)
 				elseif ok then
 					ok = around <= 1
 				end
-				if ok and score > bestScore then best, bestScore, bestWhy = e, score, string.format('nuestro %.2f suyo %.2f', ours, theirs) end
+				if ok and score > bestScore then best, bestScore, bestWhy = e, score, string.format('nuestro %.2f suyo %.2f', usShare, themShare) end
 			end
 		end
 		if best ~= nil then
