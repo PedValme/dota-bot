@@ -1904,3 +1904,22 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - **no cumplen** las entradas de 2 s o más (≥ 70 %) ni el tango (0). Lo más probable es que el tango lo explique el registro, que cuenta rivales que el bot no ve; hay que comprobarlo;
   - la difícil mejora y la segura empeora. Hipótesis por comprobar en el registro: presionar 2 contra 2 contra rivales tanque (Bristleback, Axe, Tidehunter) cuesta más de lo que da.
 - Decisión: queda la ronda 2, la última del paquete. Antes se diagnostica en el registro por qué empeora la segura, y solo se cambia lo que tenga causa leída.
+
+### 2026-11-14 · Paquete 4, ronda 2 (`p4r2a-*` frente a `p4r2b-*`): diagnóstico y predicción antes de lanzar
+- Pregunta: ¿deja la segura de morir de más sin perder el daño que la pareja ganó en la difícil?
+- Diagnóstico de `p4a` frente a `p4b` (subagente Opus, solo lectura, scripts en el scratchpad de la sesión):
+  - todo el exceso de muertes de la segura está en peleas que abrimos nosotros: de 9 a 26 con muerte nuestra; las que abren ellos bajan de 24 a 22;
+  - 31 de 60 muertes de Luna o Lich en A tienen en los 10 s previos una agresión nueva del paquete 4: 17 por seguir o unirse a una apertura y 14 por presión;
+  - seguir o unirse en la segura acaba con un muerto nuestro en 10 s en el 29 % de los episodios (41 de 142), frente al 7-8 % en la difícil. La sombra lee «nuestro» 0,92 / «suyo» 1,21 en los que acaban en muerte y 1,11 / 0,97 en el resto. La tasa base de muerte en 10 s ronda el 14 % (estimación gruesa);
+  - causa en el código: las ramas de seguir y unirse de `dos.lua` solo miran `Combate.Unsafe`, no la carrera. Las entradas de la pareja, que sí la miran, bajaron de 24 a 7;
+  - la hipótesis de los rivales tanque se cumple en parte: con BB y Axe sí, con Tide no, y Skywrath mata más;
+  - el tango «con un rival a 900» lo cuenta el análisis con la foto omnisciente del segundo entero. De 19 casos, 7 ya estaban a más de 900 y en 3 el bot no veía al rival. Quedan 2 casos sin explicar. Solo 1 de las 60 muertes tuvo un tango en los 10 s previos: no explica la segura.
+- Cambio único (`dos.lua`, `FollowWins`): seguir o unirse a una apertura solo si la carrera sobre ese objetivo, con el punto de choque, da nuestra parte ≥ la suya. Aplicado a posteriori con la sombra, quita 12 de las 24 ventanas con muerte en la segura y 1 de 3 con kill, y en la difícil conserva las 12 con kill y quita 5 de 6 con muerte. Solo registro: la decisión del tango escribe el rival visible más cercano y el daño de héroe en 2 s, y `linea-dos.mjs` lo cuenta como «visto por el bot» además del recuento viejo.
+- Diseño: como la ronda 1. Brazos A, `control_equipo_p4` (`p4r2a-*`), y B, `control_equipo` (`p4r2b-*`), contra `base`, en orden ABBA, 12 partidas al min 12, alineaciones de MEDICIONES 2026-11-13.
+- Predicción (A frente a B, por línea):
+  - muertes de la segura ≤ 9,0 (ronda 1: 10,0; B: 8,2);
+  - peleas abiertas por nosotros con muerte nuestra en la segura ≤ 15 (ronda 1: 26);
+  - seguir o unirse en la segura con un muerto nuestro en 10 s ≤ 20 % de los episodios (ronda 1: 29 %);
+  - daño de la pareja en la difícil ≥ ×1,4 sobre B (ronda 1: ×1,67), con la mediana tras una apertura ≥ 100;
+  - tango visto por el bot con un rival a 900: 0;
+  - salvaguarda: diferencia de kills del equipo A − B no peor que −3, y muertes por línea no más de +2. Con 6 partidas por brazo, el equipo solo avisa.

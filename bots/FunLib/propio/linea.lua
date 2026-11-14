@@ -508,7 +508,14 @@ local function RuleHeal(bot, s, p)
 			if d < treeD and not underTower then tree, treeD = t, d end
 		end
 		if tree ~= nil then
-			return { intent = 'curar_tango', reason = string.format('faltan %d de vida, árbol a %d', bot:GetMaxHealth() - p.hpAbs, treeD),
+			-- The nearest enemy hero this bot sees, and hero damage in the last 2 s: the analysis counted enemies from the omniscient
+			-- record, not from what the bot saw (package 4, round 1 diagnosis).
+			local nearD = 99999
+			for _, e in ipairs(p.enemyHeroes) do
+				if Valid(e) then nearD = math.min(nearD, D2(p.loc, e:GetLocation())) end
+			end
+			return { intent = 'curar_tango', reason = string.format('faltan %d de vida, árbol a %d, rival visible a %d, daño_heroe2s %s',
+				bot:GetMaxHealth() - p.hpAbs, treeD, nearD, tostring(bot:WasRecentlyDamagedByAnyHero(2.0))),
 				item = tango, tree = tree }
 		end
 	end
