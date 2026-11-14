@@ -1970,3 +1970,38 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - la diferencia de kills del equipo no es peor que −3.
 - Con 6 partidas por brazo, la diferencia mínima detectable del patrimonio de la difícil ronda los 5k: la ronda solo puede dar una señal que confirmar, no probar el efecto.
 - Mecanismo, solo para leer (A − B): ataques de la pareja en la difícil (t 0-600) ×1,3 o más (B en `p4r2a`: 3.015); lanzamientos de Breathe Fire por línea +3 o más (14,5).
+- Humo `g1-humo` (código `0ca9383`, 2 de 2 válidas, 0 `prop error`). Las tres reglas actúan:
+  - el DK presiona a más de 450 en 24 decisiones (0 en `p4r2a-a`);
+  - 20 llamas rematan un creep;
+  - Luna compra las Raindrops.
+
+  Frente a `p4r2a-a`: difícil con 3,0 muertes frente a 6,5, y el DK con +2 niveles; segura con 8,5 muertes frente a 6,0 y −4,4k. Pasa la puerta (nivel del DK y muertes de la difícil).
+- Resultado de la ronda 1. Datos de la tanda:
+  - código `0ca9383`, 11 de 12 válidas, **0 `prop error`**. `g1b-c` 2 no es válida: un héroe apareció tras el inicio;
+  - CPU media 41-87 % y máxima 62-100 %. La alineación c corrió con la PC cargada, anotado;
+  - velocidad real ×1,78 y ×1,82.
+
+  `equipo.mjs` A − B (6 y 5 partidas, 5 estratos):
+
+  | Criterio | Resultado | ¿Cumple? |
+  |---|---|---|
+  | Patrimonio de la difícil ≥ +1,0k | −3,0k (−7,2k a 1,2k) | no |
+  | Nivel del DK ≥ +0,5 | −0,8 | no |
+  | Patrimonio de Luna ≥ −300 | −1,05k | no |
+  | Muertes por línea ≤ +1 | segura +3,0, difícil +2,2 | no |
+  | Diferencia de kills del equipo no peor que −3 | −6,4 | no |
+
+  - Fuera del ruido, a peor: patrimonio del equipo −4,9k (de −8,2k a −1,6k), patrimonio de la segura −3,3k y nivel de la difícil −2,0.
+  - Mecanismo: ataques de la pareja en la difícil 2.764 frente a 3.359, y Breathe Fire 17,5 frente a 13,6 por línea.
+  - **No cumple.**
+- Diagnóstico (subagente Opus, solo lectura, scripts en el scratchpad de la sesión):
+  - **Ruido de tanda:** B (`g1b`) lleva el mismo código que `p4r2a`, y le saca +2,1k de patrimonio del equipo y +5,4 kills. A frente a `p4r2a` queda dentro del ruido (−2,6k, IC de −5,6k a 0,5k). Más o menos la mitad del −4,9k es suerte de B.
+  - **A daña, con causa leída:** 45 presiones lejanas en 6 partidas. Duran 0,5 s, solo el 51 % llega a pegar (46 de daño de media), y el DK vuelve a la línea. El DK muere 16 veces frente a 7 en `p4r2a` (+1,3 por partida, IC de 0,06 a 2,6). Ninguna ganancia de daño, últimos golpes ni patrimonio.
+  - **E cuesta sin beneficio:** las Raindrops retrasan las botas unos 150 s (t=467 frente a 239-322) y no se ve que bloqueen daño (daño mágico recibido por Luna: 4.914 frente a 4.698-4.759).
+  - **B es neutra:** 3,7 llamas a creeps por partida, y los últimos golpes del DK no cambian (21,5 frente a 20,6-23,2). El maná gastado no quita llamas de acoso.
+  - **Defecto de validez:** `g1b-c` 1 cuenta como válida, y Luna cargó en t=−5 y no compró nada en toda la partida (0 `prop compra`). La comprobación de «héroe aparecido tras el inicio» no la caza. Perjudica a B, así que no explica lo de A. Hay que convertirlo en comprobación antes de la próxima serie (ESTADO, problemas conocidos).
+- Decisión: **`guias1` cierra en la ronda 1, sin ronda 2:**
+  - ninguna regla muestra beneficio;
+  - B sola aportaría como mucho unos +100-150 de oro por partida, muy por debajo de lo detectable (unos 5k);
+  - el código queda tras sus variantes, sin adoptarse, y `control_equipo_p4` sigue de referencia;
+  - lectura del piloto: con transcripciones, las guías dan reglas genéricas que el bot o ya cumple o no puede ejecutar bien (presionar a medias, tirar campamentos sin la mecánica), y las que se programaron no movieron el resultado. La recomendación a Pedro es no extrapolarlo a más héroes en esta forma. El plan del piloto (`trabajo/guias-youtube.md`) se borra al cerrarse; las tablas y el resumen siguen en `trabajo/guias/` como datos.

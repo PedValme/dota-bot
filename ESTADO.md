@@ -2,40 +2,22 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
-- **Qué se estaba haciendo:** el plan de mejora del equipo propio, firmado por Pedro (`trabajo/plan-mejora-equipo.md`, DECISIONES 2026-11-13). Meta: ganar con sobra al equipo de OHA, con cada cambio medido cara a cara, intercalado, en 3 alineaciones y con `tools/bench/equipo.mjs`.
-- **Dónde quedó:** cinco paquetes en la línea de dos. Los paquetes 1 y 2 (reglas de línea), la capa de pareja `dos.lua` y el paquete 3 (héroes) no movieron el resultado; su código sigue en `main`, tras la variante.
-  - El diagnóstico de las 94 muertes de `h2`, con su revisión adversarial, mostró la causa: no devolvíamos daño y nadie seguía nuestras aperturas.
-  - El paquete 4 ataca eso.
-  - Al min 12 frente a OHA con los mismos héroes, la diferencia de kills del equipo ronda −10 a −12.
-- **Qué se probó:** reglas del 1 contra 1, pareja que entra y sale, hechizos como OHA, y ahora seguir las aperturas y presionar en pareja.
-- **Siguiente acción:** paquete 4 (firmado por Pedro, DECISIONES 2026-11-14; variante `control_equipo_p4`), ronda 1 hecha (MEDICIONES 2026-11-14):
-  - la pareja ya hace el daño que le faltaba: difícil ×1,67, tras una apertura 228 frente a 51;
-  - la difícil mejora (+1,7 kills);
-  - la segura empeora (+1,8 muertes, −2,2k);
-  - el equipo queda en −2,2 kills, dentro del ruido.
+- **Qué se estaba haciendo:** el plan de mejora del equipo propio (`trabajo/plan-mejora-equipo.md`, DECISIONES 2026-11-13). Meta: ganar con sobra al equipo de OHA, con cada cambio medido cara a cara, en orden ABBA y con `tools/bench/equipo.mjs`.
+- **Dónde quedó (noche del 2026-11-14, MEDICIONES):**
+  - **Paquete 4 cerrado, y gana.** La ronda 2 (#111) solo deja seguir o unirse a una apertura si la pareja gana la carrera. `control_equipo_p4` le saca al bot propio sin el paquete +7,2k de patrimonio del equipo, con IC fuera del 0. Es el primer paquete que lo consigue, y es la referencia.
+  - **Piloto de guías de YouTube (`guias1`, #112) cerrado sin cumplir y sin ronda 2:**
+    - la presión lejana del DK le cuesta una muerte por partida;
+    - las Raindrops retrasan las botas sin bloquear nada que se vea;
+    - Breathe Fire a creeps es neutro.
 
-  Siguiente:
-  1. diagnosticar en `p4a-*` por qué empeora la segura (¿presión 2 contra 2 frente a rivales tanque?) y comprobar si el tango «con un rival a 900» son rivales que el bot no ve;
-  2. ronda 2, la última, solo con causas leídas;
-  3. después, el piloto de guías de YouTube.
-
-  Cómo se hace:
-  - **Diagnóstico** (paso 1):
-    - `node tools/analisis/linea-dos.mjs "p4a-.*" --sombra --detalle` frente a `"p4b-.*"`;
-    - las decisiones `prop decision`, `prop dos` y `presiono_2c2` de Luna y Lich en los 10 s antes de cada muerte;
-    - el tango contra las líneas `fino` (¿el rival era visible para el bot?).
-  - **Ronda 2** (paso 2): la predicción, escrita antes en MEDICIONES. Después, 12 partidas con `--rival dotabot --variantes <brazo>,base --modo turbo --observar --corte 12 --heroes luna,sniper,dragon_knight,lion,lich/<alineación>`:
-    - orden ABBA: `control_equipo_p4` y `control_equipo` en a, al revés en b y como en a en c;
-    - etiquetas `p4r2a-<x>` y `p4r2b-<x>`;
-    - alineaciones como en MEDICIONES 2026-11-13, A contra A.
-  - **Lectura de la ronda:** `linea-dos.mjs` por brazo y `node tools/bench/equipo.mjs "p4r2a-.*" "p4r2b-.*" --t 720`.
-  - **Reglas:**
-    - cada tanda se revisa por `prop error` antes de leerla;
-    - no se edita `bots/` en este clon mientras juega una tanda (usar un worktree).
-- **Después, en sesión nueva** (Pedro, DECISIONES 2026-11-14): piloto de reglas de héroe sacadas de guías de YouTube, con los cinco héroes (`trabajo/guias-youtube.md`).
-  - Las transcripciones se bajan con `yt-dlp`, a instalar con pip: el conector de YouTube solo da subtítulos de los videos del canal propio.
-  - Va después de cerrar la ronda del paquete 4.
-- Lo que espera a Pedro vive en OmniBrain (P-177): `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
+    Tablas y resumen en `trabajo/guias/`. El código queda tras sus variantes.
+  - Frente a OHA con los mismos héroes, el equipo sigue por detrás al min 12: con `p4`, unas −3 a −9 kills según la tanda.
+- **Lo aprendido de la medición:** el mismo código (`control_equipo_p4`) dio +2,1k de patrimonio del equipo y +5,4 kills de una tanda a otra (`p4r2a` frente a `g1b`). Una diferencia entre brazos de una sola tanda por debajo de unos 5k no dice nada. Solo vale lo que sale fuera del IC.
+- **Siguiente acción:**
+  1. Convertir en comprobación de validez el defecto visto en `g1b-c` 1: un héroe nuestro cargado tarde (t > −20) o sin ninguna compra. Va antes de cualquier serie, y como toca el orquestador, se revisa antes.
+  2. Después, lo que decida Pedro (OmniBrain, P-841). Recomendado: diagnosticar en los registros de `p4r2a` dónde se pierde lo que queda frente a OHA y proponer el siguiente paquete del plan.
+- **Reglas de la tanda:** cada tanda se revisa por `prop error` antes de leerla. No se edita `bots/` del clon principal mientras juega, y se trabaja en un worktree **sin junctions** hacia datos del clon (ver problemas conocidos).
+- Lo que espera a Pedro vive en OmniBrain: `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
 ## Madurez
 Prototipo. El bot por defecto es OHA 7.41a (127 héroes) con limpieza de seguridad, al día con 7.41f, sin cambios de juego
@@ -56,9 +38,10 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
   puerta de la confirmación y lobby para jugar contra el Sniper (#60).
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
 - 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100); registro fino y estudio de OHA en las líneas de dos (#101); capa de la línea de dos, TP a la fuente y sombra, 2 rondas sin cumplir (#103); paquete 3, héroes, sin cumplir (#105); paquete 4, la pareja sigue sus aperturas, ronda 1 (#108).
+- 2026-11-14 · Paquete 4, ronda 2, cerrado y adoptado como referencia (#111); piloto de guías de YouTube: 28 transcripciones, tablas de los cinco héroes y paquete `guias1`, medido sin cumplir (#112).
 
 ## Siguientes pasos
-1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): diagnóstico de las muertes en las líneas de dos (ver «Próxima sesión»).
+1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): la comprobación de validez nueva y, después, el siguiente paquete sobre `control_equipo_p4` (ver «Próxima sesión»).
 2. Medio juego del Sniper: farm frente a presencia y las rotaciones, con lo que Pedro vea al jugar contra el equipo.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
@@ -67,6 +50,8 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
+- **Banco, validez sin resolver:** una partida con un héroe nuestro cargado tarde (t=−5) que no compra nada cuenta como válida (`g1b-c` 1, Luna con 0 compras). La comprobación de «héroe aparecido tras el inicio» no la caza. Hay que convertirla en comprobación antes de la próxima serie.
+- **Registros de observación perdidos (2026-11-14):** `bench/observaciones/` (ignorado por git) quedó vacío de todo lo anterior a `p4r2`. Causa: un junction hacia esa carpeta dentro de un worktree temporal, que `gh pr merge --delete-branch` borró siguiendo el enlace. Siguen las filas (`series.csv`) y las líneas (`bench/lineas/`), pero `linea-dos.mjs` ya no puede releer `h2`, `p4a` ni `p4b`. Lo medido sigue en MEDICIONES.
 - **Banco: Dota se cierra solo** al cambiar o crear héroes de Dire (5 de 16 partidas con espejo, 1 de 2 creando).
   Se dejó de hacer: cada equipo pide su propio sorteo. Sin comprobar aún en una serie que no vuelva a pasar (20 de 20
   partidas de humo sin cierres).
