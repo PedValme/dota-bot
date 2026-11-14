@@ -298,7 +298,20 @@ function studyLane(d, ourTeam, ours, theirs, laneName) {
     if (!me || !ours.includes(me[0])) continue;
     if ([...snap].some(([h, st]) => st.team !== team && st.alive && dist(st, me[1]) <= 900)) tangoFight++;
   }
-  return { fights, deaths, kills: killsOf, pos, trips, castsBy, sombraLane, atk, spell, follow, entries, tangoFight };
+  // The same, as the bot saw it (package 4, round 2 on: the decision carries «rival visible a N»): the count above uses the omniscient
+  // record at the whole second and counts enemies in the fog or walking away.
+  let tangoSeen = 0, tangoLogged = 0;
+  for (const x of d.props) {
+    if (x.kind !== "decision" || !/intencion=curar_tango/.test(x.text) || x.t < 0 || x.t > T) continue;
+    const near = x.text.match(/rival visible a (\d+)/);
+    if (!near) continue;
+    const snap = d.fino.get(Math.floor(x.t));
+    const me = snap && [...snap].find(([h, st]) => st.pid === x.pid);
+    if (!me || !ours.includes(me[0])) continue;
+    tangoLogged++;
+    if (Number(near[1]) <= 900) tangoSeen++;
+  }
+  return { fights, deaths, kills: killsOf, pos, trips, castsBy, sombraLane, atk, spell, follow, entries, tangoFight, tangoSeen, tangoLogged };
 }
 
 // ---- run over the matches ----
@@ -378,7 +391,7 @@ for (const [name, list] of Object.entries(lanes)) {
     const fol = list.flatMap((l) => l.follow), ent = list.flatMap((l) => l.entries);
     console.log(`Daño de la pareja a sus rivales (t 0-600), por línea: ataques ${f0(list.reduce((a, l) => a + l.atk, 0) / n)}, hechizos ${f0(list.reduce((a, l) => a + l.spell, 0) / n)}`);
     console.log(`Tras una apertura nuestra con el compañero a 1200: ${fol.length} aperturas, daño de la pareja en 5 s mediana ${f0(median(fol))} [${f0(q(fol, 0.25))}-${f0(q(fol, 0.75))}]`);
-    console.log(`Entradas de la pareja: ${ent.length} (${f1(ent.length / n)} por línea), de 2 s o más ${pct(ent.filter((x) => x >= 2).length, ent.length)}; tango con un rival a 900: ${list.reduce((a, l) => a + l.tangoFight, 0)}`);
+    console.log(`Entradas de la pareja: ${ent.length} (${f1(ent.length / n)} por línea), de 2 s o más ${pct(ent.filter((x) => x >= 2).length, ent.length)}; tango con un rival a 900: ${list.reduce((a, l) => a + l.tangoFight, 0)}; visto por el bot: ${list.reduce((a, l) => a + l.tangoSeen, 0)} de ${list.reduce((a, l) => a + l.tangoLogged, 0)} con dato`);
   }
   const cb = {};
   for (const l of list) for (const [k, v] of Object.entries(l.castsBy)) {

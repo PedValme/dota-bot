@@ -177,6 +177,20 @@ local function Race(bot, p, mate, e, enemies, weakest, weakHp, clash)
 	return us / math.max(e:GetHealth() + e:GetHealthRegen() * W, 1), them / math.max(weakHp, 1)
 end
 
+-- Package 4, round 2: following an opening (ours or the partner's) only while the pair wins the race on its target, with the clash
+-- spot counted. Round 1 let both branches through on combate.lua's Unsafe alone: in the safe lane 41 of 142 follow/join episodes ended
+-- with one of ours dead within 10 s, the shadow reading «nuestro» 0,92 / «suyo» 1,21 on those, 1,11 / 0,97 on the rest (MEDICIONES
+-- 2026-11-14). Returns ok and the reading for the log.
+local function FollowWins(bot, p, mate, e)
+	local ours = { bot }
+	if mate then table.insert(ours, mate) end
+	local enemies = LaneEnemies(ours)
+	local weakest, weakHp = bot, bot:GetHealth()
+	if mate and mate:GetHealth() < weakHp then weakest, weakHp = mate, mate:GetHealth() end
+	local usShare, themShare = Race(bot, p, mate, e, enemies, weakest, weakHp, e)
+	return usShare >= themShare, string.format('nuestro %.2f suyo %.2f', usShare, themShare)
+end
+
 -- An ally's own safety on the target, as combate.lua's Unsafe reads it from where the ally stands.
 local function MateUnsafe(mate, e)
 	local hp = mate:GetHealth()
@@ -385,7 +399,10 @@ function D.Act(bot, s, p, home, safeSpot)
 		local o = s.dosOpen
 		if o ~= nil and p.now <= o.untilT and Seen(o.target) and D2(p.loc, o.target:GetLocation()) <= K.joinMax
 			and Combate.Unsafe(bot, p, o.target) == nil then
-			return { intent = 'acosar', target = o.target, reason = 'sigo mi apertura sobre ' .. Short(o.target) }
+			local wins, read = FollowWins(bot, p, mate, o.target)
+			if wins then
+				return { intent = 'acosar', target = o.target, reason = 'sigo mi apertura sobre ' .. Short(o.target) .. ' ' .. read }
+			end
 		end
 		if mate ~= nil and mateDist <= K.joinMax then
 			local active = {}
@@ -394,7 +411,11 @@ function D.Act(bot, s, p, home, safeSpot)
 				local e = call.target
 				if call.pid == mate:GetPlayerID() and Seen(e) and not e:IsIllusion() and D2(p.loc, e:GetLocation()) <= K.joinMax
 					and Combate.Unsafe(bot, p, e) == nil then
-					return { intent = 'acosar', target = e, reason = string.format('me uno a la apertura de mi pareja sobre %s (%s)', call.name, call.why) }
+					local wins, read = FollowWins(bot, p, mate, e)
+					if wins then
+						return { intent = 'acosar', target = e,
+							reason = string.format('me uno a la apertura de mi pareja sobre %s (%s) %s', call.name, call.why, read) }
+					end
 				end
 			end
 		end
