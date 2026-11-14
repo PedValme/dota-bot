@@ -1854,3 +1854,13 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - muertes ≤ 6 en cada línea;
   - kills ≥ 2;
   - Dragon Tail ≥ 6 y Hex ≥ 5.
+- Resultado de `h2` (código de la rama, 6 de 6 válidas, **0 `prop error`**, CPU media 41-56 % y máxima 49-85 %: carga alta, anotada):
+  - kills 1,5 en la segura y 0,7 en la difícil, muertes 7,2 y 8,5 (predicho ≥ 2 y ≤ 6);
+  - Hex 5,8 (cumple), Dragon Tail 2,8 (no cumple);
+  - `equipo.mjs` frente a `h1b`: ninguna diferencia fuera del ruido, y la diferencia de kills del equipo igual (−12).
+  - **No cumple.**
+- Lectura:
+  - las muertes siguen llegando con el 88-90 % de vida 10 s antes, frente a 2 rivales;
+  - no hay oro sin gastar: la diferencia de patrimonio (5-7k por línea) viene de las kills regaladas;
+  - los héroes de OHA llevan Magic Wand y los nuestros no.
+- Decisión: **el paquete 3 agotó sus 2 rondas sin cumplir.** Su código (hechizos en el intercambio y el acoso, remate de creeps, entrada con las lecturas de OHA) se queda tras la variante del bot propio. El siguiente paso lo decide Pedro.
