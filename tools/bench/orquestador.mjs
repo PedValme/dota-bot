@@ -176,6 +176,13 @@ export const VARIANTS = {
   // against control_equipo in the same batch.
   control_equipo_p4: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", paquete4: true, empuje: false,
     thinkless: 1 },
+  // Guides package (trabajo/guias/resumen.md, signed in advance by Pedro on 2026-11-14), measured against the package-4 arm that won
+  // its round 2: on control_equipo_p4, rules A (Dragon Knight presses from further), B (Breathe Fire on the ranged creep) and E
+  // (Raindrops for Luna); on control_equipo, only B and E (A needs package 4's press in the lane of two).
+  control_equipo_g1: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", paquete4: true, guias1: true,
+    guias1_presion: true, empuje: false, thinkless: 1 },
+  control_equipo_g1b: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", guias1: true, empuje: false,
+    thinkless: 1 },
   // The own Sniper with its fighting off (no kills, abilities on heroes or trades), to measure what fighting costs in
   // farm (trabajo/fase1-plan.md, step 5).
   control_sniper_sincombate: { control_completo: "sniper", linea_heroe: "sniper", sin_combate: true, empuje: false, thinkless: 1 },

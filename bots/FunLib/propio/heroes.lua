@@ -33,8 +33,11 @@ R.ROL = {
 -- contestaDesde: how far beyond its attack range it walks to answer a hit (linea.lua, RuleTrade). A melee hero only from its reach
 -- (the 50 of RuleTrade's inRange), so it does not walk into the two of them; a ranged one keeps the 200 it had (linea.lua's old
 -- answerReach: one step, not letting nukes go free).
+-- presionaDesde (guides package, rule A, variant guias1_presion): how far beyond its range a melee hero walks to press, from 0,6 of
+-- health up. linea.lua's K.pressReach (300) was set for the Sniper: Dragon Knight (150 + 300 = 450) stood idle with the laner at 450-700
+-- and the trade in its favour (p4r2 logs); two DK guides trade hits with the laner (trabajo/guias/dragon_knight.md, rule 7).
 R.ALCANCE = {
-	cuerpo = { soltarAggroHp = 0.65, contestaDesde = 50 },
+	cuerpo = { soltarAggroHp = 0.65, contestaDesde = 50, presionaDesde = 550, presionaHp = 0.6 },
 	distancia = { soltarAggroHp = 1.0, contestaDesde = 200 },
 }
 -- Under this attack range a hero is melee (Dragon Knight 150; the shortest ranged one here, Luna, 330). Read live each time, so

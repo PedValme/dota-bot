@@ -24,6 +24,21 @@ local function WithWand(items, done)
 	return out
 end
 
+-- Guides package (trabajo/guias/resumen.md, rule E): Infused Raindrops for Luna before the Treads, as two guides buy it against magic
+-- in the lane (Luna took 4.479 of magic damage a match in p4r2). Passive: no use rule. Only if the shop sells it (cost read live).
+local function WithRaindrops(bot, items, done)
+	if Variant.guias1 ~= true or bot:GetUnitName() ~= 'npc_dota_hero_luna' then return items end
+	if (done ~= nil and done.item_infused_raindrop) or GetItemCost('item_infused_raindrop') <= 0 then return items end
+	for _, it in ipairs(items) do if it == 'item_infused_raindrop' then return items end end
+	local out, put = {}, false
+	for _, it in ipairs(items) do
+		if not put and it == 'item_power_treads' then table.insert(out, 'item_infused_raindrop') put = true end
+		table.insert(out, it)
+	end
+	if not put then table.insert(out, 1, 'item_infused_raindrop') end
+	return out
+end
+
 -- The basic parts of an item, from the engine's first recipe, leaving out what is already in the build (have).
 local function Parts(item, out, have, depth)
 	depth = depth or 0
@@ -68,7 +83,7 @@ function P.Queue(bot, s)
 	if s.buyQueue ~= nil then return s.buyQueue end
 	s.buyQueue = {}
 	local datos = Heroes.Datos(bot:GetUnitName())
-	Append(s, WithWand(Build.Plan(bot, s) or datos.compras or {}), {}, datos)
+	Append(s, WithRaindrops(bot, WithWand(Build.Plan(bot, s) or datos.compras or {}), {}), {}, datos)
 	s.buyIndex = 1
 	return s.buyQueue
 end
@@ -89,7 +104,7 @@ local function Replan(bot, s)
 	s.buyQueue = kept
 	-- A courier sent for a secret part of the old plan would make the next one look late and skip it.
 	s.secretSince = nil
-	Append(s, WithWand(Build.Plan(bot, s, done) or {}, done), done, Heroes.Datos(bot:GetUnitName()))
+	Append(s, WithRaindrops(bot, WithWand(Build.Plan(bot, s, done) or {}, done), done), done, Heroes.Datos(bot:GetUnitName()))
 	return 'plan de nuevo: cambió lo que amenazan'
 end
 
