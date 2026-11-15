@@ -3,7 +3,9 @@
 <!-- pic-method: next-session -->
 ## Próxima sesión
 - **Qué se estaba haciendo:** el plan de mejora del equipo propio (`trabajo/plan-mejora-equipo.md`, DECISIONES 2026-11-13). Meta: ganar con sobra al equipo de OHA, con cada cambio medido cara a cara, en orden ABBA y con `tools/bench/equipo.mjs`.
-- **Dónde quedó (noche del 2026-11-14, MEDICIONES):**
+- **Dónde quedó (noches del 2026-11-14 y 2026-11-15, MEDICIONES):**
+  - **Comprobación de validez nueva (#115):** un héroe de dota-bot sin compras hasta t=180 invalida la partida (solo con `--observar`).
+  - **Paquete 5 (la segura, #115) cerrado sin cumplir y sin ronda 2:** salir del punto de la torre y no hacer TP sobre dos rivales actúan, pero las muertes no bajan (8,2 frente a 8,0). El diagnóstico dejó el dato más útil: con los mismos héroes, la segura ya muere lo mismo que la de OHA (9,0 frente a 9,2); **lo que le falta son kills** (0,7 frente a 4,2 por línea).
   - **Paquete 4 cerrado, y gana.** La ronda 2 (#111) solo deja seguir o unirse a una apertura si la pareja gana la carrera. `control_equipo_p4` le saca al bot propio sin el paquete +7,2k de patrimonio del equipo, con IC fuera del 0. Es el primer paquete que lo consigue, y es la referencia.
   - **Piloto de guías de YouTube (`guias1`, #112) cerrado sin cumplir y sin ronda 2:**
     - la presión lejana del DK le cuesta una muerte por partida;
@@ -14,8 +16,7 @@
   - Frente a OHA con los mismos héroes, el equipo sigue por detrás al min 12: con `p4`, unas −3 a −9 kills según la tanda.
 - **Lo aprendido de la medición:** el mismo código (`control_equipo_p4`) dio +2,1k de patrimonio del equipo y +5,4 kills de una tanda a otra (`p4r2a` frente a `g1b`). Una diferencia entre brazos de una sola tanda por debajo de unos 5k no dice nada. Solo vale lo que sale fuera del IC.
 - **Siguiente acción:**
-  1. Convertir en comprobación de validez el defecto visto en `g1b-c` 1: un héroe nuestro cargado tarde (t > −20) o sin ninguna compra. Va antes de cualquier serie, y como toca el orquestador, se revisa antes.
-  2. Después, lo que decida Pedro (OmniBrain, P-841). Recomendado: diagnosticar en los registros de `p4r2a` dónde se pierde lo que queda frente a OHA y proponer el siguiente paquete del plan.
+  1. Lo que decida Pedro (sin P-n: OmniBrain rechazó el registro, falta el campo `tipo` en la herramienta). Recomendado: un paquete de kills para la segura, con el mismo método (diagnóstico de las peleas con OHA como especificación, revisión adversarial y ronda medida). La pregunta es por qué OHA cierra 4,2 kills por línea con Luna y Lich, y nosotros 0,7.
 - **Reglas de la tanda:** al terminar cada tanda, `node tools/bench/respaldo.mjs` copia sus registros a `F:\respaldo-dota-bot\observaciones` (DECISIONES 2026-11-14). Cada tanda se revisa por `prop error` antes de leerla. No se edita `bots/` del clon principal mientras juega, y se trabaja en un worktree **sin junctions** hacia datos del clon (ver problemas conocidos).
 - Lo que espera a Pedro vive en OmniBrain: `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
@@ -39,9 +40,10 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-05/06 · Confirmación de la línea, intercambio con números propios, medio juego con objetos y riesgo, neutrales, TP a peleas, daño aprendido de cada rival, Assassinate en peleas, rival OHA y `pulido.mjs` (#61-#82).
 - 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100); registro fino y estudio de OHA en las líneas de dos (#101); capa de la línea de dos, TP a la fuente y sombra, 2 rondas sin cumplir (#103); paquete 3, héroes, sin cumplir (#105); paquete 4, la pareja sigue sus aperturas, ronda 1 (#108).
 - 2026-11-14 · Paquete 4, ronda 2, cerrado y adoptado como referencia (#111); piloto de guías de YouTube: 28 transcripciones, tablas de los cinco héroes y paquete `guias1`, medido sin cumplir (#112).
+- 2026-11-15 · Respaldo de los registros (#114); comprobación de validez de compras y paquete 5 de la segura, medido sin cumplir (#115).
 
 ## Siguientes pasos
-1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): la comprobación de validez nueva y, después, el siguiente paquete sobre `control_equipo_p4` (ver «Próxima sesión»).
+1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): un paquete de kills para la segura sobre `control_equipo_p4` (ver «Próxima sesión»).
 2. Medio juego del Sniper: farm frente a presencia y las rotaciones, con lo que Pedro vea al jugar contra el equipo.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
@@ -50,7 +52,7 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 
 ## Problemas conocidos
 Defectos sin resolver. Mientras sigan abiertos, no se mide sobre los del banco.
-- **Banco, validez sin resolver:** una partida con un héroe nuestro cargado tarde (t=−5) que no compra nada cuenta como válida (`g1b-c` 1, Luna con 0 compras). La comprobación de «héroe aparecido tras el inicio» no la caza. Hay que convertirla en comprobación antes de la próxima serie.
+- **Banco, validez:** resuelto el 2026-11-15 (#115) para series con `--observar`; sin él, un héroe sin compras sigue sin detectarse.
 - **Registros de observación perdidos (2026-11-14):** `bench/observaciones/` (ignorado por git) quedó vacío de todo lo anterior a `p4r2`. Causa: un junction hacia esa carpeta dentro de un worktree temporal, que `gh pr merge --delete-branch` borró siguiendo el enlace. Siguen las filas (`series.csv`) y las líneas (`bench/lineas/`), pero `linea-dos.mjs` ya no puede releer `h2`, `p4a` ni `p4b`. Lo medido sigue en MEDICIONES.
 - **Banco: Dota se cierra solo** al cambiar o crear héroes de Dire (5 de 16 partidas con espejo, 1 de 2 creando).
   Se dejó de hacer: cada equipo pide su propio sorteo. Sin comprobar aún en una serie que no vuelva a pasar (20 de 20
