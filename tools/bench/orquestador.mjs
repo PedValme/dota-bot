@@ -181,6 +181,10 @@ export const VARIANTS = {
   // (Raindrops for Luna); on control_equipo, only B and E (A needs package 4's press in the lane of two).
   control_equipo_g1: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", paquete4: true, guias1: true,
     guias1_presion: true, empuje: false, thinkless: 1 },
+  // Package 5 (signed in advance by Pedro on 2026-11-15): on control_equipo_p4, the safe pair holds a point behind its tower when an
+  // enemy reaches the spot, and does not teleport onto two enemies by it with the partner away (dos.lua, BackOff and TeleportBlocked).
+  control_equipo_p5: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", paquete4: true, paquete5: true,
+    empuje: false, thinkless: 1 },
   control_equipo_g1b: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", guias1: true, empuje: false,
     thinkless: 1 },
   // The own Sniper with its fighting off (no kills, abilities on heroes or trades), to measure what fighting costs in
@@ -234,7 +238,7 @@ export function schedule(i, variants) {
 // pre-game; that the bots apply it was checked once with the "sonda" variant (bench/README.md) and each match logs
 // casts per team. (The bots' print does reach the log, but only in observer mode: OHA silences it otherwise.)
 export function validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo = "normal", loggedModo,
-  espejo = "", start, codigo, firstCodigo, couriers, intrusos, tardios, esperado, killsAtStart = null }) {
+  espejo = "", start, codigo, firstCodigo, couriers, intrusos, tardios, esperado, killsAtStart = null, sinCompras = null }) {
   // A match stopped at the cap counts, as a match dota-bot did not win (Pedro, 2026-10-31): dropping it would drop
   // exactly the matches an arm cannot close, a different number per arm. A match cut at --corte counts too: the smoke
   // asked for it and only reads the lane numbers; it has no winner.
@@ -258,6 +262,7 @@ export function validity({ outcome, roster, variant, loggedVariant, version, fir
   if (intrusos.length) return `dota-bot jugó en el equipo de Valve (pid ${intrusos.join(",")})`;
   if (!Array.isArray(tardios)) return "sin registro de aparición de héroes";
   if (tardios.length) return `héroe aparecido tras el inicio (${tardios.join(",")})`;
+  if (Array.isArray(sinCompras) && sinCompras.length) return `héroe sin compras hasta t=${NO_BUY_BY} (pid ${sinCompras.join(",")})`;
   // Five couriers alive per side at minute 1, Turbo ones (1100) in turbo: S1 (no couriers) must not come back.
   if (!couriers || couriers.radiant !== 5 || couriers.dire !== 5) {
     return `couriers ${couriers?.radiant ?? 0}-${couriers?.dire ?? 0}`;
@@ -525,6 +530,28 @@ export function lateSpawns(text) {
     if (m && bots.has(m[1])) last.set(m[1], Math.min(last.get(m[1]) ?? Infinity, Number(m[2])));
   }
   return [...last].filter(([, t]) => t > 0).map(([pid, t]) => `${pid}@${t}`);
+}
+
+// Bot heroes that bought nothing by t=NO_BUY_BY (observer lines "[dotabench] obs t=-56 buy pid=1 luna item_tango ..."): such a hero
+// plays the lane with no items at all. Seen in g1b-c 1 (2026-11-14): Luna spawned at t=-4,4 and made 0 purchases in 12 minutes, and
+// the match counted as valid (MEDICIONES 2026-11-14). Every bot hero buys its starting items before the horn, so none is legitimate.
+// Without observer lines (no --observar) there is nothing to read: null, and the match is not judged on it.
+export const NO_BUY_BY = 180;
+export function idleBuyers(text) {
+  if (!/\[dotabench\] obs t=/.test(text)) return null;
+  const lines = text.split(/\r?\n/);
+  // Only dota-bot's heroes (a "[bench] load pid=" line): whether Valve's bots leave buy lines is not seen yet (review, 2026-11-15).
+  const bots = new Set();
+  for (const line of lines) {
+    const r = line.match(/\[bench\] load pid=(\d+) /);
+    if (r) bots.add(r[1]);
+  }
+  const bought = new Set();
+  for (const line of lines) {
+    const m = line.match(/\[dotabench\] obs t=(-?\d+) buy pid=(\d+) /);
+    if (m && Number(m[1]) <= NO_BUY_BY) bought.add(m[2]);
+  }
+  return [...bots].filter((pid) => !bought.has(pid)).sort((a, b) => a - b);
 }
 
 // Players of Valve's team (2 Radiant, 3 Dire) whose hero dota-bot's scripts played: only dota-bot writes
@@ -857,6 +884,7 @@ async function main(argv) {
       let couriers = null;
       let intrusos = null;
       let tardios = null;
+      let sinCompras = null;
       let loggedVariant = null;
       let loggedModo = "";
       try {
@@ -870,6 +898,7 @@ async function main(argv) {
           // Without dota-bot's load lines (older bots/) there is nothing to check who played each hero.
           intrusos = rival ? [] : /\[bench\] load pid=/.test(log) ? valveIntruders(log, valveTeam) : null;
           tardios = /\[dotabench\] spawn /.test(log) ? lateSpawns(log) : null;
+          sinCompras = idleBuyers(log);
           loggedVariant = parseVariant(log);
           loggedModo = parseModo(log);
           if (opt.observar) {
@@ -885,7 +914,7 @@ async function main(argv) {
         ? `${codigoDespues.replace("+cambios", "")}+cambios` : codigoDespues;
       const motivo = validity({ outcome, roster, variant, loggedVariant, version, firstVersion, modo: opt.modo, loggedModo,
         espejo: opt.espejo ?? "", start, codigo, firstCodigo, couriers, intrusos, tardios, esperado,
-        killsAtStart: killsBeforeHorn(timeline) });
+        killsAtStart: killsBeforeHorn(timeline), sinCompras });
       if (timeline.length) {
         mkdirSync(TIMELINES, { recursive: true });
         writeFileSync(join(TIMELINES, `${opt.etiqueta}-${fecha.replace(/[-:T]/g, "")}-${i + 1}.csv`), timelineCsv(timeline));
