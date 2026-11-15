@@ -2166,3 +2166,21 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
     - patrimonio del mid −2,5k.
 - Decisión: **el paquete 6 cumple y se adopta.** `control_equipo_p6` pasa a ser la referencia. Es el segundo paquete del plan que mueve una métrica de la línea que toca fuera del ruido (kills de la segura y patrimonio de Luna).
 - Queda por diagnosticar, con los registros de `p6`/`p6r2`, la señal de la difícil y el Sniper. Hipótesis sin comprobar: las kills de la segura que antes cerraba el Sniper al rotar ahora las cierran Luna y Lich, y la difícil muere más por azar o por un cambio de rotaciones.
+
+### 2026-11-15 · Diagnóstico de la difícil y el Sniper en el paquete 6 (24 partidas): sin causa leída
+- Pregunta: ¿la señal de la difícil (+1,4 muertes) y del Sniper (−1,25 kills, mid −2,5k) en `p6` tiene causa en el paquete o es ruido? Diagnóstico de un subagente Opus, solo lectura, scripts en el scratchpad de la sesión (`p6diag/`). Sin partidas nuevas.
+- **Sniper:**
+  - en A hizo 28 kills (21 en el mid) y en B, 43 (38 en el mid). La caída es casi toda en el mid, matando al mid rival;
+  - rotando a la segura pierde solo 2 kills (3 frente a 5), mientras la pareja gana 9 (18 frente a 9). Hay robo de kills, pero pequeño: unas 0,17 por partida. El resto de la mejora de la segura es ganancia neta del equipo (+0,58 kills por partida en la segura).
+- **Mid, ruido de una tanda:**
+  - en `p6a` el Sniper perdió el 1 contra 1 en las 4 partidas de las alineaciones a y b (Viper, Lina). Murió solo, sin rotación;
+  - en la réplica, `p6r2a` con el mismo código dio el mejor mid de todas las tandas (9.947 de patrimonio). Con el mismo código, el patrimonio del Sniper va de 7.995 a 9.560 según la tanda.
+- **Difícil (74 muertes en A frente a 57 en B):**
+  - sin rotación rival: 60 frente a 47;
+  - con el soporte rival de nuestra segura pegando: 7 frente a 2. Es el único canal plausible desde el paquete, y explica como mucho +0,4 de las +1,4 por partida;
+  - casi toda la diferencia está en la alineación c (+4,25 por partida: Phantom Assassin y Oracle). Ya antes de t=130 hubo 7 muertes en A frente a 2 en B, antes de que el cambio de la segura pueda llegar a la difícil;
+  - con el mismo código, las muertes de la difícil van de 4,33 a 5,50 por tanda. El +1,42 está a unos 1,3 errores típicos.
+- Decisión: **sin causa leída, sin cambio de código.** El paquete 6 sigue adoptado. Para el próximo paquete se vigilan:
+  - las muertes de la difícil;
+  - las muertes en la difícil con el soporte rival de nuestra segura pegando (B: 2 en 12 partidas). Si esta pasa de unas 0,6 por partida, la presión de la segura estaría empujando al soporte rival a otra línea, y eso sería una causa.
+- Aparte, brecha de la difícil sin relación con el paquete: Lion muere mucho contra Phantom Assassin y Oracle en la alineación c en los dos brazos (15 de 18 muertes de la difícil en B).

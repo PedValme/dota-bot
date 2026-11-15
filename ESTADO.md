@@ -7,7 +7,12 @@
   - **Paquete 6 (kills de la segura, #117-#119) cumple y se adopta: `control_equipo_p6` es la referencia.**
     - Qué hace: Lich no gasta Frost Blast en creeps junto a Luna y no guarda el maná del escudo al intercambiar; Luna usa Eclipse en la línea, como OHA.
     - Resultado en 24 partidas: kills de la segura +0,75 (IC fuera del 0), y Luna +0,9k de patrimonio y +6,8 últimos golpes.
-    - Por vigilar: la difícil muere +1,4 y el Sniper mata −1,25 en las dos rondas, dentro del ruido.
+    - La señal de la difícil (+1,4 muertes) y del Sniper (−1,25 kills) se diagnosticó sin causa leída (MEDICIONES 2026-11-15):
+      - el mid cayó solo en una tanda (`p6a`);
+      - la difícil, casi toda en la alineación c y desde antes de t=130;
+      - el robo de kills del Sniper es pequeño (unas 0,17 por partida).
+
+      En el próximo paquete se vigilan las muertes de la difícil con el soporte rival de nuestra segura pegando (B: unas 0,17 por partida; causa si pasa de 0,6).
   - **Comprobación de validez nueva (#115):** un héroe de dota-bot sin compras hasta t=180 invalida la partida (solo con `--observar`).
   - **Paquete 5 (la segura, #115) cerrado sin cumplir y sin ronda 2:** salir del punto de la torre y no hacer TP sobre dos rivales actúan, pero las muertes no bajan (8,2 frente a 8,0). El diagnóstico dejó el dato más útil: con los mismos héroes, la segura ya muere lo mismo que la de OHA (9,0 frente a 9,2); **lo que le falta son kills** (0,7 frente a 4,2 por línea).
   - **Paquete 4 cerrado, y gana.** La ronda 2 (#111) solo deja seguir o unirse a una apertura si la pareja gana la carrera. `control_equipo_p4` le saca al bot propio sin el paquete +7,2k de patrimonio del equipo, con IC fuera del 0. Es el primer paquete que lo consigue, y es la referencia.
@@ -20,8 +25,9 @@
   - Frente a OHA con los mismos héroes, el equipo sigue por detrás al min 12: con `p4`, unas −3 a −9 kills según la tanda.
 - **Lo aprendido de la medición:** el mismo código (`control_equipo_p4`) dio +2,1k de patrimonio del equipo y +5,4 kills de una tanda a otra (`p4r2a` frente a `g1b`). Una diferencia entre brazos de una sola tanda por debajo de unos 5k no dice nada. Solo vale lo que sale fuera del IC.
 - **Siguiente acción:**
-  1. Diagnosticar en `p6`/`p6r2` la señal de la difícil y el Sniper: ¿las kills de la segura que antes cerraba el Sniper al rotar las cierran ahora Luna y Lich? ¿Por qué muere más la difícil?
-  2. Lo que decida Pedro sobre el siguiente paquete. Recomendado: con los mismos datos de `oha-k`, las rotaciones, que son más o menos la mitad de la brecha de kills de la segura frente a OHA. O que Pedro juegue: la segura ya mata y Luna farmea más.
+  1. Lo que decida Pedro sobre el siguiente paso. Recomendado: que juegue contra `control_equipo_p6`, porque la segura ya mata y Luna farmea más. Después, el siguiente paquete:
+     - las rotaciones, que son más o menos la mitad de la brecha de kills de la segura frente a OHA;
+     - o Lion contra Phantom Assassin y Oracle en la difícil.
 - **Reglas de la tanda:** al terminar cada tanda, `node tools/bench/respaldo.mjs` copia sus registros a `F:\respaldo-dota-bot\observaciones` (DECISIONES 2026-11-14). Cada tanda se revisa por `prop error` antes de leerla. No se edita `bots/` del clon principal mientras juega, y se trabaja en un worktree **sin junctions** hacia datos del clon (ver problemas conocidos).
 - Lo que espera a Pedro vive en OmniBrain: `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
