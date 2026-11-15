@@ -2062,3 +2062,50 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - en esta tanda, B murió solo junto a la torre 0,83 veces por partida, frente a 2,0 en las del diagnóstico. Otra vez, la variación de tanda a tanda es del tamaño del efecto buscado;
   - la caída de últimos golpes de Luna (−5,2, dentro del ruido) va en la dirección que se temía al ceder el punto.
 - Decisión: **el paquete 5 cierra en la ronda 1, sin ronda 2 ni adopción.** No hay causa nueva leída: una segunda ronda solo movería los mismos umbrales (DECISIONES 2026-11-06). Su código queda tras la variante `control_equipo_p5`, y `control_equipo_p4` sigue de referencia. Lo más firme que deja es el diagnóstico: con los mismos héroes, la segura muere lo mismo que la de OHA (9,0 frente a 9,2), y lo que falta son kills (0,7 frente a 4,2 por línea).
+
+### 2026-11-15 · Paquete 6, kills de la segura (`p6a-*` frente a `p6b-*`): especificación de OHA, diagnóstico y predicción antes de lanzar
+- Pregunta: ¿cierra la pareja de la segura más kills si usa sus hechizos como OHA?
+- Especificación nueva de OHA, `oha-k-a/b/c`. Datos de la tanda:
+  - 6 de 6 válidas, código `9d1ee49`;
+  - `--rival dotabot --variantes base_sniper,base`, nuestros cinco héroes contra las alineaciones a, b y c;
+  - CPU media 35-45 %.
+
+  La segura de OHA, con Luna y Lich: 4,5 kills y 7,3 muertes por línea. `linea-dos` cuenta al rival de la línea muerto por cualquiera.
+- Diagnóstico de OHA (6 partidas) frente a nuestro `p4` (16 partidas: `p4r2a`, `g1b-a/b` y `p5b`). Lo hizo un subagente Opus en solo lectura, con scripts en el scratchpad de la sesión:
+  - Daño de la pareja a los rivales, por línea, t 0-600:
+    - con ataques es igual: 2.632 frente a 2.771;
+    - con hechizos, OHA hace 6.467 y nosotros 2.963. Lo que falta: Lucent Beam −1.090, Frost Blast −1.134 y Chain Frost −884.
+  - Rival de la línea por debajo del 50 % a 900 o menos: pasa igual de a menudo (14,5 frente a 12,2 por partida). OHA lo mata el 23 % de las veces y nosotros el 8 %.
+  - OHA mata con la pareja sola 2,0 veces por partida frente a 0,75, y con rotaciones 1,5 + 0,67 frente a 0,31 + 0,13. Las rotaciones son más o menos la mitad de la brecha, y este paquete no las toca.
+  - **Frost Blast de Lich:** a los rivales, 6,8 frente a 12,2 por línea. Con Luna a 1200 o menos, nuestro Lich lo lanza a creeps 5,6 veces por línea, frente a 0,3 de OHA. Al intercambiar golpes, lo lanzó en 1 de 36 ocasiones en que lo tenía listo (maná mediana 180).
+  - **Eclipse de Luna:** lista en 40 de 41 ocasiones con un rival débil a tiro. 1 lanzamiento en 16 partidas, frente a 8 de OHA en 6.
+- Causas en el código:
+  - C1: `lich.lua`, FarmCast. Error al copiar la regla de OHA: la de OHA cuenta al propio Lich entre los aliados cercanos; la nuestra, no;
+  - C2: `lich.lua`, ManaToKeep. Al intercambiar se guardaba el maná del escudo, y OHA no guarda nada en esa situación;
+  - C3: Eclipse solo se lanzaba en el medio juego.
+- Revisión adversarial (Opus):
+  - la condición «aliados ≥ enemigos» de OHA nunca filtra (lee dos veces la misma lista), así que no se copia;
+  - C2 va solo al intercambiar (Harass sigue igual, como la regla de OHA para la línea);
+  - Eclipse va en TradeCast y KillCast, cuando el Beam no sale;
+  - Chain Frost queda para otro paquete.
+- Cambios, variante `control_equipo_p6` = `control_equipo_p4` + `paquete6`. Solo Luna y Lich, y solo en la línea.
+- Diseño: A, `control_equipo_p6` (`p6a-*`), frente a B, `control_equipo_p4` (`p6b-*`), contra `base`, en ABBA, 12 partidas al min 12. Antes, el humo `p6-humo` (alineación c, 2 partidas), cotejado con `p5b-c`.
+- Predicción, mecanismo por línea (A − B):
+
+  | Métrica | B | Predicción para A |
+  |---|---|---|
+  | Frost Blast a creeps con Luna cerca | 5,6 | ≤ 1 |
+  | Frost Blast a los rivales | 6,8 | ≥ 9 |
+  | Eclipse | 0,06 | ≥ 0,8 |
+  | Lucent Beam a los rivales | 10,8 | ≥ 12 |
+  | Rival por debajo del 50 % a 900 o menos que muere | 8 % | ≥ 13 % |
+
+  Kills de la segura: +0,4, solo orientativo. Con 6 partidas por brazo, el IC ronda ±1,2. El daño de hechizos ≥ 3.800 solo comprueba que el cambio actúa.
+- Salvaguardas:
+  - muertes de la segura no peor que +0,6;
+  - difícil ±0,5 muertes;
+  - el Sniper ±0,5 en kills y muertes;
+  - últimos golpes de Luna no peor que −2;
+  - escudo de Lich ≥ 7 por línea;
+  - 0 `prop error`.
+- **Cumple** si se cumplen 4 de las 5 de mecanismo (la del 13 % obligatoria) y todas las salvaguardas.

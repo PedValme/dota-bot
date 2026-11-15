@@ -139,6 +139,10 @@ local function EclipseOn(bot, s, p, e)
 	if radius == nil or radius <= 0 then radius = u:GetAOERadius() end
 	if radius == nil or radius <= 0 or D2(p.loc, e:GetLocation()) > radius then return nil end
 	if e:GetHealth() <= 4 * bot:GetAttackDamage() then return nil end
+	-- Not again within 3 s, nor silenced, hexed or stunned: an order the engine does not take would replace the attack each tick (code
+	-- review; as Dragon Knight's edfAt).
+	if bot:IsSilenced() or bot:IsHexed() or bot:IsStunned() or p.now - (s.eclipseAt or -1000) < 3 then return nil end
+	s.eclipseAt = p.now
 	local reason = string.format('eclipse en la línea sobre %s, vida %d', Short(e), e:GetHealth())
 	if bot:HasScepter() then
 		return { intent = 'rematar', ability = u, target = bot, castPoint = u:GetCastPoint(), reason = reason }
