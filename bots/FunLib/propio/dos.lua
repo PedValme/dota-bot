@@ -28,6 +28,9 @@ local Pareja = require(GetScriptDirectory()..'/FunLib/propio/pareja')
 -- Package 4 (signed by Pedro on 2026-11-14, after the death diagnosis and its adversarial review): only with the variant on.
 local Variant = dofile(GetScriptDirectory()..'/FunLib/bench_variant')
 local P4 = Variant.paquete4 == true
+-- Package 5 (signed in advance by Pedro on 2026-11-15, after the safe lane's death diagnosis and its adversarial review): only the
+-- safe lane's pair (positions 1 and 5), so the hard lane stays as control.
+local P5 = Variant.paquete5 == true
 
 local K = {
 	pairNear = 800,     -- the partner this close (alive, seen) makes hitting a hero allowed: OHA's pairs fight 573-673 apart
@@ -94,6 +97,55 @@ local function Partner(bot)
 		if a ~= bot and not a:IsIllusion() and Heroes.Datos(a:GetUnitName()).pos == want then return a end
 	end
 	return nil
+end
+
+local function SafePair(bot)
+	local pos = Heroes.Datos(bot:GetUnitName()).pos
+	return pos == 1 or pos == 5
+end
+
+-- Package 5, P1: alone by its tower, waiting on the safe spot (linea.lua's retreat, or 'esperar_torre') with an enemy reaching it is
+-- an order that does not move the bot: 20 of the safe pair's 90 deaths in p4 were alone within 900 of our tier 1, at full health,
+-- standing still on the spot while two enemies dived (P of death in 10 s 0,60-0,76 with an enemy at 700 or less, 0,08-0,11 farther;
+-- MEDICIONES 2026-11-15). The bot holds a point behind it, out of every enemy's reach (Perceive's reachNeed, as the pair's 'salir'),
+-- recomputed further back while still reached and never more than aloneFrom behind the spot; it is kept leaveHold after the last
+-- enemy reach or the second enemy in sight, so it does not swing back to the spot (adversarial review). Returns the point or nil.
+function D.BackOff(bot, s, p, spot, home)
+	if not P5 or p.dos == nil or not SafePair(bot) or spot == nil then return nil end
+	local b = s.backOff
+	if b ~= nil and p.now > b.untilT then s.backOff, b = nil, nil end
+	local reached = p.reachNeed > 0
+	if b == nil then
+		if not reached or D2(p.loc, spot) > 350 then return nil end
+		b = { to = Toward(spot, home, math.max(350, p.reachNeed + 100)), untilT = p.now + K.leaveHold }
+		s.backOff = b
+		Log(bot, string.format('salgo_del_punto alcance %d, a %d del punto', p.reachNeed, D2(p.loc, spot)))
+		return b.to
+	end
+	if reached and D2(p.loc, b.to) <= 150 then
+		local back = math.min(D2(spot, b.to) + math.max(350, p.reachNeed + 100), K.aloneFrom)
+		b.to = Toward(spot, home, back)
+		Log(bot, string.format('salgo_del_punto más atrás %d, alcance %d', back, p.reachNeed))
+	end
+	if reached or #(p.enemyHeroes or {}) >= 2 then b.untilT = p.now + K.leaveHold end
+	return b.to
+end
+
+-- Package 5, P3: no teleport back to the safe lane's tower while two or more enemy heroes we see stand within aloneFrom of it and the
+-- partner is dead or farther than aloneFrom from it: 6 of those 20 deaths came by TP with the enemies already at 350-500, and of 64
+-- TPs to the tier 1, 9 of 34 with an enemy near the tower ended in a death within 20 s, against 2 of 30 without (adversarial review).
+-- linea.lua's RuleTeleport only looked around the caster. Returns the reason to log, or nil.
+function D.TeleportBlocked(bot, towerLoc)
+	if not P5 or not SafePair(bot) or towerLoc == nil then return nil end
+	local mate = Partner(bot)
+	local mateOk = mate ~= nil and mate:IsAlive() and D2(mate:GetLocation(), towerLoc) <= K.aloneFrom
+	if mateOk then return nil end
+	local n = 0
+	for _, e in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES) or {}) do
+		if Seen(e) and not e:IsIllusion() and D2(e:GetLocation(), towerLoc) <= K.aloneFrom then n = n + 1 end
+	end
+	if n < 2 then return nil end
+	return string.format('tp_bloqueado %d rivales junto a la torre, pareja %s', n, mate == nil and 'sin' or (mate:IsAlive() and 'lejos' or 'muerta'))
 end
 
 local function Board(lane)
@@ -427,8 +479,9 @@ function D.Act(bot, s, p, home, safeSpot)
 	local enemiesNear = #(p.enemyHeroes or {})
 	-- Alone before two: by its tower, not in the lane, until the partner is back.
 	if mateDist > K.aloneFrom and enemiesNear >= 2 then
-		return { intent = 'esperar_torre', reason = string.format('solo ante %d, pareja a %d', enemiesNear, math.min(mateDist, 99999)),
-			to = safeSpot }
+		local back = D.BackOff(bot, s, p, safeSpot, home)
+		return { intent = 'esperar_torre', reason = string.format('solo ante %d, pareja a %d%s', enemiesNear, math.min(mateDist, 99999),
+			back and ', detrás del punto' or ''), to = back or safeSpot }
 	end
 	-- The core back to its support (the support already keeps near its core, Spot): the pair is the unit.
 	if not p.dos.support and mateDist > K.regroupFrom and mateDist <= K.aloneFrom and enemiesNear >= 1 then

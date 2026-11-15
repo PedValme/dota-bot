@@ -470,6 +470,9 @@ local function RuleRetreat(bot, s, p)
 		if tower ~= nil then spot, name = Toward(tower:GetLocation(), Home(p.team), 250), 'torre_cercana'
 		else spot, name = Fountain(p.team), 'fuente' end
 	end
+	-- Package 5, P1 (dos.lua, BackOff): already on the spot with an enemy reaching it, a point behind it instead of standing still.
+	local back = not s.late and Dos.BackOff(bot, s, p, spot, Home(p.team)) or nil
+	if back ~= nil then return { intent = 'retirada', reason = reason .. ' -> detrás de ' .. name, to = back } end
 	return { intent = 'retirada', reason = reason .. ' -> ' .. name, to = spot }
 end
 
@@ -708,6 +711,12 @@ local function RuleTeleport(bot, s, p)
 		if Valid(tower) then
 			if D2(p.loc, tower:GetLocation()) < K.tpFrom then return nil end
 			if s.late and Medio.Risk(bot, tower:GetLocation()) >= K.tpRisk then return nil end
+			-- Package 5, P3 (dos.lua, TeleportBlocked): not onto two enemies by the tower with the partner away. Said once in 5 s.
+			local blocked = not s.late and Dos.TeleportBlocked(bot, tower:GetLocation()) or nil
+			if blocked ~= nil then
+				if p.now - (s.tpBlockLogAt or -1000) >= 5 then s.tpBlockLogAt = p.now Log(s, bot, 'tp_bloqueado', blocked) end
+				return nil
+			end
 			s.tpAt = p.now
 			return { intent = 'teleporte', item = item, at = tower:GetLocation(),
 				reason = string.format('a %d del frente, a la torre %d', D2(p.loc, p.front), t) }

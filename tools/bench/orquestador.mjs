@@ -181,6 +181,10 @@ export const VARIANTS = {
   // (Raindrops for Luna); on control_equipo, only B and E (A needs package 4's press in the lane of two).
   control_equipo_g1: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", paquete4: true, guias1: true,
     guias1_presion: true, empuje: false, thinkless: 1 },
+  // Package 5 (signed in advance by Pedro on 2026-11-15): on control_equipo_p4, the safe pair holds a point behind its tower when an
+  // enemy reaches the spot, and does not teleport onto two enemies by it with the partner away (dos.lua, BackOff and TeleportBlocked).
+  control_equipo_p5: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", paquete4: true, paquete5: true,
+    empuje: false, thinkless: 1 },
   control_equipo_g1b: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", guias1: true, empuje: false,
     thinkless: 1 },
   // The own Sniper with its fighting off (no kills, abilities on heroes or trades), to measure what fighting costs in
