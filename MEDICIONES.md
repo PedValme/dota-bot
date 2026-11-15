@@ -2144,3 +2144,25 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
 - Decisión: la ronda 2 es una **réplica con el mismo código**: no se toca ningún umbral, y la firma permite 2 rondas. Etiquetas `p6r2a-*` y `p6r2b-*`, mismo diseño ABBA. Regla escrita antes de lanzar:
   - **cumple** si, juntando las 24 partidas (12 + 12), el patrimonio del equipo A − B tiene IC que incluye el 0 o es positivo, las kills de la segura son ≥ +0,5 y las muertes de la segura no peor que 0;
   - si el patrimonio del equipo vuelve a salir con IC por debajo del 0, no se adopta, y se diagnostica antes de seguir cómo un cambio en Luna y Lich podría afectar al Sniper y a la difícil.
+- Resultado de la ronda 2, la réplica. Datos de la tanda:
+  - código `0a0d593` (el mismo `bots/` que la ronda 1), 12 de 12 válidas, **0 `prop error`**;
+  - CPU media 36-45 % y máxima 43-75 %.
+  - Ronda 2 sola, A − B:
+    - segura: kills +0,5, muertes +0,5 y patrimonio +2,3k;
+    - difícil: muertes +2,0;
+    - equipo: patrimonio +0,8k, de −6,3k a 7,9k, que ya no sale con IC por debajo de 0.
+- Las 24 partidas juntas (12 + 12), con la regla escrita antes:
+
+  | Criterio | Resultado | ¿Cumple? |
+  |---|---|---|
+  | Patrimonio del equipo con IC que incluya el 0 o positivo | −3,0k (de −8,9k a 3,0k) | sí |
+  | Kills de la segura ≥ +0,5 | +0,75 (de 0,20 a 1,30, fuera del 0) | sí |
+  | Muertes de la segura no peor que 0 | −0,5 (de −3,2 a 2,2) | sí |
+
+  - Fuera del ruido, a favor: Luna +0,9k de patrimonio (de 0,14k a 1,67k) y +6,8 últimos golpes (de 2,6 a 11,0).
+  - Dentro del ruido, pero en la misma dirección en las dos rondas, en líneas que el código no toca:
+    - muertes de la difícil +1,4 (de −1,2 a 4,0);
+    - kills del Sniper −1,25 (de −3,7 a 1,2);
+    - patrimonio del mid −2,5k.
+- Decisión: **el paquete 6 cumple y se adopta.** `control_equipo_p6` pasa a ser la referencia. Es el segundo paquete del plan que mueve una métrica de la línea que toca fuera del ruido (kills de la segura y patrimonio de Luna).
+- Queda por diagnosticar, con los registros de `p6`/`p6r2`, la señal de la difícil y el Sniper. Hipótesis sin comprobar: las kills de la segura que antes cerraba el Sniper al rotar ahora las cierran Luna y Lich, y la difícil muere más por azar o por un cambio de rotaciones.

@@ -154,5 +154,8 @@ Son la especificación de la reescritura, no su base: se copia lo que gana y se 
 - 2026-11-15, paquete 5 (la segura: salir del punto de la torre y no hacer TP sobre dos rivales): ronda 1 sin cumplir y sin ronda 2. Las reglas
   actúan, pero las muertes no bajan. Diagnóstico: la segura ya muere lo mismo que la de OHA con los mismos héroes; lo que falta son kills
   (0,7 frente a 4,2 por línea). Se queda tras su variante (MEDICIONES 2026-11-15).
+- 2026-11-15, paquete 6 (kills de la segura: los hechizos de Luna y Lich como OHA, con especificación nueva `oha-k`): **cumple** en 24
+  partidas (ronda 1 y réplica). Kills de la segura +0,75 (IC fuera del 0), y Luna +0,9k de patrimonio y +6,8 últimos golpes. Se adopta:
+  `control_equipo_p6` es la referencia. Por vigilar: la difícil muere +1,4 y el Sniper mata −1,25 en las dos rondas, dentro del ruido.
 
 **Herramienta:** el mismo análisis lee los brazos del bot propio, y cada versión se compara con `oha-dos-*` en estas métricas. La medición que decide sigue siendo `equipo.mjs`.

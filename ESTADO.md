@@ -4,6 +4,10 @@
 ## Próxima sesión
 - **Qué se estaba haciendo:** el plan de mejora del equipo propio (`trabajo/plan-mejora-equipo.md`, DECISIONES 2026-11-13). Meta: ganar con sobra al equipo de OHA, con cada cambio medido cara a cara, en orden ABBA y con `tools/bench/equipo.mjs`.
 - **Dónde quedó (noches del 2026-11-14 y 2026-11-15, MEDICIONES):**
+  - **Paquete 6 (kills de la segura, #117-#119) cumple y se adopta: `control_equipo_p6` es la referencia.**
+    - Qué hace: Lich no gasta Frost Blast en creeps junto a Luna y no guarda el maná del escudo al intercambiar; Luna usa Eclipse en la línea, como OHA.
+    - Resultado en 24 partidas: kills de la segura +0,75 (IC fuera del 0), y Luna +0,9k de patrimonio y +6,8 últimos golpes.
+    - Por vigilar: la difícil muere +1,4 y el Sniper mata −1,25 en las dos rondas, dentro del ruido.
   - **Comprobación de validez nueva (#115):** un héroe de dota-bot sin compras hasta t=180 invalida la partida (solo con `--observar`).
   - **Paquete 5 (la segura, #115) cerrado sin cumplir y sin ronda 2:** salir del punto de la torre y no hacer TP sobre dos rivales actúan, pero las muertes no bajan (8,2 frente a 8,0). El diagnóstico dejó el dato más útil: con los mismos héroes, la segura ya muere lo mismo que la de OHA (9,0 frente a 9,2); **lo que le falta son kills** (0,7 frente a 4,2 por línea).
   - **Paquete 4 cerrado, y gana.** La ronda 2 (#111) solo deja seguir o unirse a una apertura si la pareja gana la carrera. `control_equipo_p4` le saca al bot propio sin el paquete +7,2k de patrimonio del equipo, con IC fuera del 0. Es el primer paquete que lo consigue, y es la referencia.
@@ -16,7 +20,8 @@
   - Frente a OHA con los mismos héroes, el equipo sigue por detrás al min 12: con `p4`, unas −3 a −9 kills según la tanda.
 - **Lo aprendido de la medición:** el mismo código (`control_equipo_p4`) dio +2,1k de patrimonio del equipo y +5,4 kills de una tanda a otra (`p4r2a` frente a `g1b`). Una diferencia entre brazos de una sola tanda por debajo de unos 5k no dice nada. Solo vale lo que sale fuera del IC.
 - **Siguiente acción:**
-  1. Lo que decida Pedro (sin P-n: OmniBrain rechazó el registro, falta el campo `tipo` en la herramienta). Recomendado: un paquete de kills para la segura, con el mismo método (diagnóstico de las peleas con OHA como especificación, revisión adversarial y ronda medida). La pregunta es por qué OHA cierra 4,2 kills por línea con Luna y Lich, y nosotros 0,7.
+  1. Diagnosticar en `p6`/`p6r2` la señal de la difícil y el Sniper: ¿las kills de la segura que antes cerraba el Sniper al rotar las cierran ahora Luna y Lich? ¿Por qué muere más la difícil?
+  2. Lo que decida Pedro sobre el siguiente paquete. Recomendado: con los mismos datos de `oha-k`, las rotaciones, que son más o menos la mitad de la brecha de kills de la segura frente a OHA. O que Pedro juegue: la segura ya mata y Luna farmea más.
 - **Reglas de la tanda:** al terminar cada tanda, `node tools/bench/respaldo.mjs` copia sus registros a `F:\respaldo-dota-bot\observaciones` (DECISIONES 2026-11-14). Cada tanda se revisa por `prop error` antes de leerla. No se edita `bots/` del clon principal mientras juega, y se trabaja en un worktree **sin junctions** hacia datos del clon (ver problemas conocidos).
 - Lo que espera a Pedro vive en OmniBrain: `omnibrain_esperas` con repo `dota-bot`, o «Te espera» en el panel.
 
@@ -41,9 +46,10 @@ mejorar a `base` (11 de 32 frente a 12 de 32; regala ventajas sin edificios, MED
 - 2026-11-06/12 · Evaluación adversarial (#84); banco con tienda universal (#85); base nueva (#86); «con el equipo» (#87); selección del lobby (#88); retoque (#90); marcador de fin de partida (#91); build según los enemigos, Shrapnel por cargas y daño a edificios (#92); partidas de Pedro (#89, #93); paquete de varias mejoras (#95); fase 2, base y cuatro héroes (#97); plan de mejora, análisis fijo y A contra A (#99); paquetes 1 y 2, medidos sin mejora (#100); registro fino y estudio de OHA en las líneas de dos (#101); capa de la línea de dos, TP a la fuente y sombra, 2 rondas sin cumplir (#103); paquete 3, héroes, sin cumplir (#105); paquete 4, la pareja sigue sus aperturas, ronda 1 (#108).
 - 2026-11-14 · Paquete 4, ronda 2, cerrado y adoptado como referencia (#111); piloto de guías de YouTube: 28 transcripciones, tablas de los cinco héroes y paquete `guias1`, medido sin cumplir (#112).
 - 2026-11-15 · Respaldo de los registros (#114); comprobación de validez de compras y paquete 5 de la segura, medido sin cumplir (#115).
+- 2026-11-15 · Especificación `oha-k` y paquete 6, kills de la segura: cumple en 24 partidas y se adopta (#117-#119).
 
 ## Siguientes pasos
-1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): un paquete de kills para la segura sobre `control_equipo_p4` (ver «Próxima sesión»).
+1. Plan de mejora del equipo (`trabajo/plan-mejora-equipo.md`): el siguiente paquete sobre `control_equipo_p6` (ver «Próxima sesión»).
 2. Medio juego del Sniper: farm frente a presencia y las rotaciones, con lo que Pedro vea al jugar contra el equipo.
 3. Revisar otros bots de la comunidad (Ranked Matchmaking AI, BOT Experiment, New Beginner AI, ExtremePush) al llegar a
    peleas, objetos o estrategia (DECISIONES 2026-11-03).
