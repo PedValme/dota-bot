@@ -185,6 +185,10 @@ export const VARIANTS = {
   // enemy reaches the spot, and does not teleport onto two enemies by it with the partner away (dos.lua, BackOff and TeleportBlocked).
   control_equipo_p5: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", paquete4: true, paquete5: true,
     empuje: false, thinkless: 1 },
+  // Package 6 (DECISIONES 2026-11-15): on control_equipo_p4, the safe pair's spells for kills: Lich's Frost Blast not on creeps next to
+  // Luna, not held for the shield's mana in a trade, and Luna's Eclipse in the lane (lich.lua, luna.lua).
+  control_equipo_p6: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", paquete4: true, paquete6: true,
+    empuje: false, thinkless: 1 },
   control_equipo_g1b: { control_completo: "luna,sniper,dragon_knight,lion,lich", linea_heroe: "sniper", guias1: true, empuje: false,
     thinkless: 1 },
   // The own Sniper with its fighting off (no kills, abilities on heroes or trades), to measure what fighting costs in
