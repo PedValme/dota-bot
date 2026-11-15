@@ -2005,3 +2005,37 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - B sola aportaría como mucho unos +100-150 de oro por partida, muy por debajo de lo detectable (unos 5k);
   - el código queda tras sus variantes, sin adoptarse, y `control_equipo_p4` sigue de referencia;
   - lectura del piloto: con transcripciones, las guías dan reglas genéricas que el bot o ya cumple o no puede ejecutar bien (presionar a medias, tirar campamentos sin la mecánica), y las que se programaron no movieron el resultado. La recomendación a Pedro es no extrapolarlo a más héroes en esta forma. El plan del piloto (`trabajo/guias-youtube.md`) se borra al cerrarse; las tablas y el resumen siguen en `trabajo/guias/` como datos.
+
+### 2026-11-15 · Paquete 5, la línea segura (`p5a-*` frente a `p5b-*`): diagnóstico y predicción antes de lanzar
+- Pregunta: ¿muere menos la pareja de la segura (Luna y Lich) cuando queda sola junto a su torre, sin perder farm ni experiencia?
+- Diagnóstico de 90 muertes de Luna y Lich hasta t=720 en 10 partidas de `control_equipo_p4` (`p4r2a` y `g1b-a/b`; `g1b-c` fuera). Lo hizo un subagente Opus en solo lectura, con scripts en el scratchpad de la sesión:
+  - 45 muertes con la pareja junta ante 2 rivales: sin causa sólida. La probabilidad de morir en 10 s ronda 0,2 con cualquier decisión. Es un 2 contra 2 perdido por héroes y nivel.
+  - 34 muertes solas (compañero muerto, en la base o a más de 1200), 20 de ellas a 900 o menos de nuestra torre 1:
+    - llegan con la vida entera, y la torre pega a los rivales en 18 de 20: son zambullidas bajo torre;
+    - el bot está quieto en el punto seguro, porque «retirada → torre» o `esperar_torre` ya lo dejan ahí;
+    - probabilidad de morir en 10 s: 0,60-0,76 con un rival a 700 o menos, y 0,08-0,11 más lejos;
+    - 6 de las 20 llegaron por TP con los rivales ya a 350-500.
+  - TP a la torre 1: con un rival a 1500 o menos de la torre, 9 de 34 acaban en muerte en menos de 20 s; sin rival, 2 de 30. `RuleTeleport` solo miraba alrededor de quien lanza.
+  - Con los mismos héroes, OHA murió 9,2 veces y mató 4,2 por línea (MEDICIONES 2026-11-13); nosotros, 9,0 y 0,7. Las muertes ya están a la par, y lo que falta son kills.
+  - Viva, Luna farmea a la par (3,0 últimos golpes por minuto en la línea). La pérdida de patrimonio sale casi toda de las muertes: unos 0,77k por muerte.
+- Revisión adversarial (Opus):
+  - descartó seguir aperturas solo con margen de 1,3: 23 % de muertes frente a 19 %, sin diferencia significativa, y endurecería otra vez la misma puerta;
+  - corrigió la oscilación de la salida;
+  - añadió el bloqueo del TP.
+- Cambios, variante `control_equipo_p5` = `control_equipo_p4` + `paquete5`, solo en las posiciones 1 y 5:
+  - P1: en el punto seguro con un rival que lo alcanza, sostiene un punto detrás, fuera de su alcance (`dos.lua`, `BackOff`). Lo recalcula más atrás, como mucho hasta 1500 del punto, y lo mantiene 3 s tras el último alcance;
+  - P3: no hace TP a la torre de la línea si hay 2 rivales visibles a 1500 o menos y la pareja está muerta o lejos (`dos.lua`, `TeleportBlocked`).
+- Diseño: A, `control_equipo_p5` (`p5a-*`), frente a B, `control_equipo_p4` (`p5b-*`), contra `base`, en ABBA, 12 partidas al min 12. Antes, el humo `p5-humo`, cotejado con `p4r2a-a`. Comprobación de validez nueva: héroe de dota-bot sin compras hasta t=180.
+- Predicción (A − B):
+  - mecanismo:
+    - muertes solas a 900 o menos de la torre 1: de 2,0 a 1,3 o menos por partida;
+    - muertes en menos de 20 s tras un TP a la torre 1: de unas 1,1 a 0,5 o menos;
+    - muertes solas de la pareja en total: de 3,4 a 2,8 o menos, para que la muerte no se mude a otro sitio;
+  - resultado: segura −0,6 muertes por partida y +0,3 a 0,5k de patrimonio (punto estimado). El equipo, dentro del ruido: no decide.
+- Salvaguardas:
+  - últimos golpes de Luna no peor que −2;
+  - nivel de Luna y de Lich no peor que −0,5;
+  - TP de vuelta, al menos el 60 % de B;
+  - difícil ±0,5 muertes;
+  - 0 `prop error`.
+- **Cumple** si se cumplen las tres de mecanismo y todas las salvaguardas, y el punto estimado de muertes de la segura es ≤ −0,3.

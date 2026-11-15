@@ -127,7 +127,9 @@ function D.BackOff(bot, s, p, spot, home)
 		b.to = Toward(spot, home, back)
 		Log(bot, string.format('salgo_del_punto más atrás %d, alcance %d', back, p.reachNeed))
 	end
-	if reached or #(p.enemyHeroes or {}) >= 2 then b.untilT = p.now + K.leaveHold end
+	-- Renewed only while an enemy still reaches us: 'esperar_torre' always has two in sight, and renewing on that walked the bot up to
+	-- 1500 back, out of the lane's experience (code review).
+	if reached then b.untilT = p.now + K.leaveHold end
 	return b.to
 end
 
