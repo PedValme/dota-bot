@@ -2039,3 +2039,26 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - difícil ±0,5 muertes;
   - 0 `prop error`.
 - **Cumple** si se cumplen las tres de mecanismo y todas las salvaguardas, y el punto estimado de muertes de la segura es ≤ −0,3.
+- Humo `p5-humo` (código `95c0528`, 2 de 2 válidas, 0 `prop error`). Se jugó contra la alineación b (Axe y Jakiro), donde más muertes junto a la torre hubo, y se cotejó con `p4r2a-b` en vez de `p4r2a-a`.
+  - Las reglas actúan: 8 `salgo_del_punto` y 3 `tp_bloqueado`.
+  - Muertes de la segura: 10,0 frente a 15,5 (Lich 4,5 frente a 9,5). Últimos golpes de Luna +1. La difícil, 4,0 frente a 6,5.
+  - Pasa la puerta.
+- Resultado de la ronda 1. Datos de la tanda:
+  - código `95c0528`, 12 de 12 válidas (ya con la comprobación de compras), **0 `prop error`**;
+  - CPU media 33-50 % y máxima 35-75 %: la PC estuvo libre.
+
+  | Métrica (A `p5a` / B `p5b`) | Resultado | Predicción | ¿Cumple? |
+  |---|---|---|---|
+  | Muertes de la segura por línea | 8,2 / 8,0 (`equipo.mjs`: 0,0, de −5,4 a 5,4) | −0,6 | no |
+  | Muertes solas a 900 o menos de la torre 1, por partida | 1,33 / 0,83 | ≤ 1,3 y por debajo de B | no |
+  | Muertes en 20 s tras un TP a la torre 1, por partida | 1,0 / 0,83 | ≤ 0,5 | no |
+  | TP de vuelta | 34 / 29 | al menos el 60 % de B | sí |
+  | Últimos golpes de Luna; niveles de Luna y Lich | −5,2; −0,5 y +1,2 | no peor que −2; −0,5 | no (Luna) |
+  | Muertes de la difícil | +1,2 | ±0,5 | no |
+  | Patrimonio de la segura y del equipo | +0,5k; −1,5k | punto, sin decidir | dentro del ruido |
+
+- Lectura:
+  - las reglas actúan, pero no salvan: las muertes solas junto a la torre no bajan frente a B;
+  - en esta tanda, B murió solo junto a la torre 0,83 veces por partida, frente a 2,0 en las del diagnóstico. Otra vez, la variación de tanda a tanda es del tamaño del efecto buscado;
+  - la caída de últimos golpes de Luna (−5,2, dentro del ruido) va en la dirección que se temía al ceder el punto.
+- Decisión: **el paquete 5 cierra en la ronda 1, sin ronda 2 ni adopción.** No hay causa nueva leída: una segunda ronda solo movería los mismos umbrales (DECISIONES 2026-11-06). Su código queda tras la variante `control_equipo_p5`, y `control_equipo_p4` sigue de referencia. Lo más firme que deja es el diagnóstico: con los mismos héroes, la segura muere lo mismo que la de OHA (9,0 frente a 9,2), y lo que falta son kills (0,7 frente a 4,2 por línea).

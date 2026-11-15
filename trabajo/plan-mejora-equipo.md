@@ -151,5 +151,8 @@ Son la especificación de la reescritura, no su base: se copia lo que gana y se 
     bot propio sin el paquete +7,2k de patrimonio del equipo (IC fuera del 0), y la segura deja de morir de más. Es la referencia desde ahora.
 - 2026-11-14, paquete de guías de YouTube (`guias1`, `trabajo/guias/`): ronda 1 sin cumplir y sin ronda 2. La presión lejana del DK y las
   Raindrops cuestan y no dan nada; Breathe Fire a creeps es neutro. Se queda tras su variante, sin adoptarse (MEDICIONES 2026-11-14).
+- 2026-11-15, paquete 5 (la segura: salir del punto de la torre y no hacer TP sobre dos rivales): ronda 1 sin cumplir y sin ronda 2. Las reglas
+  actúan, pero las muertes no bajan. Diagnóstico: la segura ya muere lo mismo que la de OHA con los mismos héroes; lo que falta son kills
+  (0,7 frente a 4,2 por línea). Se queda tras su variante (MEDICIONES 2026-11-15).
 
 **Herramienta:** el mismo análisis lee los brazos del bot propio, y cada versión se compara con `oha-dos-*` en estas métricas. La medición que decide sigue siendo `equipo.mjs`.
