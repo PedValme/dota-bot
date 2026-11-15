@@ -6,13 +6,13 @@ import { schedule, launchArgs, gsiConfig, readGsi, isFinished, csvRow, drawHeroe
   cutReached, parseFixedHeroes, laneHeroProblem, idleBuyers } from "./orquestador.mjs";
 
 test("a bot hero with no purchase by t=180 makes the match invalid; without observer lines it is not judged", () => {
-  const roster = (pid, bot = 1) => `[VScript] [dotabench] roster team=2 pid=${pid} bot=${bot} hero=npc_dota_hero_luna name=`;
+  const load = (pid) => `[VScript] [bench] load pid=${pid} team=2 npc_dota_hero_luna`;
   const buy = (t, pid) => `[VScript] [dotabench] obs t=${t} buy pid=${pid} luna item_tango cost=90`;
   const obs = "[VScript] [dotabench] obs t=1 hero pid=1 team=2 luna lvl=1";
-  // pid 1 bought before the horn, 2 only after t=180, 3 never; 0 is a human (bot=0) and is not judged.
-  const log = [roster(0, 0), roster(1), roster(2), roster(3), obs, buy(-56, 1), buy(240, 2)].join("\r\n");
+  // pid 1 bought before the horn, 2 only after t=180, 3 never; 4 is not dota-bot's (no load line: a Valve bot) and is not judged.
+  const log = [load(1), load(2), load(3), obs, buy(-56, 1), buy(240, 2)].join("\r\n");
   assert.deepEqual(idleBuyers(log), ["2", "3"]);
-  assert.equal(idleBuyers([roster(1)].join("\n")), null);
+  assert.equal(idleBuyers([load(1)].join("\n")), null);
   const R = ["luna", "lina", "axe", "lion", "lich"];
   const D = ["sven", "zuus", "tidehunter", "bane", "oracle"];
   const start = { radiant: 5, dire: 5, heroesRadiant: R, heroesDire: D, nwRadiant: 3005, nwDire: 3005 };

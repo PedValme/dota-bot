@@ -536,9 +536,10 @@ export const NO_BUY_BY = 180;
 export function idleBuyers(text) {
   if (!/\[dotabench\] obs t=/.test(text)) return null;
   const lines = text.split(/\r?\n/);
+  // Only dota-bot's heroes (a "[bench] load pid=" line): whether Valve's bots leave buy lines is not seen yet (review, 2026-11-15).
   const bots = new Set();
   for (const line of lines) {
-    const r = line.match(/\[dotabench\] roster team=\d pid=(\d+) bot=1/);
+    const r = line.match(/\[bench\] load pid=(\d+) /);
     if (r) bots.add(r[1]);
   }
   const bought = new Set();
