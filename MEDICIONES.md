@@ -2109,3 +2109,38 @@ se vieron, y por eso **ninguna sirve para elegir entre variantes**:
   - escudo de Lich ≥ 7 por línea;
   - 0 `prop error`.
 - **Cumple** si se cumplen 4 de las 5 de mecanismo (la del 13 % obligatoria) y todas las salvaguardas.
+- Humo `p6-humo` (código `cb392f4`, alineación c, 2 de 2 válidas, 0 `prop error`), frente a `p5b-c`:
+  - Frost Blast de Lich, por línea: 19 a rivales frente a 10, y 8 a creeps frente a 19;
+  - Eclipse 1,5 por línea frente a 0, y la línea «eclipse en la línea» sale en el registro;
+  - segura: 0,5 kills y 6,0 muertes, frente a 2,5 y 7,0 (n = 2);
+  - daño de hechizos 3.141 frente a 3.130.
+
+  Mecanismo a la par o mejor, y kills dentro del ruido: se lanza la ronda.
+- Resultado de la ronda 1. Datos de la tanda:
+  - código `cb392f4`, 12 de 12 válidas, **0 `prop error`**;
+  - CPU media 35-49 % y máxima 39-81 %.
+
+  | Métrica (A `p6a` / B `p6b`) | Resultado | Predicción | ¿Cumple? |
+  |---|---|---|---|
+  | Rival por debajo del 50 % a 900 o menos que muere | 13 % (10 de 79) / 8 % (7 de 88) | ≥ 13 % | sí |
+  | Frost Blast a los rivales, por línea | 9,5 / 7,2 | ≥ 9 | sí |
+  | Eclipse, por línea | 1,5 / 0 | ≥ 0,8 | sí |
+  | Frost Blast a creeps, por línea (total, también sin Luna cerca) | 2,8 / 8,3 | ≤ 1 con Luna cerca | probable; sin desglosar |
+  | Lucent Beam a los rivales, por línea | 10,5 / 9,8 | ≥ 12 | no |
+  | Muertes de la segura | 7,0 / 8,5 (−1,5; de −4,8 a 1,8) | no peor que +0,6 | sí |
+  | Últimos golpes de Luna | +1,3 | no peor que −2 | sí |
+  | Escudo de Lich | 7,8 por línea | ≥ 7 | sí |
+  | Muertes de la difícil | +0,8 | ±0,5 | **no** |
+  | Kills del Sniper | −2,0 (de −4,2 a 0,2) | ±0,5 | **no** |
+
+  - Segura: kills 1,8 frente a 0,8 (+1,0, de −0,5 a 2,5); daño de hechizos de la pareja 3.851 frente a 3.055.
+  - En los episodios de rival débil, los nuestros muertos bajan de 24 a 11.
+  - Lich muere −1,7 (de −3,25 a −0,09, fuera del 0). Patrimonio de la segura +0,5k.
+  - Equipo: patrimonio −6,8k (de −12,7k a −0,8k), por la difícil (−2,3k) y el mid. El paquete no toca ninguna de las dos líneas.
+- Lectura:
+  - el mecanismo actúa como se predijo, y la segura mejora en todo lo que el paquete toca;
+  - las dos salvaguardas que fallan están en líneas cuyo código no cambia: el Sniper (pos 2) y la difícil (pos 3 y 4) son el mismo código en los dos brazos;
+  - con el ruido de tanda medido esta semana (+2,1k y +5,4 kills con el mismo código), lo más probable es la suerte de tanda. Con una sola tanda no se puede afirmar.
+- Decisión: la ronda 2 es una **réplica con el mismo código**: no se toca ningún umbral, y la firma permite 2 rondas. Etiquetas `p6r2a-*` y `p6r2b-*`, mismo diseño ABBA. Regla escrita antes de lanzar:
+  - **cumple** si, juntando las 24 partidas (12 + 12), el patrimonio del equipo A − B tiene IC que incluye el 0 o es positivo, las kills de la segura son ≥ +0,5 y las muertes de la segura no peor que 0;
+  - si el patrimonio del equipo vuelve a salir con IC por debajo del 0, no se adopta, y se diagnostica antes de seguir cómo un cambio en Luna y Lich podría afectar al Sniper y a la difícil.
