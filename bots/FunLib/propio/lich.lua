@@ -2,6 +2,9 @@
 -- reason, or nil. Ranges, cast points, costs and damage are read live from the engine (GetCastRange, GetCastPoint,
 -- GetSpecialValueInt), never from a table, so a patch that changes them changes the bot.
 local H = {}
+-- Package 6, kills in the safe lane (DECISIONES 2026-11-15; diagnosis and adversarial review in MEDICIONES 2026-11-15): only with the
+-- variant on.
+local P6 = dofile(GetScriptDirectory()..'/FunLib/bench_variant').paquete6 == true
 
 -- What the shared code reads of each hero (heroes.lua): position, role, level-up order, starting items, fixed item list (when
 -- the build profile gives none), Treads' stat and parts.
@@ -60,12 +63,12 @@ end
 
 -- The mana to keep for Chain Frost, and Frost Shield once learned: Chain Frost's cost once learned and nearly off cooldown. Frost Blast
 -- spent at will in lane left no mana for the ultimate when a fight came.
-local function ManaToKeep(bot)
+local function ManaToKeep(bot, noShield)
 	local keep = 0
 	local u = bot:GetAbilityByName('lich_chain_frost')
 	if u ~= nil and u:GetLevel() > 0 and u:GetCooldownTimeRemaining() <= 10 then keep = keep + u:GetManaCost() end
 	local w = bot:GetAbilityByName('lich_frost_shield')
-	if w ~= nil and w:GetLevel() > 0 then keep = keep + w:GetManaCost() end
+	if not noShield and w ~= nil and w:GetLevel() > 0 then keep = keep + w:GetManaCost() end
 	return keep
 end
 
@@ -174,7 +177,9 @@ end
 function H.TradeCast(bot, s, p, e)
 	local a = Ready(bot, 'lich_frost_nova')
 	if a == nil or not Castable(e) or e:IsIllusion() or D2(p.loc, e:GetLocation()) > a:GetCastRange() + 30 then return nil end
-	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
+	-- Package 6, C2: in the lane, the trade does not keep the shield's mana, as OHA's IsGoingOnSomeone keeps none (Harass still does,
+	-- as OHA's laning rule asks over half the mana): 1 Frost Blast in 36 trades with it free, with 180 mana (p4 logs).
+	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot, P6 and not p.late) then return nil end
 	local mana = bot:GetMana() / math.max(bot:GetMaxMana(), 1)
 	if not (a:GetLevel() >= 2 or mana > 0.68 or e:GetHealth() < 0.48 * e:GetMaxHealth() or p.hp < 0.28) then return nil end
 	return { intent = ON_UNIT, ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = 0,
@@ -186,7 +191,9 @@ end
 -- hero is hitting, and only with at most one allied hero near, as OHA asks.
 function H.FarmCast(bot, s, p)
 	local a = Ready(bot, 'lich_frost_nova')
-	if a == nil or #(p.allyHeroes or {}) > 1 then return nil end
+	-- Package 6, C1: OHA's «#hAllyList <= 1» counts Lich itself (GetAlliesNearLoc), so it farms only with no ally near; p.allyHeroes
+	-- leaves the bot out, and «> 1» let Lich farm with Frost Blast next to Luna (5,6 a lane, OHA 0,3).
+	if a == nil or #(p.allyHeroes or {}) > (P6 and 0 or 1) then return nil end
 	local dmg = BlastDamage(a)
 	for _, c in ipairs(p.enemyCreeps) do
 		if Castable(c) and D2(p.loc, c:GetLocation()) <= math.min(800, a:GetCastRange() + 200) then

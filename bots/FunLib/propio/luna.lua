@@ -4,6 +4,8 @@
 -- Moon Glaives and Lunar Blessing are passive: the attack itself carries them, and the main target of an attack takes its full
 -- damage, which combate.lua already counts from GetAttackDamage. Lunar Orbit has no rule yet.
 local H = {}
+-- Package 6, kills in the safe lane (DECISIONES 2026-11-15): only with the variant on.
+local P6 = dofile(GetScriptDirectory()..'/FunLib/bench_variant').paquete6 == true
 
 -- What the shared code reads of each hero (heroes.lua): position, role, level-up order, starting items, fixed item list (when
 -- the build profile gives none), Treads' stat, and the starting parts not bought again for the first item.
@@ -125,12 +127,34 @@ function H.Harass(bot, s, p)
 	return nil
 end
 
+-- Package 6, C3: Eclipse in the lane on the hero we trade with or kill, as OHA's ConsiderEclipse under IsGoingOnSomeone (hero_luna.lua
+-- ~550-575): the target within Eclipse's radius, castable, and with more health than four of Luna's attacks. OHA's «allies >= enemies»
+-- there reads the same list twice and never filters (adversarial review), so it is not copied. It was ready in 40 of 41 chances with a
+-- weak rival in reach and cast once in 16 matches (OHA: 8 in 6).
+local function EclipseOn(bot, s, p, e)
+	if not P6 or p.late or e == nil or not Seen(e) or e:IsIllusion() or e:IsMagicImmune() or e:IsInvulnerable() then return nil end
+	local u = bot:GetAbilityByName('luna_eclipse')
+	if u == nil or u:GetLevel() == 0 or not u:IsFullyCastable() then return nil end
+	local radius = u:GetSpecialValueInt('radius')
+	if radius == nil or radius <= 0 then radius = u:GetAOERadius() end
+	if radius == nil or radius <= 0 or D2(p.loc, e:GetLocation()) > radius then return nil end
+	if e:GetHealth() <= 4 * bot:GetAttackDamage() then return nil end
+	-- Not again within 3 s, nor silenced, hexed or stunned: an order the engine does not take would replace the attack each tick (code
+	-- review; as Dragon Knight's edfAt).
+	if bot:IsSilenced() or bot:IsHexed() or bot:IsStunned() or p.now - (s.eclipseAt or -1000) < 3 then return nil end
+	s.eclipseAt = p.now
+	local reason = string.format('eclipse en la línea sobre %s, vida %d', Short(e), e:GetHealth())
+	if bot:HasScepter() then
+		return { intent = 'rematar', ability = u, target = bot, castPoint = u:GetCastPoint(), reason = reason }
+	end
+	return { intent = 'apuntar', ability = u, castPoint = u:GetCastPoint(), reason = reason }
+end
+
 -- Package 3: Lucent Beam on the hero we trade hits with (linea.lua's 'acosar'), as OHA casts it on its attack target (hero_luna.lua:
--- 224-242), keeping Eclipse's mana.
+-- 224-242), keeping Eclipse's mana. Package 6: Eclipse when the beam does not go.
 function H.TradeCast(bot, s, p, e)
 	local a = Beam(bot)
-	if a == nil or not Beamable(s, p, a, e) then return nil end
-	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
+	if a == nil or not Beamable(s, p, a, e) or bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return EclipseOn(bot, s, p, e) end
 	s.beamAt = p.now
 	return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = BeamLock(a),
 		reason = string.format('en el intercambio con %s', Short(e)) }
@@ -158,11 +182,11 @@ function H.FarmCast(bot, s, p)
 	return nil
 end
 
--- During a kill: Lucent Beam on the target (damage and a short stun that stops it running), keeping Eclipse's mana.
+-- During a kill: Lucent Beam on the target (damage and a short stun that stops it running), keeping Eclipse's mana. Package 6:
+-- Eclipse after it, when the beam does not go.
 function H.KillCast(bot, s, p, e)
 	local a = Beam(bot)
-	if a == nil or not Beamable(s, p, a, e) then return nil end
-	if bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return nil end
+	if a == nil or not Beamable(s, p, a, e) or bot:GetMana() - a:GetManaCost() < ManaToKeep(bot) then return EclipseOn(bot, s, p, e) end
 	s.beamAt = p.now
 	return { intent = 'rematar', ability = a, target = e, castPoint = a:GetCastPoint(), opens = e, lockSec = BeamLock(a),
 		reason = string.format('en la kill sobre %s', Short(e)) }
