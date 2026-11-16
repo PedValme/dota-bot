@@ -2,6 +2,7 @@
 
 <!-- pic-method: next-session -->
 ## Próxima sesión
+- **En pausa desde el 2026-11-15:** Pedro se toma un tiempo para pensar cómo mejorar el proyecto («voy a darme un tiempo para pensar como mejorar este proyecto, por ahora me he saturado»). No se lanzan tandas ni paquetes hasta que él retome. Al volver, se empieza por su idea, no por la cola de abajo.
 - **Qué se estaba haciendo:** el plan de mejora del equipo propio (`trabajo/plan-mejora-equipo.md`, DECISIONES 2026-11-13). Meta: ganar con sobra al equipo de OHA, con cada cambio medido cara a cara, en orden ABBA y con `tools/bench/equipo.mjs`.
 - **Dónde quedó (noches del 2026-11-14 y 2026-11-15, MEDICIONES):**
   - **Paquete 6 (kills de la segura, #117-#119) cumple y se adopta: `control_equipo_p6` es la referencia.**
