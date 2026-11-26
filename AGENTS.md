@@ -41,17 +41,16 @@ once it exists.
     `bench/README.md`, «Cómo se avanza»).
   - La lista de tareas (lo hecho y lo pendiente) va al reportar un avance terminado o cuando conviene ver todo el
     mapa, no al responder preguntas sobre el proceso en curso; por qué: con tantos pasos se pierde de vista dónde
-    estamos, pero repetirla en cada respuesta estorba (Pedro, 2026-10-31: «en cada avance presentame un to-do list
-    por favor de lo hecho y los pendientes»; acotado el 2026-11-01: «cuando te haga preguntas sobre el proceso en curso
-    no hace falta que incluya el todo list, solo traelo a colación cuando haya un avance terminado o tenga sentido ver
-    todo el mapa de tareas»).
+    estamos, pero repetirla en cada respuesta estorba (Pedro, 2026-10-31: la lista de lo hecho y lo pendiente en cada
+    avance; acotado el 2026-11-01: no en las preguntas sobre el proceso en curso, solo con un avance terminado o cuando
+    tenga sentido ver todo el mapa de tareas).
   - Una serie solo confirma lo que los humos ya muestran a la par o mejor: con el bot propio por debajo de OHA en la
     mayoría de las métricas de los humos, no se lanza; primero se diagnostica en los registros y se corrige. Por qué:
     horas de máquina midiendo algo que a todas luces sale mal (DECISIONES.md, 2026-11-04).
   - Los humos cortados (min 12 la línea, min 25 el medio juego) se corren con la carga anotada, aunque la PC esté ocupada,
     sin preguntar: por qué, la PC se comparte con otro trabajo y esperarla costó una noche; miden mecanismo y no sustituyen
     a la serie, que sigue pidiendo máquina libre (DECISIONES.md, 2026-11-04 y 2026-11-05).
-  - La partida de Pedro decide por encima de los números: la confirmación de la línea pasó y él vio el bot «nefasto»; por
+  - La partida de Pedro decide por encima de los números: la confirmación de la línea pasó y él vio el bot jugar muy mal; por
     qué, los bots de Valve no presionan como un humano (DECISIONES.md, 2026-11-05).
   - Sin vueltas de umbrales: un paquete, como mucho 2 rondas de mecanismo, y juega Pedro; una constante cambia solo por un fallo de
     regla visto en el registro. Por qué: con estas partidas ni 12 vueltas detectan ±3,4 kills, y el mismo código dio 199 y 162 últimos
