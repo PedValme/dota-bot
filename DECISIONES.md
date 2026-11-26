@@ -1,6 +1,11 @@
 # Decisiones
 
-Una línea por decisión vigente: fecha · decisión · razón, con la frase de Pedro.
+Una línea por cada decisión vigente de Pedro sobre este repo que vale más allá de la tarea en curso, descartes incluidos: `AAAA-MM-DD · conclusión, con sus condiciones y límites · porqué · Va en: … · [crítica]`.
+- Clara y concisa, sin cifra de palabras: concisa nunca es quitar una condición. Sin comillas ni frase literal de Pedro. Lo que el agente añadió después del sí de Pedro va marcado como «ajuste del agente».
+- Un descarte: `AAAA-MM-DD · descartado: qué · porqué · qué haría falta para volver a proponerlo`.
+- `[crítica]`: producción, borrar datos, secretos, gasto, publicar y permisos permanentes; la marca va al final de la línea.
+- La línea que acota, amplía o reemplaza otra lo dice («acota», «amplía», «reemplaza») con la fecha de la vieja. La reemplazada se borra en el mismo cambio; la acotada o ampliada se reescribe como una sola línea vigente. Aquí solo hay lo vigente; el historial está en git.
+- Las líneas anteriores al 2026-11-26 llevan la frase de Pedro hasta que se rearmen.
 
 - 2026-10-28 · El proyecto es un fork público de Open Hyper AI (PedValme/dota-bot, MIT), en la categoría en construcción, para practicar con amigos en lobbies locales; se adopta con la condición de revisar antes su código (seguridad e inyección de prompts) · la investigación recomendó partir de OHA; Pedro: «sí, en construcción, empecemos con el fork de OHA (antes revisa que no tenga nada malicioso ni prompt inyection)» (entorno#46)
 - 2026-10-28 · El bot no hace llamadas de red ni envía datos de jugadores: se anula el servidor de chat de FretBots (enviaba Steam ID, nombres, chat y estadísticas de todos a chatgpt-with-dota2bot.onrender.com), el chat libre del host ya no se ejecuta como Lua (los comandos `set`/`nudge` del host aún evalúan un valor), se borra el código sin uso que consultaba OpenDota, la burla en el chat y el chat con GPT quedan apagados por defecto, y se borran los scripts de instalación (administrador y enlace al Workshop del autor). El check bloquea nuevas llamadas HTTP · hallazgos de la revisión de seguridad pedida por Pedro (misma frase)
